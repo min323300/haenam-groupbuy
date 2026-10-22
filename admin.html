@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>공동구매 관리자</title><style>
+body{font-family:Arial,"Noto Sans KR",sans-serif;margin:0;background:#f4f4f4;color:#222}.wrap{max-width:1200px;margin:auto;padding:20px}
+.card{background:white;border-radius:15px;padding:18px;margin-bottom:16px;overflow:auto}input,textarea{padding:9px;border:1px solid #ccc;border-radius:7px;margin:4px}
+button{padding:8px 10px;border:0;border-radius:7px;cursor:pointer;font-weight:700}table{border-collapse:collapse;width:100%;min-width:1000px}
+th,td{padding:9px;border-bottom:1px solid #eee;text-align:left}.yes{background:#dff6df}.no{background:#ffe6e6}.copy{background:#222;color:#fff}
+</style></head><body><div class="wrap"><h1>공동구매 관리자</h1>
+<div class="card"><h2>랜딩페이지 내용 변경</h2>
+<input id="stitle" placeholder="상품명"><input id="sprice" type="number" placeholder="판매가"><br>
+<input id="simage" style="width:70%" placeholder="상품 이미지 URL"><br>
+<textarea id="sdesc" style="width:90%" placeholder="상품 설명"></textarea><br>
+<button onclick="saveSettings()">내용 저장</button></div>
+<div class="card"><h2>주문 관리 <span id="cnt"></span></h2><div id="orders"></div></div>
+</div><script src="config.js"></script><script>
+const cfg=window.APP_CONFIG;
+const api=(path,opt={})=>fetch(cfg.SUPABASE_URL+"/rest/v1/"+path,{...opt,headers:{
+"apikey":cfg.SUPABASE_ANON_KEY,"Authorization":"Bearer "+cfg.SUPABASE_ANON_KEY,"Content-Type":"application/json",
+"Prefer":opt.prefer||"return=representation",...(opt.headers||{})}});
+async function loadSettings(){let r=await api("settings?id=eq.1&select=*");let d=await r.json();if(d[0]){stitle.value=d[0].title;sprice.value=d[0].price;simage.value=d[0].image_url||"";sdesc.value=d[0].description||""}}
+async function saveSettings(){await api("settings?id=eq.1",{method:"PATCH",body:JSON.stringify({title:stitle.value,price:+sprice.value,image_url:simage.value,description:sdesc.value})});alert("저장했습니다.")}
+async function toggle(id,key,val){await api("orders?id=eq."+id,{method:"PATCH",body:JSON.stringify({[key]:!val})});load()}
+function btn(id,key,val,label){return `<button class="${val?'yes':'no'}" onclick="toggle(${id},'${key}',${val})">${label}: ${val?'완료':'미확인'}</button>`}
+function copyMsg(name){let t=`${name} 고객님, 입금 확인되었습니다. 주문해 주셔서 감사합니다.`;navigator.clipboard.writeText(t);alert("안내문을 복사했습니다. 카톡이나 문자에 붙여 넣으세요.")}
+async function load(){let r=await api("orders?select=*&order=created_at.desc");let d=await r.json();cnt.textContent=`(${d.length}건)`;
+orders.innerHTML=`<table><tr><th>접수일</th><th>고객</th><th>연락처</th><th>수량</th><th>주소/메모</th><th>전화</th><th>입금</th><th>안내</th><th>배송</th><th>문구</th></tr>`+
+d.map(x=>`<tr><td>${new Date(x.created_at).toLocaleString()}</td><td>${x.name}</td><td>${x.phone}</td><td>${x.qty}</td><td>${x.address}<br>${x.memo||''}</td>
+<td>${btn(x.id,'status_call',x.status_call,'전화')}</td><td>${btn(x.id,'status_paid',x.status_paid,'입금')}</td>
+<td>${btn(x.id,'status_notice',x.status_notice,'안내')}</td><td>${btn(x.id,'status_shipping',x.status_shipping,'배송')}</td>
+<td><button class="copy" onclick='copyMsg(${JSON.stringify(x.name)})'>입금확인 문구 복사</button></td></tr>`).join("")+"</table>"}
+loadSettings();load();
+</script></body></html>

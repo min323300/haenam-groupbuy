@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>해남 공동구매</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans KR",sans-serif;background:#f7f5ef;color:#222}
+.wrap{max-width:760px;margin:auto;padding:18px}.hero{background:#fff;border-radius:22px;padding:28px;box-shadow:0 8px 30px #0001;text-align:center}
+h1{font-size:32px;margin:5px}.price{font-size:35px;font-weight:800;margin:15px}.badge{display:inline-block;background:#222;color:#fff;padding:7px 12px;border-radius:20px}
+img.heroimg{width:100%;max-height:390px;object-fit:cover;border-radius:18px;margin-top:15px}.card{background:#fff;margin-top:16px;padding:22px;border-radius:18px}
+input,select,textarea{width:100%;padding:13px;margin:6px 0 12px;border:1px solid #ccc;border-radius:10px;font-size:16px}
+button{border:0;border-radius:10px;padding:14px;font-size:16px;font-weight:700;cursor:pointer}.order{width:100%;background:#111;color:#fff}
+.count{font-size:27px;font-weight:800}.recent{padding:9px 0;border-bottom:1px solid #eee}.small{font-size:13px;color:#777}
+</style>
+</head>
+<body><div class="wrap">
+<section class="hero">
+<span class="badge">산지 공동구매</span>
+<h1 id="title">해남 농산물 공동구매</h1>
+<div id="desc">해남에서 정성껏 준비했습니다.</div>
+<img id="productImage" class="heroimg" src="https://images.unsplash.com/photo-1536304993881-ff6e9eefa2a6?auto=format&fit=crop&w=1200&q=80">
+<div class="price"><span id="price">59,900</span>원</div>
+</section>
+
+<section class="card">
+<h2>예약 주문</h2>
+<form id="orderForm">
+<label>성함</label><input id="name" required>
+<label>연락처</label><input id="phone" required placeholder="010-0000-0000">
+<label>수량</label><select id="qty"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
+<label>주소</label><input id="address" required>
+<label>요청사항</label><textarea id="memo"></textarea>
+<label><input type="checkbox" id="privacy" required style="width:auto"> 주문 처리를 위한 개인정보 수집에 동의합니다.</label>
+<button class="order" type="submit">공동구매 예약하기</button>
+</form>
+<p id="msg"></p>
+</section>
+
+<section class="card">
+<h2>공동구매 현황</h2>
+<div>현재 예약 <span class="count" id="orderCount">0</span>건</div>
+<p class="small">개인정보 보호를 위해 주문자 이름은 일부만 표시됩니다.</p>
+<div id="recentOrders"></div>
+</section>
+</div>
+<script src="config.js"></script>
+<script>
+const cfg=window.APP_CONFIG;
+const api=(path,opt={})=>fetch(cfg.SUPABASE_URL+"/rest/v1/"+path,{...opt,headers:{
+"apikey":cfg.SUPABASE_ANON_KEY,"Authorization":"Bearer "+cfg.SUPABASE_ANON_KEY,
+"Content-Type":"application/json","Prefer":opt.prefer||"return=minimal",...(opt.headers||{})}});
+function mask(n){return n? n.slice(0,1)+"*"+(n.length>2?n.slice(-1):""):"고객";}
+async function settings(){
+ let r=await api("settings?id=eq.1&select=*"); let d=await r.json(); if(!d[0])return;
+ title.textContent=d[0].title;desc.textContent=d[0].description;price.textContent=Number(d[0].price).toLocaleString();
+ if(d[0].image_url) productImage.src=d[0].image_url;
+}
+async function refresh(){
+ let r=await api("orders?select=id,name,qty,created_at&order=created_at.desc&limit=1000",{headers:{"Prefer":"count=exact"}});
+ let d=await r.json(); orderCount.textContent=d.length;
+ recentOrders.innerHTML=d.slice(0,8).map(x=>`<div class="recent">${mask(x.name)}님 · ${x.qty}개 예약 접수</div>`).join("");
+}
+orderForm.onsubmit=async(e)=>{
+ e.preventDefault(); if(!privacy.checked)return;
+ let body={name:name.value,phone:phone.value,qty:+qty.value,address:address.value,memo:memo.value,status_call:false,status_paid:false,status_notice:false,status_shipping:false};
+ let r=await api("orders",{method:"POST",body:JSON.stringify(body)});
+ if(r.ok){msg.textContent="예약이 접수되었습니다. 담당자가 확인 후 연락드리겠습니다.";orderForm.reset();refresh()}
+ else msg.textContent="접수 중 오류가 발생했습니다.";
+};
+settings();refresh();
+</script></body></html>
