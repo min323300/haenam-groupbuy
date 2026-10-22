@@ -87,6 +87,10 @@
       <button class="secondary" type="button" onclick="addProductDetailBlock('price')">+ 강조문구 추가</button>
     </div>
     <div id="productDetailBuilder" class="detail-builder" style="margin-top:10px"></div>
+    <div class="toolbar" style="margin-top:14px">
+      <button class="blue" type="button" onclick="saveDetailPage()">상세페이지 전체 저장</button>
+      <span class="muted">이미지·글·강조문구를 모두 구성한 뒤 이 버튼을 눌러 저장하세요.</span>
+    </div>
 
     <div class="toolbar">
       <input id="productImageFile" type="file" accept="image/*" style="display:none">
@@ -293,6 +297,47 @@ async function editProduct(code){
     showMessage('productMessage',`${$('productName').value} 상품을 불러왔습니다. 상세페이지를 수정할 수 있습니다.`);
   }catch(e){showMessage('productMessage','상품 불러오기 오류: '+e.message,true)}
 }
+async function saveDetailPage(){
+  try{
+    const code=$('productCode').value.trim();
+    if(!code) return showMessage('productMessage','먼저 등록된 상품의 수정 버튼을 눌러 상품을 불러와 주세요.',true);
+    if(!$('productName').value.trim()) return showMessage('productMessage','상품명을 입력해 주세요.',true);
+
+    const payload={
+      action:'saveProduct',
+      productCode:code,
+      productName:$('productName').value.trim(),
+      salePrice:$('salePrice').value,
+      normalPrice:$('normalPrice').value,
+      productImage:$('productImage').value.trim(),
+      productDescription:$('productDescription').value.trim(),
+      startDate:$('startDate').value,
+      endDate:$('endDate').value,
+      targetCount:$('targetCount').value,
+      paymentMethod:$('paymentMethod').value,
+      bankName:$('bankName').value.trim(),
+      accountNumber:$('accountNumber').value.trim(),
+      accountHolder:$('accountHolder').value.trim(),
+      paymentGuide:$('paymentGuide').value.trim(),
+      productLink:$('productLink').value.trim(),
+      saleStatus:$('saleStatus').value,
+      detailBlocks:productDetailBlocks.map(b=>({
+        type:b.type,
+        value:b.value||'',
+        imageUrl:b.imageUrl||''
+      }))
+    };
+
+    showMessage('productMessage','상세페이지 전체를 저장하고 있습니다...');
+    const res=await apiPost(payload);
+    if(!res.success) throw new Error(res.message||'상세페이지 저장 실패');
+    showMessage('productMessage','상세페이지 전체가 저장되었습니다.');
+    await loadProducts();
+  }catch(e){
+    showMessage('productMessage','상세페이지 저장 오류: '+e.message,true);
+  }
+}
+
 async function saveProduct(){
   try{
     if(!$('productName').value.trim()) return showMessage('productMessage','상품명을 입력해 주세요.',true);
