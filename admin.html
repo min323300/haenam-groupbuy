@@ -3,1183 +3,429 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>공동구매 관리자</title>
-
+  <title>해남공구마켓 관리자</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: Arial, "Noto Sans KR", sans-serif;
-      background: #f4f4f4;
-      color: #222;
-    }
-
-    .wrap {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 28px 18px 60px;
-    }
-
-    h1 {
-      font-size: 32px;
-      margin: 10px 0 25px;
-    }
-
-    h2 {
-      font-size: 23px;
-      margin: 0 0 22px;
-    }
-
-    .card {
-      background: #fff;
-      border-radius: 18px;
-      padding: 24px;
-      margin-bottom: 20px;
-    }
-
-    .row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 12px;
-    }
-
-    input,
-    textarea,
-    select {
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 12px;
-      font-size: 15px;
-      background: #fff;
-    }
-
-    input:focus,
-    textarea:focus,
-    select:focus {
-      outline: 2px solid #1f8b5c;
-      border-color: transparent;
-    }
-
-    #title {
-      width: 280px;
-    }
-
-    #price {
-      width: 180px;
-    }
-
-    #imageUrl {
-      width: 100%;
-      margin-bottom: 12px;
-    }
-
-    #desc {
-      width: 100%;
-      min-height: 160px;
-      resize: vertical;
-    }
-
-    button {
-      border: 0;
-      border-radius: 8px;
-      padding: 11px 18px;
-      font-size: 15px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .primary {
-      background: #16875a;
-      color: #fff;
-    }
-
-    .secondary {
-      background: #ededed;
-      color: #222;
-    }
-
-    .danger {
-      background: #d9534f;
-      color: #fff;
-    }
-
-    /* 이미지 업로드 */
-
-    .upload-title {
-      font-size: 17px;
-      font-weight: 700;
-      margin: 22px 0 10px;
-    }
-
-    .drop-zone {
-      width: 100%;
-      min-height: 190px;
-      border: 2px dashed #aaa;
-      border-radius: 14px;
-      background: #fafafa;
-
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      text-align: center;
-      padding: 25px;
-      cursor: pointer;
-
-      transition: 0.2s;
-    }
-
-    .drop-zone:hover {
-      border-color: #16875a;
-      background: #f2faf6;
-    }
-
-    .drop-zone.dragover {
-      border-color: #16875a;
-      background: #e9f7ef;
-      transform: scale(1.005);
-    }
-
-    .drop-icon {
-      font-size: 42px;
-      margin-bottom: 8px;
-    }
-
-    .drop-main {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 7px;
-    }
-
-    .drop-sub {
-      color: #777;
-      font-size: 14px;
-    }
-
-    #fileInput {
-      display: none;
-    }
-
-    .preview-box {
-      display: none;
-      margin-top: 15px;
-      border: 1px solid #ddd;
-      border-radius: 12px;
-      padding: 15px;
-      background: #fafafa;
-    }
-
-    .preview-box img {
-      display: block;
-      max-width: 420px;
-      width: 100%;
-      max-height: 320px;
-      object-fit: contain;
-      margin: 0 auto 12px;
-      border-radius: 10px;
-      background: #fff;
-    }
-
-    .file-info {
-      text-align: center;
-      color: #555;
-      margin-bottom: 12px;
-    }
-
-    .upload-actions {
-      text-align: center;
-    }
-
-    .upload-status {
-      margin-top: 12px;
-      padding: 12px;
-      border-radius: 8px;
-      display: none;
-    }
-
-    .upload-status.loading {
-      display: block;
-      background: #fff4cf;
-      color: #725800;
-    }
-
-    .upload-status.success {
-      display: block;
-      background: #e4f6ea;
-      color: #126336;
-    }
-
-    .upload-status.error {
-      display: block;
-      background: #fde7e7;
-      color: #a32121;
-    }
-
-    /* 주문관리 */
-
-    .order-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 18px;
-    }
-
-    .order-count {
-      font-size: 17px;
-      font-weight: 700;
-    }
-
-    .table-wrap {
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 1050px;
-    }
-
-    th,
-    td {
-      border: 1px solid #ddd;
-      padding: 9px;
-      text-align: center;
-      font-size: 14px;
-    }
-
-    th {
-      background: #f2f2f2;
-      font-weight: 700;
-    }
-
-    td.address,
-    td.memo {
-      text-align: left;
-      min-width: 180px;
-    }
-
-    .status-btn {
-      padding: 7px 9px;
-      font-size: 12px;
-      margin: 2px;
-    }
-
-    .off {
-      background: #eee;
-      color: #555;
-    }
-
-    .on {
-      background: #16875a;
-      color: #fff;
-    }
-
-    .copy-btn {
-      background: #2878d0;
-      color: #fff;
-      padding: 7px 10px;
-      font-size: 12px;
-    }
-
-    .empty {
-      padding: 35px;
-      text-align: center;
-      color: #777;
-    }
-
-    .save-message {
-      display: none;
-      margin-top: 12px;
-      padding: 12px;
-      border-radius: 8px;
-      background: #e4f6ea;
-      color: #126336;
-    }
-
-    @media (max-width: 700px) {
-      .wrap {
-        padding: 16px 10px 40px;
-      }
-
-      .card {
-        padding: 17px;
-      }
-
-      h1 {
-        font-size: 27px;
-      }
-
-      #title,
-      #price {
-        width: 100%;
-      }
-    }
-
-    /* 상세페이지 블록 편집기 */
-    .detail-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
-    .detail-builder{border:1px solid #ddd;border-radius:14px;background:#fafafa;padding:14px;min-height:100px}
-    .detail-empty{text-align:center;color:#777;padding:28px 10px}
-    .detail-block{background:#fff;border:1px solid #ddd;border-radius:12px;padding:14px;margin-bottom:12px}
-    .detail-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,"Noto Sans KR",sans-serif;background:#f4f6f4;color:#222}
+    .wrap{max-width:1280px;margin:0 auto;padding:24px 16px 60px}
+    h1{margin:0 0 20px;font-size:30px}
+    h2{margin:0 0 18px;font-size:22px}
+    h3{margin:20px 0 10px;font-size:17px}
+    .card{background:#fff;border-radius:16px;padding:22px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .field{display:flex;flex-direction:column;gap:6px}
+    .full{grid-column:1/-1}
+    label{font-size:13px;font-weight:700;color:#444}
+    input,textarea,select{width:100%;border:1px solid #ccd3cc;border-radius:9px;padding:11px;font-size:14px;background:#fff}
+    textarea{min-height:100px;resize:vertical}
+    input:focus,textarea:focus,select:focus{outline:2px solid #1d8b5c;border-color:transparent}
+    button{border:0;border-radius:9px;padding:10px 16px;font-weight:700;cursor:pointer}
+    .primary{background:#16875a;color:#fff}
+    .secondary{background:#ecefec;color:#222}
+    .danger{background:#d9534f;color:#fff}
+    .blue{background:#2878d0;color:#fff}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
+    .notice{padding:11px 13px;border-radius:9px;background:#eef8f2;color:#17623f;margin:12px 0;display:none}
+    .error{background:#fdeaea;color:#a32121}
+    .muted{color:#68736b;font-size:13px;line-height:1.55}
+    .table-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;min-width:1100px}
+    th,td{border:1px solid #ddd;padding:9px;text-align:center;font-size:13px}
+    th{background:#eef4ef}
+    td.left{text-align:left}
+    .product-table{min-width:1350px}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#edf6f0;color:#17623f;font-size:12px;font-weight:700}
+    .detail-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+    .detail-builder{border:1px solid #ddd;border-radius:12px;background:#fafafa;padding:12px;min-height:90px}
+    .detail-empty{text-align:center;color:#777;padding:24px}
+    .detail-block{background:#fff;border:1px solid #ddd;border-radius:10px;padding:12px;margin-bottom:10px}
+    .detail-head{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:9px}
     .detail-actions{display:flex;gap:5px;flex-wrap:wrap}
-    .detail-actions button{padding:7px 10px;font-size:12px}
-    .detail-block textarea,.detail-block input[type="text"]{width:100%}
-    .detail-block textarea{min-height:110px;resize:vertical}
-    .detail-drop{width:100%;min-height:120px;border:2px dashed #aaa;border-radius:12px;background:#fafafa;display:flex;align-items:center;justify-content:center;text-align:center;padding:18px;cursor:pointer}
-    .detail-drop.dragover{border-color:#16875a;background:#e9f7ef}
-    .detail-preview{display:block;max-width:100%;height:auto;max-height:none;object-fit:contain;margin:10px auto;border-radius:8px;background:#f7f7f7}
-
+    .detail-actions button{padding:6px 9px;font-size:12px}
+    .detail-drop{min-height:110px;border:2px dashed #aaa;border-radius:10px;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px;cursor:pointer;background:#fafafa}
+    .detail-drop.dragover{border-color:#16875a;background:#eaf7ef}
+    .detail-preview{display:block;max-width:100%;height:auto;margin:10px auto;border-radius:8px}
+    .status-btn{padding:6px 8px;font-size:11px;margin:2px}
+    .on{background:#16875a;color:#fff}.off{background:#eee;color:#555}
+    .summary{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+    .summary-box{background:#f2f8f4;border-radius:10px;padding:10px 14px;font-weight:700}
+    @media(max-width:760px){.grid,.grid-3{grid-template-columns:1fr}.wrap{padding:14px 8px 40px}.card{padding:15px}h1{font-size:25px}}
   </style>
 </head>
-
 <body>
-
 <div class="wrap">
-
-  <h1>공동구매 관리자</h1>
-
-
-  <!-- ======================================= -->
-  <!-- 랜딩페이지 관리 -->
-  <!-- ======================================= -->
+  <h1>해남공구마켓 관리자</h1>
 
   <section class="card">
-    <h2>랜딩페이지 내용 변경</h2>
-    <div class="row">
-      <input type="text" id="title" placeholder="상품명">
-      <input type="number" id="price" placeholder="판매가격">
-    </div>
-    <textarea id="desc" placeholder="상품 상단 설명"></textarea>
+    <h2>① 공구상품 관리</h2>
+    <p class="muted">쌀·절임배추·고구마 등 공구상품을 등록합니다. 저장하면 Google Sheets의 <b>상품관리</b> 시트에 자동 반영됩니다.</p>
 
-    <h2 style="margin-top:26px;">상세페이지 구성</h2>
-    <p style="color:#666;line-height:1.6;">
-      이미지·글·가격/강조문구를 원하는 순서대로 추가하세요.
-      긴 세로 이미지도 원본 비율로 등록할 수 있습니다.
-    </p>
-    <div class="detail-toolbar">
-      <button type="button" class="primary" onclick="addDetailBlock('image')">+ 이미지 추가</button>
-      <button type="button" class="secondary" onclick="addDetailBlock('text')">+ 글 추가</button>
-      <button type="button" class="secondary" onclick="addDetailBlock('price')">+ 가격/강조문구 추가</button>
-    </div>
-    <div id="detailBuilder" class="detail-builder"></div>
-    <div id="uploadStatus" class="upload-status"></div>
+    <input type="hidden" id="productCode">
 
+    <div class="grid">
+      <div class="field"><label>상품명 *</label><input id="productName" placeholder="예: 해남 새청무 쌀 20kg"></div>
+      <div class="field"><label>판매상태</label>
+        <select id="saleStatus"><option>준비중</option><option selected>판매중</option><option>종료</option></select>
+      </div>
+      <div class="field"><label>판매가격</label><input id="salePrice" type="number" placeholder="59900"></div>
+      <div class="field"><label>정상가격</label><input id="normalPrice" type="number" placeholder="65000"></div>
+      <div class="field"><label>공구 시작일</label><input id="startAt" type="datetime-local"></div>
+      <div class="field"><label>공구 마감일</label><input id="endAt" type="datetime-local"></div>
+      <div class="field"><label>목표 주문건수</label><input id="targetOrders" type="number" placeholder="100"></div>
+      <div class="field"><label>결제방식</label><select id="paymentMethod"><option>계좌이체</option><option>현장결제</option><option>기타</option></select></div>
+      <div class="field full"><label>대표이미지 주소</label><input id="productImage" placeholder="이미지 URL 또는 아래 업로드 버튼 사용"></div>
+      <div class="field full"><label>상품 설명</label><textarea id="productDescription" placeholder="상품 카드와 상세페이지에 사용할 설명"></textarea></div>
+      <div class="field full"><label>공구 연결 링크</label><input id="linkUrl" placeholder="예: https://.../product.html?id=..."></div>
+    </div>
+
+    <h3>상품별 결제계좌</h3>
+    <div class="grid-3">
+      <div class="field"><label>은행명</label><input id="bankName" placeholder="예: 농협"></div>
+      <div class="field"><label>계좌번호</label><input id="accountNumber" placeholder="예: 000-0000-0000-00"></div>
+      <div class="field"><label>예금주</label><input id="accountHolder" placeholder="예금주"></div>
+      <div class="field full"><label>입금 안내문</label><textarea id="paymentMessage" placeholder="입금 후 주문자 성함으로 확인됩니다."></textarea></div>
+    </div>
+
+    <div class="toolbar">
+      <input id="productImageFile" type="file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadProductImage(this.files[0])">
+      <button class="secondary" type="button" onclick="document.getElementById('productImageFile').click()">대표이미지 업로드</button>
+      <button class="primary" type="button" onclick="saveProduct()">상품 저장</button>
+      <button class="secondary" type="button" onclick="resetProductForm()">새 상품 입력</button>
+    </div>
+    <div id="productMessage" class="notice"></div>
+  </section>
+
+  <section class="card">
+    <div class="toolbar" style="justify-content:space-between;margin-top:0">
+      <h2 style="margin:0">등록된 공구상품</h2>
+      <button class="secondary" onclick="loadProducts()">새로고침</button>
+    </div>
+    <div class="table-wrap">
+      <table class="product-table">
+        <thead><tr>
+          <th>상품코드</th><th>상품명</th><th>판매가</th><th>기간</th><th>현재 주문</th><th>목표</th>
+          <th>상태</th><th>은행</th><th>계좌번호</th><th>예금주</th><th>연결링크</th><th>수정</th>
+        </tr></thead>
+        <tbody id="productsBody"><tr><td colspan="12">상품을 불러오는 중입니다.</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>② 기존 랜딩페이지 / 상세페이지 관리</h2>
+    <p class="muted">기존 단일 랜딩페이지 기능도 그대로 유지합니다.</p>
+    <div class="grid">
+      <div class="field"><label>상품명</label><input id="title"></div>
+      <div class="field"><label>판매가격</label><input id="price" type="number"></div>
+      <div class="field full"><label>상단 설명</label><textarea id="desc"></textarea></div>
+    </div>
     <input type="hidden" id="imageUrl">
 
-    <div style="margin-top:18px;">
-      <button type="button" class="primary" onclick="saveSettings()">전체 내용 저장</button>
+    <h3>상세페이지 구성</h3>
+    <div class="detail-toolbar">
+      <button class="primary" onclick="addDetailBlock('image')">+ 이미지 추가</button>
+      <button class="secondary" onclick="addDetailBlock('text')">+ 글 추가</button>
+      <button class="secondary" onclick="addDetailBlock('price')">+ 가격/강조문구 추가</button>
     </div>
-    <div id="saveMessage" class="save-message">저장되었습니다.</div>
+    <div id="detailBuilder" class="detail-builder"></div>
+    <div class="toolbar"><button class="primary" onclick="saveSettings()">전체 내용 저장</button></div>
+    <div id="settingsMessage" class="notice"></div>
   </section>
-
-  <!-- ======================================= -->
-  <!-- 주문 관리 -->
-  <!-- ======================================= -->
 
   <section class="card">
-
-    <div class="order-top">
-
-      <h2 style="margin:0;">
-        주문 관리
-      </h2>
-
-      <div>
-
-        <span class="order-count">
-          총 주문 <span id="orderCount">0</span>건
-        </span>
-
-        &nbsp;
-
-        <button
-          type="button"
-          class="secondary"
-          onclick="loadOrders()"
-        >
-          새로고침
-        </button>
-
-      </div>
-
+    <div class="toolbar" style="justify-content:space-between;margin-top:0">
+      <h2 style="margin:0">③ 주문 관리</h2>
+      <button class="secondary" onclick="loadOrders()">새로고침</button>
     </div>
-
-
+    <div class="summary"><div class="summary-box">총 주문 <span id="orderCount">0</span>건</div></div>
     <div class="table-wrap">
-
       <table>
-
-        <thead>
-
-          <tr>
-
-            <th>접수일</th>
-            <th>성함</th>
-            <th>연락처</th>
-            <th>수량</th>
-            <th>주소</th>
-            <th>요청사항</th>
-
-            <th>전화확인</th>
-            <th>입금확인</th>
-            <th>안내완료</th>
-            <th>배송완료</th>
-
-            <th>문자 복사</th>
-
-          </tr>
-
-        </thead>
-
-        <tbody id="ordersBody">
-
-          <tr>
-            <td colspan="11" class="empty">
-              주문내역을 불러오는 중입니다.
-            </td>
-          </tr>
-
-        </tbody>
-
+        <thead><tr>
+          <th>접수일</th><th>상품</th><th>성함</th><th>연락처</th><th>수량</th><th>주소</th><th>요청사항</th>
+          <th>전화</th><th>입금</th><th>안내</th><th>배송</th><th>문자</th>
+        </tr></thead>
+        <tbody id="ordersBody"><tr><td colspan="12">주문을 불러오는 중입니다.</td></tr></tbody>
       </table>
-
     </div>
-
   </section>
-
 </div>
 
-
 <script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz9-pk6kkPk01Lh11agNKxeV1Gjo_kzAPYOXyJ9kXUVY7r8t3ptrLurCjOwdTf31f00ug/exec';
 
-/* =====================================================
-   Google Apps Script 웹앱 주소
-===================================================== */
-
-const SCRIPT_URL =
-  'https://script.google.com/macros/s/AKfycbz9-pk6kkPk01Lh11agNKxeV1Gjo_kzAPYOXyJ9kXUVY7r8t3ptrLurCjOwdTf31f00ug/exec';
-
-
-let selectedFile = null;
-
-
-/* =====================================================
-   페이지 시작
-===================================================== */
-
-document.addEventListener('DOMContentLoaded', function () {
-
-  loadSettings();
-
-  loadOrders();
-
-});
-
-
-/* =====================================================
-   상세페이지 블록 편집기
-===================================================== */
+let productsCache = [];
 let detailBlocks = [];
 let detailSeq = 0;
 
-function detailId() {
-  detailSeq += 1;
-  return 'detail_' + Date.now() + '_' + detailSeq;
+document.addEventListener('DOMContentLoaded', function(){
+  loadProducts();
+  loadSettings();
+  loadOrders();
+});
+
+function safe(v){ return String(v == null ? '' : v); }
+function esc(v){
+  return safe(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 }
+function money(v){ return Number(v || 0).toLocaleString('ko-KR') + '원'; }
+function shortDate(v){ return v ? safe(v).replace('T',' ').slice(0,16) : ''; }
+function inputDate(v){ return v ? safe(v).slice(0,16) : ''; }
 
-function addDetailBlock(type, value = '', caption = '') {
-  detailBlocks.push({ id: detailId(), type, value, caption });
-  renderDetailBlocks();
+async function apiGet(params){
+  const q = new URLSearchParams(Object.assign({}, params, {_:Date.now()}));
+  const r = await fetch(SCRIPT_URL + '?' + q.toString());
+  const data = await r.json();
+  if(data && data.success === false) throw new Error(data.message || '요청 실패');
+  return data;
 }
-
-function renderDetailBlocks() {
-  const root = document.getElementById('detailBuilder');
-
-  if (!detailBlocks.length) {
-    root.innerHTML = '<div class="detail-empty">아직 상세 내용이 없습니다.<br>위 버튼으로 이미지나 글을 추가해 주세요.</div>';
-    return;
-  }
-
-  root.innerHTML = detailBlocks.map(function (block, index) {
-    const label = block.type === 'image' ? '이미지' :
-                  block.type === 'price' ? '가격 / 강조문구' : '글';
-
-    let editor = '';
-
-    if (block.type === 'text') {
-      editor = `<textarea placeholder="설명글을 입력하세요."
-        oninput="setDetailValue('${block.id}', this.value)">${escapeHtml(block.value)}</textarea>`;
-    }
-
-    if (block.type === 'price') {
-      editor = `<input type="text" placeholder="예: 20kg 공동구매 특가 59,900원"
-        value="${escapeHtml(block.value)}"
-        oninput="setDetailValue('${block.id}', this.value)">`;
-    }
-
-    if (block.type === 'image') {
-      editor = `
-        <div id="drop_${block.id}" class="detail-drop"
-          onclick="document.getElementById('file_${block.id}').click()">
-          📷<br>${block.value ? '클릭하거나 끌어다 놓아 이미지 교체' : '클릭하거나 이미지를 끌어다 놓으세요'}
-        </div>
-        <input id="file_${block.id}" type="file"
-          accept="image/jpeg,image/png,image/webp" style="display:none"
-          onchange="selectDetailImage('${block.id}', this.files[0])">
-        ${block.value ? `<img class="detail-preview" src="${escapeHtml(driveDisplayUrl(block.value))}" alt="상세 이미지">` : ''}
-        <input type="text" placeholder="이미지 아래 설명 (선택)"
-          value="${escapeHtml(block.caption || '')}"
-          oninput="setDetailCaption('${block.id}', this.value)">
-      `;
-    }
-
-    return `
-      <div class="detail-block">
-        <div class="detail-head">
-          <strong>${index + 1}. ${label}</strong>
-          <div class="detail-actions">
-            <button type="button" class="secondary" onclick="moveDetail(${index}, -1)">↑ 위</button>
-            <button type="button" class="secondary" onclick="moveDetail(${index}, 1)">↓ 아래</button>
-            <button type="button" class="danger" onclick="removeDetail(${index})">삭제</button>
-          </div>
-        </div>
-        ${editor}
-      </div>`;
-  }).join('');
-
-  setupDetailDrops();
-}
-
-function setDetailValue(id, value) {
-  const block = detailBlocks.find(b => b.id === id);
-  if (block) block.value = value;
-}
-function setDetailCaption(id, value) {
-  const block = detailBlocks.find(b => b.id === id);
-  if (block) block.caption = value;
-}
-function removeDetail(index) {
-  if (confirm('이 블록을 삭제할까요?')) {
-    detailBlocks.splice(index, 1);
-    renderDetailBlocks();
-  }
-}
-function moveDetail(index, direction) {
-  const target = index + direction;
-  if (target < 0 || target >= detailBlocks.length) return;
-  [detailBlocks[index], detailBlocks[target]] = [detailBlocks[target], detailBlocks[index]];
-  renderDetailBlocks();
-}
-
-function setupDetailDrops() {
-  detailBlocks.filter(b => b.type === 'image').forEach(function (block) {
-    const zone = document.getElementById('drop_' + block.id);
-    if (!zone) return;
-    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
-    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
-    zone.addEventListener('drop', e => {
-      e.preventDefault();
-      zone.classList.remove('dragover');
-      const file = e.dataTransfer.files && e.dataTransfer.files[0];
-      if (file) selectDetailImage(block.id, file);
-    });
+async function apiPost(payload){
+  const r = await fetch(SCRIPT_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify(payload)
   });
+  const data = await r.json();
+  if(data && data.success === false) throw new Error(data.message || '요청 실패');
+  return data;
+}
+function showMessage(id, text, error){
+  const el=document.getElementById(id);
+  el.textContent=text; el.style.display='block';
+  el.classList.toggle('error', !!error);
+  setTimeout(()=>el.style.display='none',4000);
 }
 
-function selectDetailImage(id, file) {
-  if (!file) return;
-  if (!file.type.startsWith('image/')) {
-    alert('이미지 파일만 선택해 주세요.');
-    return;
+async function loadProducts(){
+  const body=document.getElementById('productsBody');
+  body.innerHTML='<tr><td colspan="12">상품을 불러오는 중입니다.</td></tr>';
+  try{
+    const result=await apiGet({action:'products'});
+    productsCache=Array.isArray(result.products)?result.products:[];
+    if(!productsCache.length){
+      body.innerHTML='<tr><td colspan="12">아직 등록된 공구상품이 없습니다.</td></tr>';
+      return;
+    }
+    body.innerHTML=productsCache.map((p,i)=>`
+      <tr>
+        <td>${esc(p.productCode)}</td>
+        <td class="left"><b>${esc(p.productName)}</b></td>
+        <td>${money(p.salePrice)}</td>
+        <td>${esc(shortDate(p.startAt))}<br>~ ${esc(shortDate(p.endAt))}</td>
+        <td><b>${Number(p.orderCount||0)}</b>건</td>
+        <td>${Number(p.targetOrders||0)}건</td>
+        <td><span class="badge">${esc(p.saleStatus||'준비중')}</span></td>
+        <td>${esc(p.bankName)}</td>
+        <td>${esc(p.accountNumber)}</td>
+        <td>${esc(p.accountHolder)}</td>
+        <td class="left">${p.linkUrl ? `<a href="${esc(p.linkUrl)}" target="_blank">열기</a>` : '-'}</td>
+        <td><button class="blue" onclick="editProduct(${i})">수정</button></td>
+      </tr>`).join('');
+  }catch(e){
+    body.innerHTML='<tr><td colspan="12">상품 목록을 불러오지 못했습니다.</td></tr>';
+    showMessage('productMessage','상품 조회 오류: '+e.message,true);
   }
-  if (file.size > 8 * 1024 * 1024) {
-    alert('8MB 이하 이미지를 사용해 주세요.');
-    return;
-  }
-  uploadDetailImage(id, file);
 }
 
-function fileToDataUrl(file) {
-  return new Promise(function (resolve, reject) {
-    const reader = new FileReader();
-    reader.onload = e => resolve(e.target.result);
-    reader.onerror = reject;
+function editProduct(i){
+  const p=productsCache[i]; if(!p)return;
+  productCode.value=p.productCode||'';
+  productName.value=p.productName||'';
+  salePrice.value=p.salePrice||'';
+  normalPrice.value=p.normalPrice||'';
+  productImage.value=p.image||'';
+  productDescription.value=p.description||'';
+  startAt.value=inputDate(p.startAt);
+  endAt.value=inputDate(p.endAt);
+  targetOrders.value=p.targetOrders||'';
+  linkUrl.value=p.linkUrl||'';
+  paymentMethod.value=p.paymentMethod||'계좌이체';
+  bankName.value=p.bankName||'';
+  accountNumber.value=p.accountNumber||'';
+  accountHolder.value=p.accountHolder||'';
+  paymentMessage.value=p.paymentMessage||'';
+  saleStatus.value=p.saleStatus||'준비중';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function resetProductForm(){
+  ['productCode','productName','salePrice','normalPrice','productImage','productDescription',
+   'startAt','endAt','targetOrders','linkUrl','bankName','accountNumber','accountHolder','paymentMessage']
+   .forEach(id=>document.getElementById(id).value='');
+  paymentMethod.value='계좌이체';
+  saleStatus.value='판매중';
+}
+
+async function saveProduct(){
+  if(!productName.value.trim()){ alert('상품명을 입력해주세요.'); return; }
+  const payload={
+    action:'saveProduct',
+    productCode:productCode.value.trim(),
+    productName:productName.value.trim(),
+    salePrice:salePrice.value,
+    normalPrice:normalPrice.value,
+    image:productImage.value.trim(),
+    description:productDescription.value.trim(),
+    startAt:startAt.value,
+    endAt:endAt.value,
+    targetOrders:targetOrders.value,
+    linkUrl:linkUrl.value.trim(),
+    paymentMethod:paymentMethod.value,
+    bankName:bankName.value.trim(),
+    accountNumber:accountNumber.value.trim(),
+    accountHolder:accountHolder.value.trim(),
+    paymentMessage:paymentMessage.value.trim(),
+    saleStatus:saleStatus.value
+  };
+  try{
+    const result=await apiPost(payload);
+    productCode.value=result.productCode||productCode.value;
+    showMessage('productMessage','상품이 저장되었습니다.');
+    await loadProducts();
+  }catch(e){ showMessage('productMessage','상품 저장 오류: '+e.message,true); }
+}
+
+function fileToDataUrl(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>resolve(e.target.result);
+    reader.onerror=reject;
     reader.readAsDataURL(file);
   });
 }
+async function uploadImageFile(file){
+  if(!file) throw new Error('이미지를 선택해주세요.');
+  if(!file.type.startsWith('image/')) throw new Error('이미지 파일만 가능합니다.');
+  if(file.size>8*1024*1024) throw new Error('8MB 이하 이미지를 사용해주세요.');
+  const base64Data=await fileToDataUrl(file);
+  return apiPost({action:'uploadImage',fileName:file.name,mimeType:file.type,base64Data});
+}
+async function uploadProductImage(file){
+  try{
+    showMessage('productMessage','대표이미지를 업로드하고 있습니다.');
+    const result=await uploadImageFile(file);
+    productImage.value=result.imageUrl||'';
+    showMessage('productMessage','대표이미지 업로드 완료. 이제 상품 저장을 눌러주세요.');
+  }catch(e){showMessage('productMessage','이미지 업로드 오류: '+e.message,true);}
+}
 
-async function uploadDetailImage(id, file) {
-  setUploadStatus('loading', '이미지를 업로드하고 있습니다...');
-  try {
-    const base64Data = await fileToDataUrl(file);
-    const response = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        action: 'uploadImage',
-        fileName: file.name,
-        mimeType: file.type,
-        base64Data: base64Data
-      })
-    });
-    const result = await response.json();
-    if (!result.success) throw new Error(result.message || '이미지 업로드 실패');
-
-    const block = detailBlocks.find(b => b.id === id);
-    if (block) block.value = result.imageUrl;
-
-    const firstImage = detailBlocks.find(b => b.type === 'image' && b.value);
-    document.getElementById('imageUrl').value = firstImage ? firstImage.value : '';
-
-    setUploadStatus('success', '이미지 업로드 완료. 마지막에 "전체 내용 저장"을 눌러 주세요.');
+/* 기존 상세페이지 편집 */
+function detailId(){ detailSeq++; return 'detail_'+Date.now()+'_'+detailSeq; }
+function addDetailBlock(type,value='',caption=''){
+  detailBlocks.push({id:detailId(),type,value,caption}); renderDetailBlocks();
+}
+function renderDetailBlocks(){
+  const root=document.getElementById('detailBuilder');
+  if(!detailBlocks.length){root.innerHTML='<div class="detail-empty">상세 내용이 없습니다. 위 버튼으로 추가하세요.</div>';return;}
+  root.innerHTML=detailBlocks.map((b,i)=>{
+    const label=b.type==='image'?'이미지':b.type==='price'?'가격 / 강조문구':'글';
+    let editor='';
+    if(b.type==='text') editor=`<textarea oninput="setDetailValue('${b.id}',this.value)" placeholder="설명글">${esc(b.value)}</textarea>`;
+    if(b.type==='price') editor=`<input type="text" oninput="setDetailValue('${b.id}',this.value)" value="${esc(b.value)}" placeholder="예: 특가 59,900원">`;
+    if(b.type==='image') editor=`
+      <div id="drop_${b.id}" class="detail-drop" onclick="document.getElementById('file_${b.id}').click()">📷<br>클릭하거나 이미지를 끌어다 놓으세요</div>
+      <input id="file_${b.id}" type="file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="selectDetailImage('${b.id}',this.files[0])">
+      ${b.value?`<img class="detail-preview" src="${esc(driveDisplayUrl(b.value))}">`:''}
+      <input type="text" value="${esc(b.caption||'')}" placeholder="이미지 설명(선택)" oninput="setDetailCaption('${b.id}',this.value)">`;
+    return `<div class="detail-block"><div class="detail-head"><strong>${i+1}. ${label}</strong>
+      <div class="detail-actions"><button class="secondary" onclick="moveDetail(${i},-1)">↑</button>
+      <button class="secondary" onclick="moveDetail(${i},1)">↓</button>
+      <button class="danger" onclick="removeDetail(${i})">삭제</button></div></div>${editor}</div>`;
+  }).join('');
+  setupDetailDrops();
+}
+function setDetailValue(id,v){const b=detailBlocks.find(x=>x.id===id);if(b)b.value=v;}
+function setDetailCaption(id,v){const b=detailBlocks.find(x=>x.id===id);if(b)b.caption=v;}
+function removeDetail(i){if(confirm('이 블록을 삭제할까요?')){detailBlocks.splice(i,1);renderDetailBlocks();}}
+function moveDetail(i,d){const t=i+d;if(t<0||t>=detailBlocks.length)return;[detailBlocks[i],detailBlocks[t]]=[detailBlocks[t],detailBlocks[i]];renderDetailBlocks();}
+function setupDetailDrops(){
+  detailBlocks.filter(b=>b.type==='image').forEach(b=>{
+    const z=document.getElementById('drop_'+b.id);if(!z)return;
+    z.addEventListener('dragover',e=>{e.preventDefault();z.classList.add('dragover')});
+    z.addEventListener('dragleave',()=>z.classList.remove('dragover'));
+    z.addEventListener('drop',e=>{e.preventDefault();z.classList.remove('dragover');const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)selectDetailImage(b.id,f)});
+  });
+}
+async function selectDetailImage(id,file){
+  try{
+    const result=await uploadImageFile(file);
+    const b=detailBlocks.find(x=>x.id===id);if(b)b.value=result.imageUrl||'';
+    const first=detailBlocks.find(x=>x.type==='image'&&x.value);
+    imageUrl.value=first?first.value:'';
     renderDetailBlocks();
-  } catch (error) {
-    setUploadStatus('error', '이미지 업로드 오류: ' + error.message);
-  }
+  }catch(e){alert('이미지 업로드 오류: '+e.message);}
 }
-
-function driveDisplayUrl(url) {
-  let imageUrl = String(url || '').trim();
-  let fileId = '';
-  if (imageUrl.includes('id=')) fileId = imageUrl.split('id=')[1].split('&')[0];
-  else if (imageUrl.includes('/file/d/')) fileId = imageUrl.split('/file/d/')[1].split('/')[0];
-  if (fileId) return 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w1600';
-  return imageUrl;
+function driveDisplayUrl(url){
+  let u=safe(url).trim(),id='';
+  if(u.includes('id='))id=u.split('id=')[1].split('&')[0];
+  else if(u.includes('/file/d/'))id=u.split('/file/d/')[1].split('/')[0];
+  return id?'https://drive.google.com/thumbnail?id='+id+'&sz=w1600':u;
 }
-
-function setUploadStatus(type, message) {
-  const box = document.getElementById('uploadStatus');
-  box.className = 'upload-status';
-  if (!type) {
-    box.style.display = 'none';
-    box.textContent = '';
-    return;
-  }
-  box.classList.add(type);
-  box.textContent = message;
-}
-
-/* =====================================================
-   설정 불러오기
-===================================================== */
-async function loadSettings() {
-  try {
-    const response = await fetch(SCRIPT_URL + '?action=settings&_=' + Date.now());
-    const result = await response.json();
-    const data = result.settings || result.data || result || {};
-
-    document.getElementById('title').value = data.title || '';
-    document.getElementById('price').value = data.price || '';
-    document.getElementById('imageUrl').value = data.image || data.imageUrl || '';
-    document.getElementById('desc').value = data.description || data.desc || '';
-
-    let blocks = data.detailBlocks || data.blocks || '';
-    if (typeof blocks === 'string' && blocks.trim()) {
-      try { blocks = JSON.parse(blocks); } catch (e) { blocks = []; }
-    }
-
-    if (Array.isArray(blocks) && blocks.length) {
-      detailBlocks = blocks.map(function (b) {
-        return {
-          id: detailId(),
-          type: b.type || 'text',
-          value: String(b.value || ''),
-          caption: String(b.caption || '')
-        };
-      });
-    } else {
-      detailBlocks = [];
-      const oldImage = data.image || data.imageUrl || '';
-      const oldDesc = data.description || data.desc || '';
-      if (oldImage) addDetailBlock('image', oldImage, '');
-      if (oldDesc) addDetailBlock('text', oldDesc, '');
+async function loadSettings(){
+  try{
+    const r=await apiGet({action:'settings'});
+    const d=r.settings||r.data||r||{};
+    title.value=d.title||'';price.value=d.price||'';imageUrl.value=d.image||d.imageUrl||'';desc.value=d.description||d.desc||'';
+    let blocks=d.detailBlocks||d.blocks||'';
+    if(typeof blocks==='string'&&blocks.trim()){try{blocks=JSON.parse(blocks)}catch(e){blocks=[]}}
+    detailBlocks=Array.isArray(blocks)?blocks.map(b=>({id:detailId(),type:b.type||'text',value:safe(b.value),caption:safe(b.caption)})):[];
+    if(!detailBlocks.length){
+      if(d.image||d.imageUrl)addDetailBlock('image',d.image||d.imageUrl,'');
+      if(d.description||d.desc)addDetailBlock('text',d.description||d.desc,'');
     }
     renderDetailBlocks();
-  } catch (error) {
-    console.error('설정 불러오기 오류:', error);
-    renderDetailBlocks();
-  }
+  }catch(e){console.error(e);renderDetailBlocks();}
+}
+async function saveSettings(){
+  const blocks=detailBlocks.map(b=>({type:b.type,value:safe(b.value).trim(),caption:safe(b.caption).trim()})).filter(b=>b.value);
+  const first=blocks.find(b=>b.type==='image');
+  try{
+    await apiPost({action:'updateSettings',title:title.value.trim(),price:price.value,
+      image:first?first.value:imageUrl.value.trim(),description:desc.value.trim(),detailBlocks:JSON.stringify(blocks)});
+    showMessage('settingsMessage','랜딩페이지 내용이 저장되었습니다.');
+  }catch(e){showMessage('settingsMessage','저장 오류: '+e.message,true);}
 }
 
-/* =====================================================
-   랜딩페이지 설정 저장
-===================================================== */
-async function saveSettings() {
-  const cleanBlocks = detailBlocks.map(function (b) {
-    return {
-      type: b.type,
-      value: String(b.value || '').trim(),
-      caption: String(b.caption || '').trim()
-    };
-  }).filter(b => b.value);
-
-  const firstImage = cleanBlocks.find(b => b.type === 'image');
-
-  const payload = {
-    action: 'updateSettings',
-    title: document.getElementById('title').value.trim(),
-    price: document.getElementById('price').value,
-    image: firstImage ? firstImage.value : document.getElementById('imageUrl').value.trim(),
-    description: document.getElementById('desc').value.trim(),
-    detailBlocks: JSON.stringify(cleanBlocks)
-  };
-
-  try {
-    const response = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    });
-    const result = await response.json();
-    if (result.success === false) throw new Error(result.message || '저장 실패');
-
-    const message = document.getElementById('saveMessage');
-    message.style.display = 'block';
-    setTimeout(() => message.style.display = 'none', 3000);
-  } catch (error) {
-    alert('저장 중 오류가 발생했습니다.\\n' + error.message);
-  }
+/* 주문관리 */
+async function loadOrders(){
+  const body=document.getElementById('ordersBody');
+  body.innerHTML='<tr><td colspan="12">주문을 불러오는 중입니다.</td></tr>';
+  try{
+    const r=await apiGet({action:'orders'});
+    const orders=Array.isArray(r)?r:(r.orders||r.data||[]);
+    orderCount.textContent=orders.length;
+    if(!orders.length){body.innerHTML='<tr><td colspan="12">현재 접수된 주문이 없습니다.</td></tr>';return;}
+    body.innerHTML=orders.map(createOrderRow).join('');
+  }catch(e){body.innerHTML='<tr><td colspan="12">주문을 불러오지 못했습니다.</td></tr>';}
 }
-
-
-/* =====================================================
-   주문 목록
-===================================================== */
-
-async function loadOrders() {
-
-  const body =
-    document.getElementById(
-      'ordersBody'
-    );
-
-
-  body.innerHTML =
-    '<tr><td colspan="11" class="empty">주문내역을 불러오는 중입니다.</td></tr>';
-
-
-  try {
-
-    const response =
-      await fetch(
-        SCRIPT_URL +
-        '?action=orders'
-      );
-
-
-    const result =
-      await response.json();
-
-
-    const orders =
-      Array.isArray(result)
-      ? result
-      : (
-          result.orders ||
-          result.data ||
-          []
-        );
-
-
-    document
-      .getElementById(
-        'orderCount'
-      )
-      .textContent =
-      orders.length;
-
-
-    if (
-      orders.length === 0
-    ) {
-
-      body.innerHTML =
-        '<tr><td colspan="11" class="empty">현재 접수된 주문이 없습니다.</td></tr>';
-
-      return;
-
-    }
-
-
-    body.innerHTML =
-      orders.map(
-        function (order) {
-
-          return createOrderRow(
-            order
-          );
-
-        }
-      ).join('');
-
-  }
-
-  catch (error) {
-
-    console.error(error);
-
-
-    body.innerHTML =
-      '<tr><td colspan="11" class="empty">주문내역을 불러오지 못했습니다.</td></tr>';
-
-  }
-
+function createOrderRow(o){
+  const id=o.id||o.orderId||o.row||'';
+  const date=o.created_at||o.createdAt||o.date||'';
+  const qty=o.qty||o.quantity||'';
+  const memo=o.memo||o.request||'';
+  return `<tr>
+    <td>${esc(date)}</td><td class="left">${esc(o.productName||'-')}</td><td>${esc(o.name)}</td><td>${esc(o.phone)}</td>
+    <td>${esc(qty)}</td><td class="left">${esc(o.address)}</td><td class="left">${esc(memo)}</td>
+    <td>${statusButton(id,'status_call',o.status_call||o.callConfirmed,'전화')}</td>
+    <td>${statusButton(id,'status_paid',o.status_paid||o.paid,'입금')}</td>
+    <td>${statusButton(id,'status_notice',o.status_notice||o.notice,'안내')}</td>
+    <td>${statusButton(id,'status_shipping',o.status_shipping||o.shipping,'배송')}</td>
+    <td><button class="blue" onclick='copyPaymentMessage(${JSON.stringify(o.name||"")})'>문자 복사</button></td></tr>`;
 }
-
-
-/* =====================================================
-   주문 한 줄 만들기
-===================================================== */
-
-function createOrderRow(order) {
-
-  const id =
-    order.id ||
-    order.orderId ||
-    order.row ||
-    '';
-
-
-  const name =
-    escapeHtml(
-      order.name || ''
-    );
-
-
-  const phone =
-    escapeHtml(
-      order.phone || ''
-    );
-
-
-  const qty =
-    escapeHtml(
-      order.qty ||
-      order.quantity ||
-      ''
-    );
-
-
-  const address =
-    escapeHtml(
-      order.address || ''
-    );
-
-
-  const memo =
-    escapeHtml(
-      order.memo ||
-      order.request ||
-      ''
-    );
-
-
-  const date =
-    escapeHtml(
-      order.created_at ||
-      order.createdAt ||
-      order.date ||
-      ''
-    );
-
-
-  return `
-
-    <tr>
-
-      <td>${date}</td>
-
-      <td>${name}</td>
-
-      <td>${phone}</td>
-
-      <td>${qty}</td>
-
-      <td class="address">
-        ${address}
-      </td>
-
-      <td class="memo">
-        ${memo}
-      </td>
-
-      <td>
-
-        ${statusButton(
-          id,
-          'status_call',
-          order.status_call ||
-          order.callConfirmed,
-          '전화'
-        )}
-
-      </td>
-
-      <td>
-
-        ${statusButton(
-          id,
-          'status_paid',
-          order.status_paid ||
-          order.paid,
-          '입금'
-        )}
-
-      </td>
-
-      <td>
-
-        ${statusButton(
-          id,
-          'status_notice',
-          order.status_notice ||
-          order.notice,
-          '안내'
-        )}
-
-      </td>
-
-      <td>
-
-        ${statusButton(
-          id,
-          'status_shipping',
-          order.status_shipping ||
-          order.shipping,
-          '배송'
-        )}
-
-      </td>
-
-      <td>
-
-        <button
-          class="copy-btn"
-          onclick='copyPaymentMessage(${JSON.stringify(
-            order.name || ''
-          )})'
-        >
-          입금확인 문자 복사
-        </button>
-
-      </td>
-
-    </tr>
-
-  `;
-
+function statusButton(id,key,value,label){
+  const active=value===true||value==='TRUE'||value===1||value==='1';
+  return `<button class="status-btn ${active?'on':'off'}" onclick='toggleOrderStatus(${JSON.stringify(id)},${JSON.stringify(key)},${active?'false':'true'})'>${active?'✓ ':''}${label}</button>`;
 }
-
-
-/* =====================================================
-   상태 버튼
-===================================================== */
-
-function statusButton(
-  id,
-  key,
-  value,
-  label
-) {
-
-  const active =
-    value === true ||
-    value === 'TRUE' ||
-    value === 1 ||
-    value === '1';
-
-
-  return `
-
-    <button
-      class="status-btn ${active ? 'on' : 'off'}"
-      onclick='toggleOrderStatus(
-        ${JSON.stringify(id)},
-        ${JSON.stringify(key)},
-        ${active ? 'false' : 'true'}
-      )'
-    >
-      ${active ? '✓ ' : ''}
-      ${label}
-    </button>
-
-  `;
-
+async function toggleOrderStatus(id,field,value){
+  try{await apiPost({action:'updateOrderStatus',id,field,value});loadOrders();}
+  catch(e){alert('상태 변경 오류: '+e.message);}
 }
-
-
-/* =====================================================
-   주문 상태 변경
-===================================================== */
-
-async function toggleOrderStatus(
-  id,
-  key,
-  value
-) {
-
-  try {
-
-    const payload = {
-
-      action:
-        'updateOrderStatus',
-
-      id:
-        id,
-
-      field:
-        key,
-
-      value:
-        value
-
-    };
-
-
-    const response =
-      await fetch(
-        SCRIPT_URL,
-        {
-
-          method:
-            'POST',
-
-          headers: {
-            'Content-Type':
-              'text/plain;charset=utf-8'
-          },
-
-          body:
-            JSON.stringify(
-              payload
-            )
-
-        }
-      );
-
-
-    const result =
-      await response.json();
-
-
-    if (
-      result.success === false
-    ) {
-
-      throw new Error(
-        result.message ||
-        '상태 변경 실패'
-      );
-
-    }
-
-
-    loadOrders();
-
-  }
-
-  catch (error) {
-
-    alert(
-      '주문 상태 변경 중 오류가 발생했습니다.\n' +
-      error.message
-    );
-
-  }
-
+async function copyPaymentMessage(name){
+  const text=(name||'고객')+' 고객님, 입금 확인되었습니다. 주문해 주셔서 감사합니다.';
+  try{await navigator.clipboard.writeText(text);alert('입금 확인 문구를 복사했습니다.');}
+  catch(e){prompt('아래 문구를 복사해 주세요.',text);}
 }
-
-
-/* =====================================================
-   입금 확인 문자 복사
-===================================================== */
-
-async function copyPaymentMessage(
-  name
-) {
-
-  const customer =
-    name || '고객';
-
-
-  const text =
-    customer +
-    ' 고객님, 입금 확인되었습니다. 주문해 주셔서 감사합니다.';
-
-
-  try {
-
-    await navigator
-      .clipboard
-      .writeText(text);
-
-
-    alert(
-      '입금 확인 문구를 복사했습니다.\n\n' +
-      text
-    );
-
-  }
-
-  catch (error) {
-
-    prompt(
-      '아래 문구를 복사해 주세요.',
-      text
-    );
-
-  }
-
-}
-
-
-/* =====================================================
-   HTML 문자 안전처리
-===================================================== */
-
-function escapeHtml(value) {
-
-  return String(
-    value ?? ''
-  )
-
-  .replace(
-    /&/g,
-    '&amp;'
-  )
-
-  .replace(
-    /</g,
-    '&lt;'
-  )
-
-  .replace(
-    />/g,
-    '&gt;'
-  )
-
-  .replace(
-    /"/g,
-    '&quot;'
-  )
-
-  .replace(
-    /'/g,
-    '&#039;'
-  );
-
-}
-
 </script>
-
 </body>
 </html>
