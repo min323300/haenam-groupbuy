@@ -220,7 +220,8 @@ async function uploadDetailImage(file,i){
     const base64=await fileToDataUrl(file);
     const res=await apiPost({action:'uploadImage',base64Data:base64,fileName:file.name,mimeType:file.type});
     if(!res.success) throw new Error(res.message||'이미지 업로드 실패');
-    productDetailBlocks[i].imageUrl=res.imageUrl||res.url||'';
+    productDetailBlocks[i].imageUrl = res.imageUrl || res.url || res.fileUrl || res.thumbnailUrl || '';
+    productDetailBlocks[i].value = productDetailBlocks[i].imageUrl;
     renderProductDetailBuilder();
     showMessage('productMessage','상세 이미지 업로드 완료');
   }catch(e){showMessage('productMessage','이미지 업로드 오류: '+e.message,true)}
