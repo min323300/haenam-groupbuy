@@ -3,1110 +3,208 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>해남 농산물 공동구매</title>
-<meta name="description" content="해남에서 정성껏 키운 쌀, 배추, 고구마 등 다양한 제철 농산물을 산지 공동구매로 만나보세요.">
-
-<!-- 카카오톡 / SNS 링크 미리보기 -->
+<title>해남공구마켓 | 해남 농수산물 공동구매</title>
+<meta name="description" content="해남의 쌀, 고구마, 배추 등 다양한 농수산물을 공동구매로 만나보세요.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="해남 농산물 공동구매">
-<meta property="og:description" content="쌀·배추·고구마 등 해남에서 정성껏 키운 다양한 제철 농산물을 산지 공동구매로 만나보세요.">
+<meta property="og:title" content="해남공구마켓">
+<meta property="og:description" content="해남 농수산물 공동구매를 한곳에서 확인하세요.">
 <meta property="og:url" content="https://min323300.github.io/haenam-groupbuy/">
 <meta property="og:image" content="https://min323300.github.io/haenam-groupbuy/share.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="해남 농산물 공동구매">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="해남 농산물 공동구매">
-<meta name="twitter:description" content="쌀·배추·고구마 등 해남의 다양한 제철 농산물을 산지 공동구매로 만나보세요.">
 <meta name="twitter:image" content="https://min323300.github.io/haenam-groupbuy/share.png">
-
 <style>
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: Arial, "Noto Sans KR", sans-serif;
-  background: #f6f5f1;
-  color: #222;
-}
-
-.wrap {
-  max-width: 760px;
-  margin: auto;
-  padding: 18px;
-}
-
-.hero {
-  background: #fff;
-  border-radius: 22px;
-  padding: 28px;
-  text-align: center;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.06);
-}
-
-.badge {
-  display: inline-block;
-  background: #198754;
-  color: white;
-  padding: 8px 14px;
-  border-radius: 20px;
-  font-weight: bold;
-}
-
-h1 {
-  margin: 14px 0 8px;
-  font-size: 32px;
-}
-
-.description {
-  line-height: 1.7;
-  color: #555;
-}
-
-.hero-image {
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-  border-radius: 18px;
-  margin-top: 18px;
-  display: block;
-}
-
-.price {
-  font-size: 36px;
-  font-weight: 800;
-  margin: 20px 0 5px;
-}
-
-.card {
-  background: white;
-  margin-top: 18px;
-  padding: 22px;
-  border-radius: 18px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.04);
-}
-
-.card h2 {
-  margin-top: 0;
-}
-
-label {
-  display: block;
-  margin-top: 8px;
-  font-weight: bold;
-}
-
-input,
-select,
-textarea {
-  width: 100%;
-  padding: 13px;
-  margin: 7px 0 13px;
-  border: 1px solid #ccc;
-  border-radius: 10px;
-  font-size: 16px;
-}
-
-textarea {
-  min-height: 80px;
-  resize: vertical;
-}
-
-.privacy-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 5px 0 18px;
-  font-size: 14px;
-  font-weight: normal;
-}
-
-.privacy-row input {
-  width: auto;
-  margin: 3px 0 0;
-}
-
-.order-btn {
-  width: 100%;
-  background: #198754;
-  color: white;
-  border: 0;
-  border-radius: 12px;
-  padding: 16px;
-  font-size: 18px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.order-btn:hover {
-  background: #146c43;
-}
-
-.order-btn:disabled {
-  background: #999;
-  cursor: not-allowed;
-}
-
-#msg {
-  margin-top: 15px;
-  font-weight: bold;
-  line-height: 1.6;
-}
-
-.success {
-  color: #198754;
-}
-
-.error {
-  color: #c62828;
-}
-
-.count-box {
-  text-align: center;
-  padding: 18px;
-  background: #f4faf6;
-  border-radius: 14px;
-  margin-bottom: 15px;
-}
-
-.count {
-  font-size: 38px;
-  font-weight: 800;
-  color: #198754;
-}
-
-.small {
-  font-size: 13px;
-  color: #777;
-  line-height: 1.6;
-}
-
-.recent {
-  padding: 12px 4px;
-  border-bottom: 1px solid #eee;
-}
-
-.recent:last-child {
-  border-bottom: 0;
-}
-
-.loading {
-  color: #777;
-}
-
-.closed {
-  background: #777;
-}
-
-@media (max-width: 600px) {
-  h1 {
-    font-size: 27px;
-  }
-
-  .price {
-    font-size: 31px;
-  }
-
-  .wrap {
-    padding: 10px;
-  }
-
-  .hero,
-  .card {
-    padding: 18px;
-  }
-}
-
-/* 관리자에서 조립하는 상세페이지 */
-.detail-section {
-  margin-top: 18px;
-}
-
-.detail-block {
-  margin: 0 0 18px;
-}
-
-.detail-image {
-  display: block;
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-  border-radius: 14px;
-  background: #fff;
-}
-
-.detail-caption {
-  margin: 10px 4px 0;
-  color: #555;
-  line-height: 1.75;
-  white-space: pre-wrap;
-}
-
-.detail-text {
-  background: #fff;
-  padding: 22px;
-  border-radius: 18px;
-  line-height: 1.85;
-  font-size: 17px;
-  white-space: pre-wrap;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.04);
-}
-
-.detail-price {
-  background: #fff7e8;
-  border: 2px solid #f0b24a;
-  color: #9a5200;
-  padding: 20px;
-  border-radius: 18px;
-  text-align: center;
-  font-size: 27px;
-  font-weight: 800;
-  line-height: 1.45;
-  white-space: pre-wrap;
-}
-
-@media (max-width: 600px) {
-  .detail-text {
-    padding: 18px;
-    font-size: 16px;
-  }
-  .detail-price {
-    font-size: 23px;
-    padding: 17px;
-  }
-}
-
+*{box-sizing:border-box}
+:root{--green:#176c46;--green2:#24915f;--cream:#f7f5ee;--ink:#1e2a23;--muted:#6c756f;--line:#e2e6e2}
+body{margin:0;font-family:Arial,"Noto Sans KR",sans-serif;background:var(--cream);color:var(--ink)}
+header{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.header-in{max-width:1180px;margin:auto;padding:16px 20px;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:24px;font-weight:900;color:var(--green)} .logo small{display:block;font-size:11px;color:#79827c;font-weight:500;margin-top:3px}
+.header-link{color:var(--green);font-weight:700;text-decoration:none}
+.hero{background:linear-gradient(135deg,#eef6ef,#fff8e8);padding:56px 20px}
+.hero-in{max-width:1180px;margin:auto;display:grid;grid-template-columns:1.2fr .8fr;gap:35px;align-items:center}
+.eyebrow{font-size:13px;font-weight:900;letter-spacing:2px;color:var(--green)}
+.hero h1{font-size:48px;line-height:1.18;margin:12px 0 16px;letter-spacing:-2px}
+.hero p{font-size:18px;color:#59635d;line-height:1.75;margin:0}
+.hero-box{background:var(--green);color:#fff;border-radius:26px;padding:30px;box-shadow:0 15px 40px rgba(23,108,70,.18)}
+.hero-box strong{font-size:27px;display:block;margin-bottom:12px} .hero-box span{line-height:1.7;color:#e3f2e9}
+.stats{max-width:1180px;margin:-22px auto 0;padding:0 20px;position:relative;z-index:2}
+.stats-in{background:#fff;border-radius:18px;box-shadow:0 8px 30px rgba(0,0,0,.07);display:grid;grid-template-columns:repeat(3,1fr);overflow:hidden}
+.stat{padding:20px;text-align:center;border-right:1px solid var(--line)} .stat:last-child{border-right:0}
+.stat b{display:block;font-size:25px;color:var(--green);margin-top:5px} .stat span{font-size:12px;color:#777}
+main{max-width:1180px;margin:45px auto;padding:0 20px 70px}
+.section-head{display:flex;justify-content:space-between;gap:15px;align-items:end;margin-bottom:20px}
+.section-head h2{font-size:31px;margin:0} .section-head p{margin:0;color:#777}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.product{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,.06);display:flex;flex-direction:column}
+.imgbox{aspect-ratio:4/3;background:#e9eee9;position:relative;overflow:hidden}
+.imgbox img{width:100%;height:100%;object-fit:cover;display:block}
+.noimg{height:100%;display:flex;align-items:center;justify-content:center;color:#789080;font-size:48px}
+.status{position:absolute;top:13px;left:13px;padding:7px 11px;border-radius:999px;background:#16875a;color:#fff;font-size:12px;font-weight:800}
+.status.end{background:#777} .status.ready{background:#d78a17}
+.product-body{padding:18px;display:flex;flex-direction:column;flex:1}
+.product h3{font-size:21px;margin:0 0 8px} .desc{color:#68736c;font-size:14px;line-height:1.55;min-height:44px}
+.price{font-size:27px;font-weight:900;margin:13px 0 5px} .normal{font-size:13px;color:#999;text-decoration:line-through}
+.timer{margin:14px 0 8px;background:#f5f8f5;border-radius:10px;padding:11px;font-weight:800;color:#b45618}
+.progress-line{display:flex;justify-content:space-between;font-size:13px;margin-top:8px}
+.progress{height:9px;background:#edf0ed;border-radius:999px;overflow:hidden;margin:7px 0 16px} .bar{height:100%;background:var(--green2);width:0}
+.btn{display:block;width:100%;border:0;border-radius:11px;padding:13px;text-align:center;text-decoration:none;font-weight:900;background:var(--green);color:#fff;cursor:pointer;font-size:15px;margin-top:auto}
+.btn.closed{background:#999;cursor:not-allowed}
+.loading,.empty{grid-column:1/-1;text-align:center;padding:55px;background:#fff;border-radius:18px;color:#777}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;padding:20px;overflow:auto}
+.modal.open{display:block} .modal-card{max-width:720px;margin:20px auto;background:#fff;border-radius:22px;overflow:hidden}
+.modal-top{padding:20px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.close{border:0;background:#eee;width:38px;height:38px;border-radius:50%;font-size:22px;cursor:pointer}
+.modal-body{padding:22px}
+.detail-img{width:100%;max-height:480px;object-fit:contain;border-radius:14px;background:#f5f5f5}
+.payment{background:#f1f8f3;border:1px solid #d6e9dc;border-radius:13px;padding:16px;margin:18px 0;line-height:1.8}
+form label{display:block;font-size:13px;font-weight:800;margin:13px 0 6px}
+input,select,textarea{width:100%;padding:12px;border:1px solid #ccd3cc;border-radius:9px;font-size:15px}
+textarea{min-height:80px;resize:vertical} .privacy{display:flex;gap:8px;align-items:flex-start;margin:13px 0;font-size:12px;color:#666} .privacy input{width:auto;margin-top:2px}
+.msg{margin-top:12px;padding:11px;border-radius:9px;display:none} .ok{display:block;background:#e8f6ed;color:#17623f} .err{display:block;background:#fdeaea;color:#a32121}
+footer{background:#203028;color:#dbe4df;text-align:center;padding:30px 20px;font-size:13px}
+@media(max-width:850px){.hero-in{grid-template-columns:1fr}.hero h1{font-size:38px}.grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:580px){.hero{padding:38px 15px}.hero h1{font-size:32px}.hero p{font-size:15px}.grid{grid-template-columns:1fr}main{padding:0 12px 50px}.stats{padding:0 12px}.stat{padding:15px 6px}.stat b{font-size:20px}.section-head{display:block}.section-head p{margin-top:8px}}
 </style>
 </head>
-
 <body>
+<header><div class="header-in"><div class="logo">해남공구마켓<small>해남 농수산물 산지 공동구매</small></div><a class="header-link" href="#products">진행 공구 보기</a></div></header>
+<section class="hero"><div class="hero-in"><div><div class="eyebrow">HAENAM GROUP BUY MARKET</div><h1>해남의 좋은 상품을<br>함께 더 합리적으로</h1><p>쌀·고구마·배추 등 해남에서 준비한 농수산물 공동구매를 한곳에서 확인하세요.<br>남은 기간과 현재 주문 현황도 실시간으로 확인할 수 있습니다.</p></div><div class="hero-box"><strong>🌾 지금 진행 중인 공구</strong><span>관리자에서 상품을 등록하면 이 화면에 자동으로 추가됩니다. 상품별 공구기간·주문현황·결제계좌도 각각 관리됩니다.</span></div></div></section>
+<div class="stats"><div class="stats-in"><div class="stat"><span>진행 중 공구</span><b id="activeCount">-</b></div><div class="stat"><span>전체 주문</span><b id="totalOrders">-</b></div><div class="stat"><span>등록 상품</span><b id="totalProducts">-</b></div></div></div>
+<main id="products"><div class="section-head"><div><div class="eyebrow">NOW OPEN</div><h2>진행 중인 공동구매</h2></div><p>상품을 눌러 주문과 결제계좌를 확인하세요.</p></div><div id="productGrid" class="grid"><div class="loading">공구상품을 불러오는 중입니다.</div></div></main>
+<footer>해남공구마켓 · 해남 농수산물 공동구매</footer>
 
-<div class="wrap">
-
-  <!-- 상품 영역 -->
-  <section class="hero">
-
-    <span class="badge">산지 공동구매</span>
-
-    <h1 id="title">
-      해남 농산물 공동구매
-    </h1>
-
-    <div
-      id="description"
-      class="description"
-    >
-      해남에서 정성껏 준비했습니다.
-    </div>
-
-    <img
-      id="productImage"
-      class="hero-image"
-      src="https://images.unsplash.com/photo-1536304993881-ff6e9eefa2a6?auto=format&fit=crop&w=1200&q=80"
-      alt="상품 이미지"
-    >
-
-    <div class="price">
-      <span id="price">
-        59,900
-      </span>원
-    </div>
-
-  </section>
-
-  <!-- 관리자에서 구성한 상세페이지 -->
-  <section id="detailContent" class="detail-section"></section>
-
-
-  <!-- 주문 -->
-  <section class="card">
-
-    <h2>예약 주문</h2>
-
-    <form id="orderForm">
-
-      <label for="name">
-        성함
-      </label>
-
-      <input
-        id="name"
-        type="text"
-        required
-        autocomplete="name"
-      >
-
-
-      <label for="phone">
-        연락처
-      </label>
-
-      <input
-        id="phone"
-        type="tel"
-        required
-        placeholder="010-0000-0000"
-        autocomplete="tel"
-      >
-
-
-      <label for="qty">
-        주문 수량
-      </label>
-
-      <select id="qty">
-
-        <option value="1">
-          1개
-        </option>
-
-        <option value="2">
-          2개
-        </option>
-
-        <option value="3">
-          3개
-        </option>
-
-        <option value="4">
-          4개
-        </option>
-
-        <option value="5">
-          5개
-        </option>
-
-        <option value="6">
-          6개
-        </option>
-
-        <option value="7">
-          7개
-        </option>
-
-        <option value="8">
-          8개
-        </option>
-
-        <option value="9">
-          9개
-        </option>
-
-        <option value="10">
-          10개
-        </option>
-
-      </select>
-
-
-      <label for="address">
-        배송 주소
-      </label>
-
-      <input
-        id="address"
-        type="text"
-        required
-        autocomplete="street-address"
-      >
-
-
-      <label for="memo">
-        요청사항
-      </label>
-
-      <textarea
-        id="memo"
-        placeholder="배송 시 요청사항 등이 있으면 적어주세요."
-      ></textarea>
-
-
-      <label class="privacy-row">
-
-        <input
-          type="checkbox"
-          id="privacy"
-          required
-        >
-
-        <span>
-          주문 및 배송 처리를 위한
-          개인정보 수집·이용에 동의합니다.
-        </span>
-
-      </label>
-
-
-      <button
-        id="orderButton"
-        class="order-btn"
-        type="submit"
-      >
-        공동구매 예약하기
-      </button>
-
-    </form>
-
-    <div id="msg"></div>
-
-  </section>
-
-
-  <!-- 공동구매 현황 -->
-  <section class="card">
-
-    <h2>공동구매 현황</h2>
-
-    <div class="count-box">
-
-      <div>
-        현재 예약
-      </div>
-
-      <div>
-        <span
-          class="count"
-          id="orderCount"
-        >
-          0
-        </span>
-        건
-      </div>
-
-    </div>
-
-    <p class="small">
-      개인정보 보호를 위해
-      최근 예약자의 이름은 일부만 표시됩니다.
-      전화번호와 주소는 공개되지 않습니다.
-    </p>
-
-    <div id="recentOrders">
-
-      <div class="loading">
-        예약 현황을 불러오는 중입니다.
-      </div>
-
-    </div>
-
-  </section>
-
+<div id="orderModal" class="modal" onclick="backdropClose(event)">
+ <div class="modal-card">
+  <div class="modal-top"><strong id="modalTitle">공구 주문</strong><button class="close" onclick="closeModal()">×</button></div>
+  <div class="modal-body">
+   <img id="modalImage" class="detail-img" alt="상품 이미지" style="display:none">
+   <h2 id="modalProductName"></h2><div id="modalDescription" class="desc"></div>
+   <div class="price" id="modalPrice"></div><div id="modalTimer" class="timer"></div>
+   <div id="paymentBox" class="payment"></div>
+   <form id="orderForm">
+    <label>성함</label><input id="name" required autocomplete="name">
+    <label>연락처</label><input id="phone" type="tel" required placeholder="010-0000-0000" autocomplete="tel">
+    <label>주문 수량</label><select id="qty"><option value="1">1개</option><option value="2">2개</option><option value="3">3개</option><option value="4">4개</option><option value="5">5개</option><option value="6">6개</option><option value="7">7개</option><option value="8">8개</option><option value="9">9개</option><option value="10">10개</option></select>
+    <label>배송 주소</label><input id="address" required autocomplete="street-address">
+    <label>요청사항</label><textarea id="memo" placeholder="배송 시 요청사항을 적어주세요."></textarea>
+    <label class="privacy"><input id="privacy" type="checkbox" required><span>주문 접수와 배송을 위한 개인정보 수집·이용에 동의합니다.</span></label>
+    <button id="orderButton" class="btn" type="submit">공동구매 주문하기</button>
+    <div id="msg" class="msg"></div>
+   </form>
+  </div>
+ </div>
 </div>
 
-
 <script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbz9-pk6kkPk01Lh11agNKxeV1Gjo_kzAPYOXyJ9kXUVY7r8t3ptrLurCjOwdTf31f00ug/exec';
+let products = [];
+let currentProduct = null;
+let timerHandle = null;
 
-/*************************************************
- * Google Apps Script 웹앱 주소
- *************************************************/
-
-const API_URL =
-  "https://script.google.com/macros/s/AKfycbz9-pk6kkPk01Lh11agNKxeV1Gjo_kzAPYOXyJ9kXUVY7r8t3ptrLurCjOwdTf31f00ug/exec";
-
-
-/*************************************************
- * HTML 요소
- *************************************************/
-
-const titleElement =
-  document.getElementById("title");
-
-const descriptionElement =
-  document.getElementById("description");
-
-const priceElement =
-  document.getElementById("price");
-
-const productImage =
-  document.getElementById("productImage");
-
-const detailContent =
-  document.getElementById("detailContent");
-
-const orderForm =
-  document.getElementById("orderForm");
-
-const orderButton =
-  document.getElementById("orderButton");
-
-const messageBox =
-  document.getElementById("msg");
-
-const orderCount =
-  document.getElementById("orderCount");
-
-const recentOrders =
-  document.getElementById("recentOrders");
-
-
-/*************************************************
- * 상품 설정 불러오기
- *************************************************/
-
-async function loadSettings() {
-
-  try {
-
-    const response =
-      await fetch(
-        API_URL +
-        "?action=settings&t=" +
-        Date.now()
-      );
-
-    const data =
-      await response.json();
-
-    if (
-      !data.success ||
-      !data.settings
-    ) {
-      return;
-    }
-
-    const settings =
-      data.settings;
-
-    if (settings.title) {
-      titleElement.textContent =
-        settings.title;
-    }
-
-    if (settings.description) {
-      descriptionElement.textContent =
-        settings.description;
-    }
-
-    if (
-      settings.price !== undefined &&
-      settings.price !== ""
-    ) {
-      priceElement.textContent =
-        Number(settings.price).toLocaleString();
-    }
-
-    /*
-     * 대표 이미지
-     * 기존 설정 시트의 상품이미지도 계속 사용합니다.
-     */
-    if (settings.image) {
-      productImage.src =
-        driveDisplayUrl(settings.image);
-    }
-
-    /*
-     * 관리자에서 만든 상세페이지 블록
-     * 이미지 → 글 → 이미지 → 가격 등 저장된 순서 그대로 표시
-     */
-    let blocks =
-      settings.detailBlocks ||
-      settings.blocks ||
-      "";
-
-    if (
-      typeof blocks === "string" &&
-      blocks.trim()
-    ) {
-      try {
-        blocks = JSON.parse(blocks);
-      } catch (error) {
-        console.error(
-          "상세페이지 데이터 해석 오류:",
-          error
-        );
-        blocks = [];
-      }
-    }
-
-    if (Array.isArray(blocks)) {
-      renderDetailContent(blocks);
-    } else {
-      renderDetailContent([]);
-    }
-
-    /*
-     * 판매상태
-     */
-    if (
-      settings.saleStatus &&
-      settings.saleStatus !== "판매중"
-    ) {
-      orderButton.disabled = true;
-      orderButton.classList.add("closed");
-      orderButton.textContent =
-        "현재 주문이 마감되었습니다.";
-    }
-
-  } catch (error) {
-
-    console.error(
-      "상품 설정 오류:",
-      error
-    );
-
-  }
-
+function s(v){return String(v==null?'':v)}
+function e(v){return s(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+function money(v){return Number(v||0).toLocaleString('ko-KR')+'원'}
+function imageUrl(url){
+ let u=s(url).trim(),id='';
+ if(u.includes('id=')) id=u.split('id=')[1].split('&')[0];
+ else if(u.includes('/file/d/')) id=u.split('/file/d/')[1].split('/')[0];
+ return id?'https://drive.google.com/thumbnail?id='+id+'&sz=w1600':u;
 }
-
-
-/*************************************************
- * Google Drive 이미지 표시 주소
- *************************************************/
-function driveDisplayUrl(url) {
-
-  let imageUrl =
-    String(url || "").trim();
-
-  let fileId = "";
-
-  if (imageUrl.includes("id=")) {
-    fileId =
-      imageUrl
-        .split("id=")[1]
-        .split("&")[0];
-  } else if (
-    imageUrl.includes("/file/d/")
-  ) {
-    fileId =
-      imageUrl
-        .split("/file/d/")[1]
-        .split("/")[0];
-  }
-
-  if (fileId) {
-    return (
-      "https://drive.google.com/thumbnail?id=" +
-      fileId +
-      "&sz=w2000"
-    );
-  }
-
-  return imageUrl;
+function dateOf(v){if(!v)return null;const d=new Date(v);return isNaN(d.getTime())?null:d}
+function stateOf(p){
+ const now=Date.now(),start=dateOf(p.startAt),end=dateOf(p.endAt);
+ if(s(p.saleStatus)==='종료'||(end&&end.getTime()<=now)) return '종료';
+ if(s(p.saleStatus)==='준비중'||(start&&start.getTime()>now)) return '준비중';
+ return '판매중';
 }
-
-
-/*************************************************
- * 상세페이지 블록 출력
- *************************************************/
-function renderDetailContent(blocks) {
-
-  if (!detailContent) {
-    return;
-  }
-
-  const validBlocks =
-    blocks.filter(function(block) {
-      return (
-        block &&
-        block.type &&
-        String(block.value || "").trim()
-      );
-    });
-
-  if (validBlocks.length === 0) {
-    detailContent.innerHTML = "";
-    return;
-  }
-
-  detailContent.innerHTML =
-    validBlocks.map(function(block) {
-
-      const type =
-        String(block.type || "");
-
-      const value =
-        String(block.value || "");
-
-      const caption =
-        String(block.caption || "");
-
-      if (type === "image") {
-
-        const imageUrl =
-          driveDisplayUrl(value);
-
-        return (
-          '<div class="detail-block">' +
-            '<img class="detail-image" ' +
-              'src="' +
-              escapeHtml(imageUrl) +
-              '" alt="상품 상세 이미지" ' +
-              'loading="lazy">' +
-            (
-              caption
-              ? '<div class="detail-caption">' +
-                  escapeHtml(caption) +
-                '</div>'
-              : ''
-            ) +
-          '</div>'
-        );
-
-      }
-
-      if (type === "price") {
-
-        return (
-          '<div class="detail-block detail-price">' +
-            escapeHtml(value) +
-          '</div>'
-        );
-
-      }
-
-      return (
-        '<div class="detail-block detail-text">' +
-          escapeHtml(value) +
-        '</div>'
-      );
-
-    }).join("");
-
+function remainText(p){
+ const st=stateOf(p); if(st==='종료')return '공동구매가 마감되었습니다';
+ const start=dateOf(p.startAt); if(st==='준비중'&&start){
+   const x=start-Date.now(); return x>0?'공구 시작까지 '+duration(x):'공구 준비중';
+ }
+ const end=dateOf(p.endAt); if(!end)return '마감일 확인 중';
+ const x=end-Date.now(); return x>0?'마감까지 '+duration(x):'공동구매가 마감되었습니다';
 }
-
-
-/*************************************************
- * 공개 주문 현황
- *************************************************/
-
-async function loadPublicOrders() {
-
-  try {
-
-    const response =
-      await fetch(
-        API_URL +
-        "?action=publicOrders&t=" +
-        Date.now()
-      );
-
-    const data =
-      await response.json();
-
-
-    if (!data.success) {
-
-      throw new Error(
-        data.message ||
-        "예약현황 조회 실패"
-      );
-
-    }
-
-
-    orderCount.textContent =
-      data.count || 0;
-
-
-    const orders =
-      data.orders || [];
-
-
-    if (orders.length === 0) {
-
-      recentOrders.innerHTML =
-        '<div class="recent">' +
-        '아직 첫 예약을 기다리고 있습니다.' +
-        '</div>';
-
-      return;
-
-    }
-
-
-    recentOrders.innerHTML =
-      orders.map(function(order) {
-
-        return (
-          '<div class="recent">' +
-          '<strong>' +
-          escapeHtml(order.name) +
-          '님</strong>' +
-          ' · ' +
-          Number(order.qty || 1) +
-          '개 예약 접수' +
-          '</div>'
-        );
-
-      }).join("");
-
-
-  } catch (error) {
-
-    console.error(
-      "예약현황 오류:",
-      error
-    );
-
-    recentOrders.innerHTML =
-      '<div class="small">' +
-      '예약 현황을 불러오지 못했습니다.' +
-      '</div>';
-
-  }
-
+function duration(ms){
+ let sec=Math.floor(ms/1000),d=Math.floor(sec/86400);sec%=86400;
+ let h=Math.floor(sec/3600);sec%=3600;let m=Math.floor(sec/60);let ss=sec%60;
+ return (d?d+'일 ':'')+String(h).padStart(2,'0')+'시간 '+String(m).padStart(2,'0')+'분 '+String(ss).padStart(2,'0')+'초';
 }
-
-
-/*************************************************
- * 주문 접수
- *************************************************/
-
-orderForm.addEventListener(
-  "submit",
-  async function(event) {
-
-    event.preventDefault();
-
-
-    if (
-      !document
-        .getElementById("privacy")
-        .checked
-    ) {
-
-      alert(
-        "개인정보 수집·이용에 동의해주세요."
-      );
-
-      return;
-
-    }
-
-
-    const name =
-      document
-        .getElementById("name")
-        .value
-        .trim();
-
-    const phone =
-      document
-        .getElementById("phone")
-        .value
-        .trim();
-
-    const qty =
-      Number(
-        document
-          .getElementById("qty")
-          .value
-      );
-
-    const address =
-      document
-        .getElementById("address")
-        .value
-        .trim();
-
-    const memo =
-      document
-        .getElementById("memo")
-        .value
-        .trim();
-
-
-    if (
-      !name ||
-      !phone ||
-      !address
-    ) {
-
-      alert(
-        "성함, 연락처, 배송 주소를 입력해주세요."
-      );
-
-      return;
-
-    }
-
-
-    const originalText =
-      orderButton.textContent;
-
-
-    orderButton.disabled =
-      true;
-
-    orderButton.textContent =
-      "예약 접수 중...";
-
-
-    messageBox.textContent =
-      "";
-
-    messageBox.className =
-      "";
-
-
-    try {
-
-      const response =
-        await fetch(
-          API_URL,
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "text/plain;charset=utf-8"
-            },
-
-            body: JSON.stringify({
-              action: "addOrder",
-              name: name,
-              phone: phone,
-              qty: qty,
-              address: address,
-              memo: memo
-            })
-          }
-        );
-
-
-      const data =
-        await response.json();
-
-
-      if (!data.success) {
-
-        throw new Error(
-          data.message ||
-          "주문 접수 실패"
-        );
-
-      }
-
-
-      messageBox.className =
-        "success";
-
-
-      messageBox.innerHTML =
-        "예약이 정상적으로 접수되었습니다.<br>" +
-        "주문번호: <strong>" +
-        escapeHtml(
-          data.orderNumber
-        ) +
-        "</strong><br>" +
-        "담당자가 확인 후 연락드리겠습니다.";
-
-
-      orderForm.reset();
-
-
-      if (
-        data.count !== undefined
-      ) {
-
-        orderCount.textContent =
-          data.count;
-
-      }
-
-
-      await loadPublicOrders();
-
-
-    } catch (error) {
-
-      console.error(
-        "주문 오류:",
-        error
-      );
-
-
-      messageBox.className =
-        "error";
-
-
-      messageBox.textContent =
-        "예약 접수 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
-
-    } finally {
-
-      /*
-       * 판매중일 경우에만
-       * 버튼 다시 활성화
-       */
-
-      if (
-        orderButton.textContent !==
-        "현재 주문이 마감되었습니다."
-      ) {
-
-        orderButton.disabled =
-          false;
-
-        orderButton.textContent =
-          originalText;
-
-      }
-
-    }
-
-  }
-);
-
-
-/*************************************************
- * HTML 문자 안전 처리
- *************************************************/
-
-function escapeHtml(value) {
-
-  return String(
-    value === undefined ||
-    value === null
-      ? ""
-      : value
-  )
-  .replace(
-    /&/g,
-    "&amp;"
-  )
-  .replace(
-    /</g,
-    "&lt;"
-  )
-  .replace(
-    />/g,
-    "&gt;"
-  )
-  .replace(
-    /"/g,
-    "&quot;"
-  )
-  .replace(
-    /'/g,
-    "&#039;"
-  );
-
+async function loadProducts(){
+ try{
+  const r=await fetch(API_URL+'?action=products&t='+Date.now());
+  const data=await r.json();
+  if(data.success===false)throw new Error(data.message||'상품 조회 실패');
+  products=Array.isArray(data.products)?data.products:[];
+  renderProducts();
+ }catch(err){
+  document.getElementById('productGrid').innerHTML='<div class="empty">상품을 불러오지 못했습니다.<br>'+e(err.message)+'</div>';
+ }
 }
-
-
-/*************************************************
- * 페이지 시작
- *************************************************/
-
-loadSettings();
-
-loadPublicOrders();
-
-
-/*
- * 30초마다 예약 건수 새로고침
- */
-
-setInterval(
-  loadPublicOrders,
-  30000
-);
-
+function renderProducts(){
+ const grid=document.getElementById('productGrid');
+ document.getElementById('totalProducts').textContent=products.length+'개';
+ document.getElementById('activeCount').textContent=products.filter(p=>stateOf(p)==='판매중').length+'개';
+ document.getElementById('totalOrders').textContent=products.reduce((a,p)=>a+Number(p.orderCount||0),0)+'건';
+ if(!products.length){grid.innerHTML='<div class="empty">현재 등록된 공구상품이 없습니다.</div>';return}
+ const sorted=[...products].sort((a,b)=>{const rank={'판매중':0,'준비중':1,'종료':2};return rank[stateOf(a)]-rank[stateOf(b)]});
+ grid.innerHTML=sorted.map(p=>{
+   const st=stateOf(p),target=Number(p.targetOrders||0),count=Number(p.orderCount||0);
+   const percent=target>0?Math.min(100,Math.round(count/target*100)):0;
+   const img=imageUrl(p.image);
+   const btn=st==='판매중'?`<button class="btn" onclick="openProduct('${e(p.productCode)}')">공구 참여하기</button>`:
+     st==='준비중'?`<button class="btn closed" disabled>공구 준비중</button>`:`<button class="btn closed" disabled>공구 마감</button>`;
+   return `<article class="product">
+    <div class="imgbox">${img?`<img src="${e(img)}" alt="${e(p.productName)}">`:'<div class="noimg">🌾</div>'}<span class="status ${st==='종료'?'end':st==='준비중'?'ready':''}">${st}</span></div>
+    <div class="product-body"><h3>${e(p.productName)}</h3><div class="desc">${e(p.description||'해남에서 준비한 공동구매 상품입니다.')}</div>
+    <div class="price">${money(p.salePrice)}</div>${Number(p.normalPrice)>Number(p.salePrice)?`<div class="normal">${money(p.normalPrice)}</div>`:''}
+    <div class="timer" data-code="${e(p.productCode)}">${remainText(p)}</div>
+    <div class="progress-line"><span>현재 <b>${count}건</b></span><span>목표 ${target||'-'}건</span></div>
+    <div class="progress"><div class="bar" style="width:${percent}%"></div></div>${btn}</div></article>`;
+ }).join('');
+}
+function tick(){
+ document.querySelectorAll('.timer[data-code]').forEach(el=>{const p=products.find(x=>s(x.productCode)===el.dataset.code);if(p)el.textContent=remainText(p)});
+ if(currentProduct)document.getElementById('modalTimer').textContent=remainText(currentProduct);
+}
+function openProduct(code){
+ const p=products.find(x=>s(x.productCode)===s(code)); if(!p)return;
+ if(p.linkUrl){window.location.href=p.linkUrl;return}
+ currentProduct=p;
+ modalTitle.textContent='공동구매 주문';
+ modalProductName.textContent=p.productName||'상품';
+ modalDescription.textContent=p.description||'';
+ modalPrice.textContent=money(p.salePrice);
+ modalTimer.textContent=remainText(p);
+ const img=imageUrl(p.image); modalImage.style.display=img?'block':'none'; if(img)modalImage.src=img;
+ let pay='<b>결제 안내</b><br>';
+ if(p.paymentMethod)pay+='결제방식: '+e(p.paymentMethod)+'<br>';
+ if(p.bankName||p.accountNumber)pay+='입금계좌: '+e(p.bankName)+' '+e(p.accountNumber)+'<br>';
+ if(p.accountHolder)pay+='예금주: '+e(p.accountHolder)+'<br>';
+ if(p.paymentMessage)pay+='<div style="margin-top:6px">'+e(p.paymentMessage)+'</div>';
+ paymentBox.innerHTML=pay;
+ orderModal.classList.add('open');document.body.style.overflow='hidden';
+}
+function closeModal(){orderModal.classList.remove('open');document.body.style.overflow=''}
+function backdropClose(ev){if(ev.target.id==='orderModal')closeModal()}
+orderForm.addEventListener('submit',async ev=>{
+ ev.preventDefault(); if(!currentProduct)return;
+ if(stateOf(currentProduct)!=='판매중'){showMsg('현재 주문할 수 없는 상품입니다.',true);return}
+ orderButton.disabled=true;orderButton.textContent='주문 접수 중...';
+ try{
+  const payload={action:'addOrder',productCode:currentProduct.productCode,productName:currentProduct.productName,
+    name:name.value.trim(),phone:phone.value.trim(),qty:qty.value,address:address.value.trim(),memo:memo.value.trim()};
+  const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+  const data=await r.json(); if(data.success===false)throw new Error(data.message||'주문 접수 실패');
+  showMsg('주문이 정상적으로 접수되었습니다. 결제 안내에 따라 입금해 주세요.',false);
+  orderForm.reset(); currentProduct.orderCount=Number(currentProduct.orderCount||0)+1; renderProducts();
+ }catch(err){showMsg('주문 오류: '+err.message,true)}
+ finally{orderButton.disabled=false;orderButton.textContent='공동구매 주문하기'}
+});
+function showMsg(text,isErr){msg.textContent=text;msg.className='msg '+(isErr?'err':'ok')}
+loadProducts();timerHandle=setInterval(tick,1000);
 </script>
-
 </body>
 </html>
