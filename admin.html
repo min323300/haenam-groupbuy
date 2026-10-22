@@ -322,6 +322,21 @@
         width: 100%;
       }
     }
+
+    /* 상세페이지 블록 편집기 */
+    .detail-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+    .detail-builder{border:1px solid #ddd;border-radius:14px;background:#fafafa;padding:14px;min-height:100px}
+    .detail-empty{text-align:center;color:#777;padding:28px 10px}
+    .detail-block{background:#fff;border:1px solid #ddd;border-radius:12px;padding:14px;margin-bottom:12px}
+    .detail-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}
+    .detail-actions{display:flex;gap:5px;flex-wrap:wrap}
+    .detail-actions button{padding:7px 10px;font-size:12px}
+    .detail-block textarea,.detail-block input[type="text"]{width:100%}
+    .detail-block textarea{min-height:110px;resize:vertical}
+    .detail-drop{width:100%;min-height:120px;border:2px dashed #aaa;border-radius:12px;background:#fafafa;display:flex;align-items:center;justify-content:center;text-align:center;padding:18px;cursor:pointer}
+    .detail-drop.dragover{border-color:#16875a;background:#e9f7ef}
+    .detail-preview{display:block;max-width:100%;height:auto;max-height:none;object-fit:contain;margin:10px auto;border-radius:8px;background:#f7f7f7}
+
   </style>
 </head>
 
@@ -337,147 +352,33 @@
   <!-- ======================================= -->
 
   <section class="card">
-
     <h2>랜딩페이지 내용 변경</h2>
-
     <div class="row">
-
-      <input
-        type="text"
-        id="title"
-        placeholder="상품명"
-      >
-
-      <input
-        type="number"
-        id="price"
-        placeholder="판매가격"
-      >
-
+      <input type="text" id="title" placeholder="상품명">
+      <input type="number" id="price" placeholder="판매가격">
     </div>
+    <textarea id="desc" placeholder="상품 상단 설명"></textarea>
 
-
-    <!-- 이미지 업로드 -->
-
-    <div class="upload-title">
-      상품 이미지
+    <h2 style="margin-top:26px;">상세페이지 구성</h2>
+    <p style="color:#666;line-height:1.6;">
+      이미지·글·가격/강조문구를 원하는 순서대로 추가하세요.
+      긴 세로 이미지도 원본 비율로 등록할 수 있습니다.
+    </p>
+    <div class="detail-toolbar">
+      <button type="button" class="primary" onclick="addDetailBlock('image')">+ 이미지 추가</button>
+      <button type="button" class="secondary" onclick="addDetailBlock('text')">+ 글 추가</button>
+      <button type="button" class="secondary" onclick="addDetailBlock('price')">+ 가격/강조문구 추가</button>
     </div>
+    <div id="detailBuilder" class="detail-builder"></div>
+    <div id="uploadStatus" class="upload-status"></div>
 
-    <div
-      id="dropZone"
-      class="drop-zone"
-    >
+    <input type="hidden" id="imageUrl">
 
-      <div>
-
-        <div class="drop-icon">
-          📷
-        </div>
-
-        <div class="drop-main">
-          여기에 상품 사진을 끌어다 놓으세요
-        </div>
-
-        <div class="drop-sub">
-          또는 여기를 클릭해서 PC에서 사진을 선택하세요
-        </div>
-
-      </div>
-
+    <div style="margin-top:18px;">
+      <button type="button" class="primary" onclick="saveSettings()">전체 내용 저장</button>
     </div>
-
-
-    <input
-      type="file"
-      id="fileInput"
-      accept="image/jpeg,image/png,image/webp"
-    >
-
-
-    <!-- 사진 미리보기 -->
-
-    <div
-      id="previewBox"
-      class="preview-box"
-    >
-
-      <img
-        id="previewImage"
-        alt="상품 이미지 미리보기"
-      >
-
-      <div
-        id="fileInfo"
-        class="file-info"
-      ></div>
-
-      <div class="upload-actions">
-
-        <button
-          type="button"
-          class="primary"
-          id="uploadButton"
-          onclick="uploadSelectedImage()"
-        >
-          이 사진 업로드
-        </button>
-
-        <button
-          type="button"
-          class="secondary"
-          onclick="cancelSelectedImage()"
-        >
-          취소
-        </button>
-
-      </div>
-
-    </div>
-
-
-    <div
-      id="uploadStatus"
-      class="upload-status"
-    ></div>
-
-
-    <!-- 실제 저장되는 이미지 주소 -->
-
-    <input
-      type="text"
-      id="imageUrl"
-      placeholder="상품 이미지 URL - 사진을 업로드하면 자동으로 입력됩니다."
-    >
-
-
-    <textarea
-      id="desc"
-      placeholder="상품 설명"
-    ></textarea>
-
-
-    <div style="margin-top:14px;">
-
-      <button
-        type="button"
-        class="primary"
-        onclick="saveSettings()"
-      >
-        내용 저장
-      </button>
-
-    </div>
-
-    <div
-      id="saveMessage"
-      class="save-message"
-    >
-      저장되었습니다.
-    </div>
-
+    <div id="saveMessage" class="save-message">저장되었습니다.</div>
   </section>
-
-
 
   <!-- ======================================= -->
   <!-- 주문 관리 -->
@@ -576,8 +477,6 @@ let selectedFile = null;
 
 document.addEventListener('DOMContentLoaded', function () {
 
-  setupImageUpload();
-
   loadSettings();
 
   loadOrders();
@@ -586,638 +485,268 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 /* =====================================================
-   이미지 드래그앤드롭
+   상세페이지 블록 편집기
 ===================================================== */
+let detailBlocks = [];
+let detailSeq = 0;
 
-function setupImageUpload() {
-
-  const dropZone =
-    document.getElementById('dropZone');
-
-  const fileInput =
-    document.getElementById('fileInput');
-
-
-  dropZone.addEventListener(
-    'click',
-    function () {
-
-      fileInput.click();
-
-    }
-  );
-
-
-  fileInput.addEventListener(
-    'change',
-    function (event) {
-
-      if (
-        event.target.files &&
-        event.target.files[0]
-      ) {
-
-        selectImage(
-          event.target.files[0]
-        );
-
-      }
-
-    }
-  );
-
-
-  dropZone.addEventListener(
-    'dragover',
-    function (event) {
-
-      event.preventDefault();
-
-      dropZone.classList.add(
-        'dragover'
-      );
-
-    }
-  );
-
-
-  dropZone.addEventListener(
-    'dragleave',
-    function () {
-
-      dropZone.classList.remove(
-        'dragover'
-      );
-
-    }
-  );
-
-
-  dropZone.addEventListener(
-    'drop',
-    function (event) {
-
-      event.preventDefault();
-
-      dropZone.classList.remove(
-        'dragover'
-      );
-
-
-      const files =
-        event.dataTransfer.files;
-
-
-      if (
-        files &&
-        files.length > 0
-      ) {
-
-        selectImage(
-          files[0]
-        );
-
-      }
-
-    }
-  );
-
+function detailId() {
+  detailSeq += 1;
+  return 'detail_' + Date.now() + '_' + detailSeq;
 }
 
+function addDetailBlock(type, value = '', caption = '') {
+  detailBlocks.push({ id: detailId(), type, value, caption });
+  renderDetailBlocks();
+}
 
-/* =====================================================
-   사진 선택
-===================================================== */
+function renderDetailBlocks() {
+  const root = document.getElementById('detailBuilder');
 
-function selectImage(file) {
-
-  if (
-    !file.type.startsWith('image/')
-  ) {
-
-    alert(
-      '이미지 파일만 선택해 주세요.'
-    );
-
+  if (!detailBlocks.length) {
+    root.innerHTML = '<div class="detail-empty">아직 상세 내용이 없습니다.<br>위 버튼으로 이미지나 글을 추가해 주세요.</div>';
     return;
-
   }
 
+  root.innerHTML = detailBlocks.map(function (block, index) {
+    const label = block.type === 'image' ? '이미지' :
+                  block.type === 'price' ? '가격 / 강조문구' : '글';
 
-  /*
-    너무 큰 사진은 업로드 실패 가능성이 있으므로
-    8MB 제한
-  */
+    let editor = '';
 
-  const maxSize =
-    8 * 1024 * 1024;
+    if (block.type === 'text') {
+      editor = `<textarea placeholder="설명글을 입력하세요."
+        oninput="setDetailValue('${block.id}', this.value)">${escapeHtml(block.value)}</textarea>`;
+    }
 
+    if (block.type === 'price') {
+      editor = `<input type="text" placeholder="예: 20kg 공동구매 특가 59,900원"
+        value="${escapeHtml(block.value)}"
+        oninput="setDetailValue('${block.id}', this.value)">`;
+    }
 
-  if (
-    file.size > maxSize
-  ) {
+    if (block.type === 'image') {
+      editor = `
+        <div id="drop_${block.id}" class="detail-drop"
+          onclick="document.getElementById('file_${block.id}').click()">
+          📷<br>${block.value ? '클릭하거나 끌어다 놓아 이미지 교체' : '클릭하거나 이미지를 끌어다 놓으세요'}
+        </div>
+        <input id="file_${block.id}" type="file"
+          accept="image/jpeg,image/png,image/webp" style="display:none"
+          onchange="selectDetailImage('${block.id}', this.files[0])">
+        ${block.value ? `<img class="detail-preview" src="${escapeHtml(driveDisplayUrl(block.value))}" alt="상세 이미지">` : ''}
+        <input type="text" placeholder="이미지 아래 설명 (선택)"
+          value="${escapeHtml(block.caption || '')}"
+          oninput="setDetailCaption('${block.id}', this.value)">
+      `;
+    }
 
-    alert(
-      '사진 용량이 너무 큽니다.\n8MB 이하 사진을 사용해 주세요.'
-    );
+    return `
+      <div class="detail-block">
+        <div class="detail-head">
+          <strong>${index + 1}. ${label}</strong>
+          <div class="detail-actions">
+            <button type="button" class="secondary" onclick="moveDetail(${index}, -1)">↑ 위</button>
+            <button type="button" class="secondary" onclick="moveDetail(${index}, 1)">↓ 아래</button>
+            <button type="button" class="danger" onclick="removeDetail(${index})">삭제</button>
+          </div>
+        </div>
+        ${editor}
+      </div>`;
+  }).join('');
 
+  setupDetailDrops();
+}
+
+function setDetailValue(id, value) {
+  const block = detailBlocks.find(b => b.id === id);
+  if (block) block.value = value;
+}
+function setDetailCaption(id, value) {
+  const block = detailBlocks.find(b => b.id === id);
+  if (block) block.caption = value;
+}
+function removeDetail(index) {
+  if (confirm('이 블록을 삭제할까요?')) {
+    detailBlocks.splice(index, 1);
+    renderDetailBlocks();
+  }
+}
+function moveDetail(index, direction) {
+  const target = index + direction;
+  if (target < 0 || target >= detailBlocks.length) return;
+  [detailBlocks[index], detailBlocks[target]] = [detailBlocks[target], detailBlocks[index]];
+  renderDetailBlocks();
+}
+
+function setupDetailDrops() {
+  detailBlocks.filter(b => b.type === 'image').forEach(function (block) {
+    const zone = document.getElementById('drop_' + block.id);
+    if (!zone) return;
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      zone.classList.remove('dragover');
+      const file = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file) selectDetailImage(block.id, file);
+    });
+  });
+}
+
+function selectDetailImage(id, file) {
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    alert('이미지 파일만 선택해 주세요.');
     return;
-
   }
-
-
-  selectedFile = file;
-
-
-  const reader =
-    new FileReader();
-
-
-  reader.onload =
-    function (event) {
-
-      document
-        .getElementById('previewImage')
-        .src =
-        event.target.result;
-
-
-      document
-        .getElementById('previewBox')
-        .style.display =
-        'block';
-
-
-      document
-        .getElementById('fileInfo')
-        .textContent =
-        file.name +
-        ' / ' +
-        formatFileSize(
-          file.size
-        );
-
-    };
-
-
-  reader.readAsDataURL(file);
-
-}
-
-
-/* =====================================================
-   파일 크기 표시
-===================================================== */
-
-function formatFileSize(bytes) {
-
-  if (
-    bytes < 1024
-  ) {
-
-    return bytes + ' B';
-
-  }
-
-
-  if (
-    bytes < 1024 * 1024
-  ) {
-
-    return (
-      bytes / 1024
-    ).toFixed(1) +
-    ' KB';
-
-  }
-
-
-  return (
-    bytes /
-    1024 /
-    1024
-  ).toFixed(1) +
-  ' MB';
-
-}
-
-
-/* =====================================================
-   선택 취소
-===================================================== */
-
-function cancelSelectedImage() {
-
-  selectedFile = null;
-
-
-  document
-    .getElementById('fileInput')
-    .value = '';
-
-
-  document
-    .getElementById('previewBox')
-    .style.display =
-    'none';
-
-
-  setUploadStatus(
-    '',
-    ''
-  );
-
-}
-
-
-/* =====================================================
-   이미지 Google Drive 업로드
-===================================================== */
-
-function uploadSelectedImage() {
-
-  if (
-    !selectedFile
-  ) {
-
-    alert(
-      '먼저 사진을 선택해 주세요.'
-    );
-
+  if (file.size > 8 * 1024 * 1024) {
+    alert('8MB 이하 이미지를 사용해 주세요.');
     return;
-
   }
-
-
-  const button =
-    document.getElementById(
-      'uploadButton'
-    );
-
-
-  button.disabled = true;
-
-  button.textContent =
-    '업로드 중...';
-
-
-  setUploadStatus(
-    'loading',
-    '사진을 Google Drive에 업로드하고 있습니다. 잠시 기다려 주세요.'
-  );
-
-
-  const reader =
-    new FileReader();
-
-
-  reader.onload =
-    async function (event) {
-
-      try {
-
-        const payload = {
-
-          action:
-            'uploadImage',
-
-          fileName:
-            selectedFile.name,
-
-          mimeType:
-            selectedFile.type,
-
-          base64Data:
-            event.target.result
-
-        };
-
-
-        const response =
-          await fetch(
-            SCRIPT_URL,
-            {
-
-              method:
-                'POST',
-
-              headers: {
-                'Content-Type':
-                  'text/plain;charset=utf-8'
-              },
-
-              body:
-                JSON.stringify(
-                  payload
-                )
-
-            }
-          );
-
-
-        const result =
-          await response.json();
-
-
-        if (
-          !result.success
-        ) {
-
-          throw new Error(
-            result.message ||
-            '이미지 업로드에 실패했습니다.'
-          );
-
-        }
-
-
-        document
-          .getElementById(
-            'imageUrl'
-          )
-          .value =
-          result.imageUrl;
-
-
-        setUploadStatus(
-          'success',
-          '사진 업로드가 완료되었습니다. 아래의 "내용 저장" 버튼을 눌러 주세요.'
-        );
-
-
-        selectedFile = null;
-
-
-        document
-          .getElementById(
-            'fileInput'
-          )
-          .value = '';
-
-
-      }
-
-      catch (error) {
-
-        console.error(error);
-
-
-        setUploadStatus(
-          'error',
-          '사진 업로드 중 오류가 발생했습니다: ' +
-          error.message
-        );
-
-      }
-
-      finally {
-
-        button.disabled =
-          false;
-
-        button.textContent =
-          '이 사진 업로드';
-
-      }
-
-    };
-
-
-  reader.readAsDataURL(
-    selectedFile
-  );
-
+  uploadDetailImage(id, file);
 }
 
+function fileToDataUrl(file) {
+  return new Promise(function (resolve, reject) {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
-/* =====================================================
-   업로드 상태
-===================================================== */
+async function uploadDetailImage(id, file) {
+  setUploadStatus('loading', '이미지를 업로드하고 있습니다...');
+  try {
+    const base64Data = await fileToDataUrl(file);
+    const response = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'uploadImage',
+        fileName: file.name,
+        mimeType: file.type,
+        base64Data: base64Data
+      })
+    });
+    const result = await response.json();
+    if (!result.success) throw new Error(result.message || '이미지 업로드 실패');
 
-function setUploadStatus(
-  type,
-  message
-) {
+    const block = detailBlocks.find(b => b.id === id);
+    if (block) block.value = result.imageUrl;
 
-  const box =
-    document.getElementById(
-      'uploadStatus'
-    );
+    const firstImage = detailBlocks.find(b => b.type === 'image' && b.value);
+    document.getElementById('imageUrl').value = firstImage ? firstImage.value : '';
 
+    setUploadStatus('success', '이미지 업로드 완료. 마지막에 "전체 내용 저장"을 눌러 주세요.');
+    renderDetailBlocks();
+  } catch (error) {
+    setUploadStatus('error', '이미지 업로드 오류: ' + error.message);
+  }
+}
 
-  box.className =
-    'upload-status';
+function driveDisplayUrl(url) {
+  let imageUrl = String(url || '').trim();
+  let fileId = '';
+  if (imageUrl.includes('id=')) fileId = imageUrl.split('id=')[1].split('&')[0];
+  else if (imageUrl.includes('/file/d/')) fileId = imageUrl.split('/file/d/')[1].split('/')[0];
+  if (fileId) return 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w1600';
+  return imageUrl;
+}
 
-
-  if (
-    !type
-  ) {
-
-    box.style.display =
-      'none';
-
-    box.textContent =
-      '';
-
+function setUploadStatus(type, message) {
+  const box = document.getElementById('uploadStatus');
+  box.className = 'upload-status';
+  if (!type) {
+    box.style.display = 'none';
+    box.textContent = '';
     return;
-
   }
-
-
-  box.classList.add(
-    type
-  );
-
-
-  box.textContent =
-    message;
-
+  box.classList.add(type);
+  box.textContent = message;
 }
-
 
 /* =====================================================
    설정 불러오기
 ===================================================== */
-
 async function loadSettings() {
-
   try {
+    const response = await fetch(SCRIPT_URL + '?action=settings&_=' + Date.now());
+    const result = await response.json();
+    const data = result.settings || result.data || result || {};
 
-    const response =
-      await fetch(
-        SCRIPT_URL +
-        '?action=settings'
-      );
+    document.getElementById('title').value = data.title || '';
+    document.getElementById('price').value = data.price || '';
+    document.getElementById('imageUrl').value = data.image || data.imageUrl || '';
+    document.getElementById('desc').value = data.description || data.desc || '';
 
-
-    const result =
-      await response.json();
-
-
-    const data =
-      result.settings ||
-      result.data ||
-      result;
-
-
-    if (
-      !data
-    ) {
-
-      return;
-
+    let blocks = data.detailBlocks || data.blocks || '';
+    if (typeof blocks === 'string' && blocks.trim()) {
+      try { blocks = JSON.parse(blocks); } catch (e) { blocks = []; }
     }
 
-
-    document
-      .getElementById('title')
-      .value =
-      data.title || '';
-
-
-    document
-      .getElementById('price')
-      .value =
-      data.price || '';
-
-
-    document
-      .getElementById('imageUrl')
-      .value =
-      data.image ||
-      data.imageUrl ||
-      '';
-
-
-    document
-      .getElementById('desc')
-      .value =
-      data.description ||
-      data.desc ||
-      '';
-
+    if (Array.isArray(blocks) && blocks.length) {
+      detailBlocks = blocks.map(function (b) {
+        return {
+          id: detailId(),
+          type: b.type || 'text',
+          value: String(b.value || ''),
+          caption: String(b.caption || '')
+        };
+      });
+    } else {
+      detailBlocks = [];
+      const oldImage = data.image || data.imageUrl || '';
+      const oldDesc = data.description || data.desc || '';
+      if (oldImage) addDetailBlock('image', oldImage, '');
+      if (oldDesc) addDetailBlock('text', oldDesc, '');
+    }
+    renderDetailBlocks();
+  } catch (error) {
+    console.error('설정 불러오기 오류:', error);
+    renderDetailBlocks();
   }
-
-  catch (error) {
-
-    console.error(
-      '설정 불러오기 오류:',
-      error
-    );
-
-  }
-
 }
-
 
 /* =====================================================
    랜딩페이지 설정 저장
 ===================================================== */
-
 async function saveSettings() {
+  const cleanBlocks = detailBlocks.map(function (b) {
+    return {
+      type: b.type,
+      value: String(b.value || '').trim(),
+      caption: String(b.caption || '').trim()
+    };
+  }).filter(b => b.value);
+
+  const firstImage = cleanBlocks.find(b => b.type === 'image');
 
   const payload = {
-
-    action:
-      'updateSettings',
-
-    title:
-      document
-        .getElementById('title')
-        .value
-        .trim(),
-
-    price:
-      document
-        .getElementById('price')
-        .value,
-
-    image:
-      document
-        .getElementById('imageUrl')
-        .value
-        .trim(),
-
-    description:
-      document
-        .getElementById('desc')
-        .value
-        .trim()
-
+    action: 'updateSettings',
+    title: document.getElementById('title').value.trim(),
+    price: document.getElementById('price').value,
+    image: firstImage ? firstImage.value : document.getElementById('imageUrl').value.trim(),
+    description: document.getElementById('desc').value.trim(),
+    detailBlocks: JSON.stringify(cleanBlocks)
   };
 
-
   try {
+    const response = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (result.success === false) throw new Error(result.message || '저장 실패');
 
-    const response =
-      await fetch(
-        SCRIPT_URL,
-        {
-
-          method:
-            'POST',
-
-          headers: {
-            'Content-Type':
-              'text/plain;charset=utf-8'
-          },
-
-          body:
-            JSON.stringify(
-              payload
-            )
-
-        }
-      );
-
-
-    const result =
-      await response.json();
-
-
-    if (
-      result.success === false
-    ) {
-
-      throw new Error(
-        result.message ||
-        '저장 실패'
-      );
-
-    }
-
-
-    const message =
-      document.getElementById(
-        'saveMessage'
-      );
-
-
-    message.style.display =
-      'block';
-
-
-    setTimeout(
-      function () {
-
-        message.style.display =
-          'none';
-
-      },
-      3000
-    );
-
+    const message = document.getElementById('saveMessage');
+    message.style.display = 'block';
+    setTimeout(() => message.style.display = 'none', 3000);
+  } catch (error) {
+    alert('저장 중 오류가 발생했습니다.\\n' + error.message);
   }
-
-  catch (error) {
-
-    alert(
-      '저장 중 오류가 발생했습니다.\n' +
-      error.message
-    );
-
-  }
-
 }
 
 
