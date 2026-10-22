@@ -109,10 +109,28 @@ function s(v){return String(v==null?'':v)}
 function e(v){return s(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
 function money(v){return Number(v||0).toLocaleString('ko-KR')+'원'}
 function imageUrl(url){
- let u=s(url).trim(),id='';
- if(u.includes('id=')) id=u.split('id=')[1].split('&')[0];
- else if(u.includes('/file/d/')) id=u.split('/file/d/')[1].split('/')[0];
- return id?'https://drive.google.com/thumbnail?id='+id+'&sz=w1600':u;
+  let u = String(url || '').trim();
+  if(!u) return '';
+
+  let id = '';
+
+  // drive.google.com/uc?...&id=파일ID
+  const idMatch = u.match(/[?&]id=([^&]+)/);
+  if(idMatch) id = idMatch[1];
+
+  // drive.google.com/file/d/파일ID/view
+  if(!id){
+    const fileMatch = u.match(/\/file\/d\/([^/]+)/);
+    if(fileMatch) id = fileMatch[1];
+  }
+
+  if(id){
+    return 'https://drive.google.com/thumbnail?id='
+      + encodeURIComponent(id)
+      + '&sz=w1600';
+  }
+
+  return u;
 }
 function dateOf(v){if(!v)return null;const d=new Date(v);return isNaN(d.getTime())?null:d}
 function stateOf(p){
