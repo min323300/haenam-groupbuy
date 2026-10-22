@@ -187,10 +187,18 @@ function renderDetailBlocks(p){
  const blocks=parseDetailBlocks(p);
  box.innerHTML=blocks.map(b=>{
   const type=s(b.type||b.kind).toLowerCase();
-  if(type==='image'){
-   const src=imageUrl(b.url||b.imageUrl||b.src||b.value||'');
-   return src?`<div class="detail-block image"><img src="${e(src)}" alt="${e(p.productName)} 상세 이미지" loading="lazy"></div>`:'';
-  }
+if(type==='image'){
+  const raw = b.imageUrl || b.url || b.src || b.value || b.image || '';
+  const src = imageUrl(raw);
+
+  return src
+    ? `<div class="detail-block image">
+         <img src="${e(src)}"
+              alt="${e(p.productName)} 상세 이미지"
+              style="width:100%;height:auto;display:block;border-radius:12px;margin:12px 0;">
+       </div>`
+    : '';
+}
   if(type==='text'){
    const text=b.text||b.content||b.value||'';
    return text?`<div class="detail-block text">${e(text)}</div>`:'';
