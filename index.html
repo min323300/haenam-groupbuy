@@ -518,12 +518,30 @@ async function loadSettings() {
     }
 
 
-    if (settings.image) {
+   if (settings.image) {
 
-      productImage.src =
-        settings.image;
+    let imageUrl = settings.image.trim();
 
+    // Google Drive 파일 ID 추출
+    let fileId = "";
+
+    if (imageUrl.includes("id=")) {
+        fileId = imageUrl.split("id=")[1].split("&")[0];
+    } else if (imageUrl.includes("/file/d/")) {
+        fileId = imageUrl.split("/file/d/")[1].split("/")[0];
     }
+
+    // Google Drive 이미지면 썸네일 전용 주소로 변환
+    if (fileId) {
+        imageUrl =
+            "https://drive.google.com/thumbnail?id=" +
+            fileId +
+            "&sz=w1600";
+    }
+
+    productImage.src = imageUrl;
+
+} 
 
 
     /*
