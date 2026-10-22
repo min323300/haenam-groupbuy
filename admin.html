@@ -35,7 +35,7 @@
     .detail-actions{display:flex;gap:5px;flex-wrap:wrap}
     .detail-actions button{padding:6px 9px;font-size:12px}
     .detail-drop{min-height:110px;border:2px dashed #aaa;border-radius:10px;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px}
-    .detail-preview{display:block;max-width:100%;max-height:360px;height:auto;margin:10px auto;border-radius:8px}
+    .detail-preview{display:block;max-width:100%;max-height:420px;height:auto;margin:10px auto;border-radius:10px}
     .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#edf6f0;color:#17623f;font-size:12px;font-weight:700}
     .table-wrap{overflow-x:auto}
     table{width:100%;border-collapse:collapse;min-width:1200px}
@@ -185,9 +185,26 @@ function renderProductDetailBuilder(){
     const label=b.type==='image'?'이미지':b.type==='price'?'강조문구':'글';
     let body='';
     if(b.type==='image'){
-      body=`<input value="${esc(b.imageUrl||b.value||'')}" placeholder="이미지 URL" oninput="updateProductBlock(${i},'imageUrl',this.value)">
-      <div class="toolbar"><button class="secondary" type="button" onclick="chooseDetailImage(${i})">이미지 파일 업로드</button></div>
-      ${(b.imageUrl||b.value)?`<img class="detail-preview" src="${esc(b.imageUrl||b.value)}" onerror="this.style.display='none'">`:''}`;
+      const imageSrc=b.imageUrl||b.value||'';
+      body=`
+        <div style="background:#f5f7f5;border:1px solid #e0e5e0;border-radius:12px;padding:12px">
+          ${imageSrc
+            ? `<img class="detail-preview" src="${esc(imageSrc)}" alt="상세 이미지 미리보기"
+                 style="width:100%;max-width:520px;max-height:420px;object-fit:contain;background:#fff;border:1px solid #e1e1e1;padding:6px"
+                 onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+               <div style="display:none;padding:20px;text-align:center;color:#a32121">이미지를 불러오지 못했습니다. 아래의 이미지 변경 버튼으로 다시 업로드해 주세요.</div>`
+            : `<div style="padding:28px 12px;text-align:center;color:#777;background:#fff;border:2px dashed #c7cec7;border-radius:10px">
+                 아직 등록된 이미지가 없습니다.<br>아래의 이미지 선택/변경 버튼을 눌러주세요.
+               </div>`}
+          <div class="toolbar" style="justify-content:center">
+            <button class="primary" type="button" onclick="chooseDetailImage(${i})">${imageSrc?'이미지 변경':'이미지 선택/업로드'}</button>
+          </div>
+          <details style="margin-top:10px">
+            <summary style="cursor:pointer;color:#68736b;font-size:12px">이미지 주소 보기/직접 수정</summary>
+            <input style="margin-top:8px" value="${esc(imageSrc)}" placeholder="이미지 URL"
+              oninput="updateProductBlock(${i},'imageUrl',this.value);updateProductBlock(${i},'value',this.value)">
+          </details>
+        </div>`;
     }else if(b.type==='price'){
       body=`<textarea placeholder="예: 공동구매 특가 59,900원 / 무료배송" oninput="updateProductBlock(${i},'value',this.value)">${esc(b.value)}</textarea>`;
     }else{
