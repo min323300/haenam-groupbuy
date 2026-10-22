@@ -63,6 +63,7 @@ form label{display:block;font-size:13px;font-weight:800;margin:13px 0 6px}
 input,select,textarea{width:100%;padding:12px;border:1px solid #ccd3cc;border-radius:9px;font-size:15px}
 textarea{min-height:80px;resize:vertical} .privacy{display:flex;gap:8px;align-items:flex-start;margin:13px 0;font-size:12px;color:#666} .privacy input{width:auto;margin-top:2px}
 .msg{margin-top:12px;padding:11px;border-radius:9px;display:none} .ok{display:block;background:#e8f6ed;color:#17623f} .err{display:block;background:#fdeaea;color:#a32121}
+.detail-blocks{margin:24px 0}.detail-block{margin:0 0 22px}.detail-block.image img{display:block;width:100%;height:auto;border-radius:14px;background:#f5f5f5}.detail-block.text{font-size:16px;line-height:1.85;white-space:pre-wrap;color:#303a34}.detail-block.emphasis{font-size:20px;line-height:1.65;font-weight:900;text-align:center;padding:22px 18px;border-radius:14px;background:#f1f8f3;color:var(--green);white-space:pre-wrap}.detail-order-btn{margin-top:22px;padding:16px;font-size:17px}
 footer{background:#203028;color:#dbe4df;text-align:center;padding:30px 20px;font-size:13px}
 @media(max-width:850px){.hero-in{grid-template-columns:1fr}.hero h1{font-size:38px}.grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:580px){.hero{padding:38px 15px}.hero h1{font-size:32px}.hero p{font-size:15px}.grid{grid-template-columns:1fr}main{padding:0 12px 50px}.stats{padding:0 12px}.stat{padding:15px 6px}.stat b{font-size:20px}.section-head{display:block}.section-head p{margin-top:8px}}
@@ -168,6 +169,43 @@ function renderProducts(){
 function tick(){
  document.querySelectorAll('.timer[data-code]').forEach(el=>{const p=products.find(x=>s(x.productCode)===el.dataset.code);if(p)el.textContent=remainText(p)});
  if(currentProduct)document.getElementById('modalTimer').textContent=remainText(currentProduct);
+}
+function parseDetailBlocks(p){
+ let raw=p.detailBlocks;
+ if(raw==null||raw==='') raw=p.detailPage;
+ if(raw==null||raw==='') raw=p.detailContent;
+ if(raw==null||raw==='') raw=p.detail;
+ if(Array.isArray(raw)) return raw;
+ if(typeof raw==='string'&&raw.trim()){
+  try{const a=JSON.parse(raw);return Array.isArray(a)?a:[]}catch(err){return []}
+ }
+ return [];
+}
+function renderDetailBlocks(p){
+ const box=document.getElementById('detailBlocks');
+ const blocks=parseDetailBlocks(p);
+ box.innerHTML=blocks.map(b=>{
+  const type=s(b.type||b.kind).toLowerCase();
+  if(type==='image'){
+   const src=imageUrl(b.url||b.imageUrl||b.src||b.value||'');
+   return src?`<div class="detail-block image"><img src="${e(src)}" alt="${e(p.productName)} 상세 이미지" loading="lazy"></div>`:'';
+  }
+  if(type==='text'){
+   const text=b.text||b.content||b.value||'';
+   return text?`<div class="detail-block text">${e(text)}</div>`:'';
+  }
+  if(type==='price'||type==='emphasis'||type==='highlight'){
+   const text=b.text||b.content||b.value||'';
+   return text?`<div class="detail-block emphasis">${e(text)}</div>`:'';
+  }
+  return '';
+ }).join('');
+}
+function showOrderForm(){
+ const form=document.getElementById('orderForm');
+ form.style.display='block';
+ document.getElementById('showOrderFormButton').style.display='none';
+ form.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function openProduct(code){
  const p=products.find(x=>s(x.productCode)===s(code)); if(!p)return;
