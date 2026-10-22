@@ -217,6 +217,7 @@ function openProduct(code){
  modalPrice.textContent=money(p.salePrice);
  modalTimer.textContent=remainText(p);
  const img=imageUrl(p.image); modalImage.style.display=img?'block':'none'; if(img)modalImage.src=img;
+ renderDetailBlocks(p);
  let pay='<b>결제 안내</b><br>';
  if(p.paymentMethod)pay+='결제방식: '+e(p.paymentMethod)+'<br>';
  if(p.bankName||p.accountNumber)pay+='입금계좌: '+e(p.bankName)+' '+e(p.accountNumber)+'<br>';
