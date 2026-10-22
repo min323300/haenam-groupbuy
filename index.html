@@ -53,10 +53,11 @@ h1 {
 
 .hero-image {
   width: 100%;
-  max-height: 420px;
-  object-fit: cover;
+  height: auto;
+  object-fit: contain;
   border-radius: 18px;
   margin-top: 18px;
+  display: block;
 }
 
 .price {
@@ -203,6 +204,66 @@ textarea {
     padding: 18px;
   }
 }
+
+/* 관리자에서 조립하는 상세페이지 */
+.detail-section {
+  margin-top: 18px;
+}
+
+.detail-block {
+  margin: 0 0 18px;
+}
+
+.detail-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.detail-caption {
+  margin: 10px 4px 0;
+  color: #555;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+.detail-text {
+  background: #fff;
+  padding: 22px;
+  border-radius: 18px;
+  line-height: 1.85;
+  font-size: 17px;
+  white-space: pre-wrap;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+}
+
+.detail-price {
+  background: #fff7e8;
+  border: 2px solid #f0b24a;
+  color: #9a5200;
+  padding: 20px;
+  border-radius: 18px;
+  text-align: center;
+  font-size: 27px;
+  font-weight: 800;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 600px) {
+  .detail-text {
+    padding: 18px;
+    font-size: 16px;
+  }
+  .detail-price {
+    font-size: 23px;
+    padding: 17px;
+  }
+}
+
 </style>
 </head>
 
@@ -240,6 +301,9 @@ textarea {
     </div>
 
   </section>
+
+  <!-- 관리자에서 구성한 상세페이지 -->
+  <section id="detailContent" class="detail-section"></section>
 
 
   <!-- 주문 -->
@@ -444,6 +508,9 @@ const priceElement =
 const productImage =
   document.getElementById("productImage");
 
+const detailContent =
+  document.getElementById("detailContent");
+
 const orderForm =
   document.getElementById("orderForm");
 
@@ -488,82 +555,74 @@ async function loadSettings() {
     const settings =
       data.settings;
 
-
     if (settings.title) {
-
       titleElement.textContent =
         settings.title;
-
     }
-
 
     if (settings.description) {
-
       descriptionElement.textContent =
         settings.description;
-
     }
-
 
     if (
       settings.price !== undefined &&
       settings.price !== ""
     ) {
-
       priceElement.textContent =
-        Number(
-          settings.price
-        ).toLocaleString();
-
+        Number(settings.price).toLocaleString();
     }
-
-
-   if (settings.image) {
-
-    let imageUrl = settings.image.trim();
-
-    // Google Drive 파일 ID 추출
-    let fileId = "";
-
-    if (imageUrl.includes("id=")) {
-        fileId = imageUrl.split("id=")[1].split("&")[0];
-    } else if (imageUrl.includes("/file/d/")) {
-        fileId = imageUrl.split("/file/d/")[1].split("/")[0];
-    }
-
-    // Google Drive 이미지면 썸네일 전용 주소로 변환
-    if (fileId) {
-        imageUrl =
-            "https://drive.google.com/thumbnail?id=" +
-            fileId +
-            "&sz=w1600";
-    }
-
-    productImage.src = imageUrl;
-
-} 
-
 
     /*
-     * 설정 시트의 판매상태를
-     * 판매중 / 판매종료 등으로 관리
+     * 대표 이미지
+     * 기존 설정 시트의 상품이미지도 계속 사용합니다.
      */
+    if (settings.image) {
+      productImage.src =
+        driveDisplayUrl(settings.image);
+    }
 
+    /*
+     * 관리자에서 만든 상세페이지 블록
+     * 이미지 → 글 → 이미지 → 가격 등 저장된 순서 그대로 표시
+     */
+    let blocks =
+      settings.detailBlocks ||
+      settings.blocks ||
+      "";
+
+    if (
+      typeof blocks === "string" &&
+      blocks.trim()
+    ) {
+      try {
+        blocks = JSON.parse(blocks);
+      } catch (error) {
+        console.error(
+          "상세페이지 데이터 해석 오류:",
+          error
+        );
+        blocks = [];
+      }
+    }
+
+    if (Array.isArray(blocks)) {
+      renderDetailContent(blocks);
+    } else {
+      renderDetailContent([]);
+    }
+
+    /*
+     * 판매상태
+     */
     if (
       settings.saleStatus &&
       settings.saleStatus !== "판매중"
     ) {
-
-      orderButton.disabled =
-        true;
-
-      orderButton.classList.add(
-        "closed"
-      );
-
+      orderButton.disabled = true;
+      orderButton.classList.add("closed");
       orderButton.textContent =
         "현재 주문이 마감되었습니다.";
-
     }
 
   } catch (error) {
@@ -574,6 +633,122 @@ async function loadSettings() {
     );
 
   }
+
+}
+
+
+/*************************************************
+ * Google Drive 이미지 표시 주소
+ *************************************************/
+function driveDisplayUrl(url) {
+
+  let imageUrl =
+    String(url || "").trim();
+
+  let fileId = "";
+
+  if (imageUrl.includes("id=")) {
+    fileId =
+      imageUrl
+        .split("id=")[1]
+        .split("&")[0];
+  } else if (
+    imageUrl.includes("/file/d/")
+  ) {
+    fileId =
+      imageUrl
+        .split("/file/d/")[1]
+        .split("/")[0];
+  }
+
+  if (fileId) {
+    return (
+      "https://drive.google.com/thumbnail?id=" +
+      fileId +
+      "&sz=w2000"
+    );
+  }
+
+  return imageUrl;
+}
+
+
+/*************************************************
+ * 상세페이지 블록 출력
+ *************************************************/
+function renderDetailContent(blocks) {
+
+  if (!detailContent) {
+    return;
+  }
+
+  const validBlocks =
+    blocks.filter(function(block) {
+      return (
+        block &&
+        block.type &&
+        String(block.value || "").trim()
+      );
+    });
+
+  if (validBlocks.length === 0) {
+    detailContent.innerHTML = "";
+    return;
+  }
+
+  detailContent.innerHTML =
+    validBlocks.map(function(block) {
+
+      const type =
+        String(block.type || "");
+
+      const value =
+        String(block.value || "");
+
+      const caption =
+        String(block.caption || "");
+
+      if (type === "image") {
+
+        const imageUrl =
+          driveDisplayUrl(value);
+
+        return (
+          '<div class="detail-block">' +
+            '<img class="detail-image" ' +
+              'src="' +
+              escapeHtml(imageUrl) +
+              '" alt="상품 상세 이미지" ' +
+              'loading="lazy">' +
+            (
+              caption
+              ? '<div class="detail-caption">' +
+                  escapeHtml(caption) +
+                '</div>'
+              : ''
+            ) +
+          '</div>'
+        );
+
+      }
+
+      if (type === "price") {
+
+        return (
+          '<div class="detail-block detail-price">' +
+            escapeHtml(value) +
+          '</div>'
+        );
+
+      }
+
+      return (
+        '<div class="detail-block detail-text">' +
+          escapeHtml(value) +
+        '</div>'
+      );
+
+    }).join("");
 
 }
 
