@@ -1,32 +1,1656 @@
-<!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>공동구매 관리자</title><style>
-body{font-family:Arial,"Noto Sans KR",sans-serif;margin:0;background:#f4f4f4;color:#222}.wrap{max-width:1200px;margin:auto;padding:20px}
-.card{background:white;border-radius:15px;padding:18px;margin-bottom:16px;overflow:auto}input,textarea{padding:9px;border:1px solid #ccc;border-radius:7px;margin:4px}
-button{padding:8px 10px;border:0;border-radius:7px;cursor:pointer;font-weight:700}table{border-collapse:collapse;width:100%;min-width:1000px}
-th,td{padding:9px;border-bottom:1px solid #eee;text-align:left}.yes{background:#dff6df}.no{background:#ffe6e6}.copy{background:#222;color:#fff}
-</style></head><body><div class="wrap"><h1>공동구매 관리자</h1>
-<div class="card"><h2>랜딩페이지 내용 변경</h2>
-<input id="stitle" placeholder="상품명"><input id="sprice" type="number" placeholder="판매가"><br>
-<input id="simage" style="width:70%" placeholder="상품 이미지 URL"><br>
-<textarea id="sdesc" style="width:90%" placeholder="상품 설명"></textarea><br>
-<button onclick="saveSettings()">내용 저장</button></div>
-<div class="card"><h2>주문 관리 <span id="cnt"></span></h2><div id="orders"></div></div>
-</div><script src="config.js"></script><script>
-const cfg=window.APP_CONFIG;
-const api=(path,opt={})=>fetch(cfg.SUPABASE_URL+"/rest/v1/"+path,{...opt,headers:{
-"apikey":cfg.SUPABASE_ANON_KEY,"Authorization":"Bearer "+cfg.SUPABASE_ANON_KEY,"Content-Type":"application/json",
-"Prefer":opt.prefer||"return=representation",...(opt.headers||{})}});
-async function loadSettings(){let r=await api("settings?id=eq.1&select=*");let d=await r.json();if(d[0]){stitle.value=d[0].title;sprice.value=d[0].price;simage.value=d[0].image_url||"";sdesc.value=d[0].description||""}}
-async function saveSettings(){await api("settings?id=eq.1",{method:"PATCH",body:JSON.stringify({title:stitle.value,price:+sprice.value,image_url:simage.value,description:sdesc.value})});alert("저장했습니다.")}
-async function toggle(id,key,val){await api("orders?id=eq."+id,{method:"PATCH",body:JSON.stringify({[key]:!val})});load()}
-function btn(id,key,val,label){return `<button class="${val?'yes':'no'}" onclick="toggle(${id},'${key}',${val})">${label}: ${val?'완료':'미확인'}</button>`}
-function copyMsg(name){let t=`${name} 고객님, 입금 확인되었습니다. 주문해 주셔서 감사합니다.`;navigator.clipboard.writeText(t);alert("안내문을 복사했습니다. 카톡이나 문자에 붙여 넣으세요.")}
-async function load(){let r=await api("orders?select=*&order=created_at.desc");let d=await r.json();cnt.textContent=`(${d.length}건)`;
-orders.innerHTML=`<table><tr><th>접수일</th><th>고객</th><th>연락처</th><th>수량</th><th>주소/메모</th><th>전화</th><th>입금</th><th>안내</th><th>배송</th><th>문구</th></tr>`+
-d.map(x=>`<tr><td>${new Date(x.created_at).toLocaleString()}</td><td>${x.name}</td><td>${x.phone}</td><td>${x.qty}</td><td>${x.address}<br>${x.memo||''}</td>
-<td>${btn(x.id,'status_call',x.status_call,'전화')}</td><td>${btn(x.id,'status_paid',x.status_paid,'입금')}</td>
-<td>${btn(x.id,'status_notice',x.status_notice,'안내')}</td><td>${btn(x.id,'status_shipping',x.status_shipping,'배송')}</td>
-<td><button class="copy" onclick='copyMsg(${JSON.stringify(x.name)})'>입금확인 문구 복사</button></td></tr>`).join("")+"</table>"}
-loadSettings();load();
-</script></body></html>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>공동구매 관리자</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, "Noto Sans KR", sans-serif;
+      background: #f4f4f4;
+      color: #222;
+    }
+
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px 18px 60px;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin: 10px 0 25px;
+    }
+
+    h2 {
+      font-size: 23px;
+      margin: 0 0 22px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 18px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    input,
+    textarea,
+    select {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 15px;
+      background: #fff;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      outline: 2px solid #1f8b5c;
+      border-color: transparent;
+    }
+
+    #title {
+      width: 280px;
+    }
+
+    #price {
+      width: 180px;
+    }
+
+    #imageUrl {
+      width: 100%;
+      margin-bottom: 12px;
+    }
+
+    #desc {
+      width: 100%;
+      min-height: 160px;
+      resize: vertical;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 11px 18px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .primary {
+      background: #16875a;
+      color: #fff;
+    }
+
+    .secondary {
+      background: #ededed;
+      color: #222;
+    }
+
+    .danger {
+      background: #d9534f;
+      color: #fff;
+    }
+
+    /* 이미지 업로드 */
+
+    .upload-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin: 22px 0 10px;
+    }
+
+    .drop-zone {
+      width: 100%;
+      min-height: 190px;
+      border: 2px dashed #aaa;
+      border-radius: 14px;
+      background: #fafafa;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      text-align: center;
+      padding: 25px;
+      cursor: pointer;
+
+      transition: 0.2s;
+    }
+
+    .drop-zone:hover {
+      border-color: #16875a;
+      background: #f2faf6;
+    }
+
+    .drop-zone.dragover {
+      border-color: #16875a;
+      background: #e9f7ef;
+      transform: scale(1.005);
+    }
+
+    .drop-icon {
+      font-size: 42px;
+      margin-bottom: 8px;
+    }
+
+    .drop-main {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 7px;
+    }
+
+    .drop-sub {
+      color: #777;
+      font-size: 14px;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .preview-box {
+      display: none;
+      margin-top: 15px;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 15px;
+      background: #fafafa;
+    }
+
+    .preview-box img {
+      display: block;
+      max-width: 420px;
+      width: 100%;
+      max-height: 320px;
+      object-fit: contain;
+      margin: 0 auto 12px;
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .file-info {
+      text-align: center;
+      color: #555;
+      margin-bottom: 12px;
+    }
+
+    .upload-actions {
+      text-align: center;
+    }
+
+    .upload-status {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .upload-status.loading {
+      display: block;
+      background: #fff4cf;
+      color: #725800;
+    }
+
+    .upload-status.success {
+      display: block;
+      background: #e4f6ea;
+      color: #126336;
+    }
+
+    .upload-status.error {
+      display: block;
+      background: #fde7e7;
+      color: #a32121;
+    }
+
+    /* 주문관리 */
+
+    .order-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .order-count {
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1050px;
+    }
+
+    th,
+    td {
+      border: 1px solid #ddd;
+      padding: 9px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    th {
+      background: #f2f2f2;
+      font-weight: 700;
+    }
+
+    td.address,
+    td.memo {
+      text-align: left;
+      min-width: 180px;
+    }
+
+    .status-btn {
+      padding: 7px 9px;
+      font-size: 12px;
+      margin: 2px;
+    }
+
+    .off {
+      background: #eee;
+      color: #555;
+    }
+
+    .on {
+      background: #16875a;
+      color: #fff;
+    }
+
+    .copy-btn {
+      background: #2878d0;
+      color: #fff;
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+
+    .empty {
+      padding: 35px;
+      text-align: center;
+      color: #777;
+    }
+
+    .save-message {
+      display: none;
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #e4f6ea;
+      color: #126336;
+    }
+
+    @media (max-width: 700px) {
+      .wrap {
+        padding: 16px 10px 40px;
+      }
+
+      .card {
+        padding: 17px;
+      }
+
+      h1 {
+        font-size: 27px;
+      }
+
+      #title,
+      #price {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="wrap">
+
+  <h1>공동구매 관리자</h1>
+
+
+  <!-- ======================================= -->
+  <!-- 랜딩페이지 관리 -->
+  <!-- ======================================= -->
+
+  <section class="card">
+
+    <h2>랜딩페이지 내용 변경</h2>
+
+    <div class="row">
+
+      <input
+        type="text"
+        id="title"
+        placeholder="상품명"
+      >
+
+      <input
+        type="number"
+        id="price"
+        placeholder="판매가격"
+      >
+
+    </div>
+
+
+    <!-- 이미지 업로드 -->
+
+    <div class="upload-title">
+      상품 이미지
+    </div>
+
+    <div
+      id="dropZone"
+      class="drop-zone"
+    >
+
+      <div>
+
+        <div class="drop-icon">
+          📷
+        </div>
+
+        <div class="drop-main">
+          여기에 상품 사진을 끌어다 놓으세요
+        </div>
+
+        <div class="drop-sub">
+          또는 여기를 클릭해서 PC에서 사진을 선택하세요
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <input
+      type="file"
+      id="fileInput"
+      accept="image/jpeg,image/png,image/webp"
+    >
+
+
+    <!-- 사진 미리보기 -->
+
+    <div
+      id="previewBox"
+      class="preview-box"
+    >
+
+      <img
+        id="previewImage"
+        alt="상품 이미지 미리보기"
+      >
+
+      <div
+        id="fileInfo"
+        class="file-info"
+      ></div>
+
+      <div class="upload-actions">
+
+        <button
+          type="button"
+          class="primary"
+          id="uploadButton"
+          onclick="uploadSelectedImage()"
+        >
+          이 사진 업로드
+        </button>
+
+        <button
+          type="button"
+          class="secondary"
+          onclick="cancelSelectedImage()"
+        >
+          취소
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <div
+      id="uploadStatus"
+      class="upload-status"
+    ></div>
+
+
+    <!-- 실제 저장되는 이미지 주소 -->
+
+    <input
+      type="text"
+      id="imageUrl"
+      placeholder="상품 이미지 URL - 사진을 업로드하면 자동으로 입력됩니다."
+    >
+
+
+    <textarea
+      id="desc"
+      placeholder="상품 설명"
+    ></textarea>
+
+
+    <div style="margin-top:14px;">
+
+      <button
+        type="button"
+        class="primary"
+        onclick="saveSettings()"
+      >
+        내용 저장
+      </button>
+
+    </div>
+
+    <div
+      id="saveMessage"
+      class="save-message"
+    >
+      저장되었습니다.
+    </div>
+
+  </section>
+
+
+
+  <!-- ======================================= -->
+  <!-- 주문 관리 -->
+  <!-- ======================================= -->
+
+  <section class="card">
+
+    <div class="order-top">
+
+      <h2 style="margin:0;">
+        주문 관리
+      </h2>
+
+      <div>
+
+        <span class="order-count">
+          총 주문 <span id="orderCount">0</span>건
+        </span>
+
+        &nbsp;
+
+        <button
+          type="button"
+          class="secondary"
+          onclick="loadOrders()"
+        >
+          새로고침
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <div class="table-wrap">
+
+      <table>
+
+        <thead>
+
+          <tr>
+
+            <th>접수일</th>
+            <th>성함</th>
+            <th>연락처</th>
+            <th>수량</th>
+            <th>주소</th>
+            <th>요청사항</th>
+
+            <th>전화확인</th>
+            <th>입금확인</th>
+            <th>안내완료</th>
+            <th>배송완료</th>
+
+            <th>문자 복사</th>
+
+          </tr>
+
+        </thead>
+
+        <tbody id="ordersBody">
+
+          <tr>
+            <td colspan="11" class="empty">
+              주문내역을 불러오는 중입니다.
+            </td>
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </section>
+
+</div>
+
+
+<script>
+
+/* =====================================================
+   Google Apps Script 웹앱 주소
+===================================================== */
+
+const SCRIPT_URL =
+  'https://script.google.com/macros/s/AKfycbz9-pk6kkPk01Lh11agNKxeV1Gjo_kzAPYOXyJ9kXUVY7r8t3ptrLurCjOwdTf31f00ug/exec';
+
+
+let selectedFile = null;
+
+
+/* =====================================================
+   페이지 시작
+===================================================== */
+
+document.addEventListener('DOMContentLoaded', function () {
+
+  setupImageUpload();
+
+  loadSettings();
+
+  loadOrders();
+
+});
+
+
+/* =====================================================
+   이미지 드래그앤드롭
+===================================================== */
+
+function setupImageUpload() {
+
+  const dropZone =
+    document.getElementById('dropZone');
+
+  const fileInput =
+    document.getElementById('fileInput');
+
+
+  dropZone.addEventListener(
+    'click',
+    function () {
+
+      fileInput.click();
+
+    }
+  );
+
+
+  fileInput.addEventListener(
+    'change',
+    function (event) {
+
+      if (
+        event.target.files &&
+        event.target.files[0]
+      ) {
+
+        selectImage(
+          event.target.files[0]
+        );
+
+      }
+
+    }
+  );
+
+
+  dropZone.addEventListener(
+    'dragover',
+    function (event) {
+
+      event.preventDefault();
+
+      dropZone.classList.add(
+        'dragover'
+      );
+
+    }
+  );
+
+
+  dropZone.addEventListener(
+    'dragleave',
+    function () {
+
+      dropZone.classList.remove(
+        'dragover'
+      );
+
+    }
+  );
+
+
+  dropZone.addEventListener(
+    'drop',
+    function (event) {
+
+      event.preventDefault();
+
+      dropZone.classList.remove(
+        'dragover'
+      );
+
+
+      const files =
+        event.dataTransfer.files;
+
+
+      if (
+        files &&
+        files.length > 0
+      ) {
+
+        selectImage(
+          files[0]
+        );
+
+      }
+
+    }
+  );
+
+}
+
+
+/* =====================================================
+   사진 선택
+===================================================== */
+
+function selectImage(file) {
+
+  if (
+    !file.type.startsWith('image/')
+  ) {
+
+    alert(
+      '이미지 파일만 선택해 주세요.'
+    );
+
+    return;
+
+  }
+
+
+  /*
+    너무 큰 사진은 업로드 실패 가능성이 있으므로
+    8MB 제한
+  */
+
+  const maxSize =
+    8 * 1024 * 1024;
+
+
+  if (
+    file.size > maxSize
+  ) {
+
+    alert(
+      '사진 용량이 너무 큽니다.\n8MB 이하 사진을 사용해 주세요.'
+    );
+
+    return;
+
+  }
+
+
+  selectedFile = file;
+
+
+  const reader =
+    new FileReader();
+
+
+  reader.onload =
+    function (event) {
+
+      document
+        .getElementById('previewImage')
+        .src =
+        event.target.result;
+
+
+      document
+        .getElementById('previewBox')
+        .style.display =
+        'block';
+
+
+      document
+        .getElementById('fileInfo')
+        .textContent =
+        file.name +
+        ' / ' +
+        formatFileSize(
+          file.size
+        );
+
+    };
+
+
+  reader.readAsDataURL(file);
+
+}
+
+
+/* =====================================================
+   파일 크기 표시
+===================================================== */
+
+function formatFileSize(bytes) {
+
+  if (
+    bytes < 1024
+  ) {
+
+    return bytes + ' B';
+
+  }
+
+
+  if (
+    bytes < 1024 * 1024
+  ) {
+
+    return (
+      bytes / 1024
+    ).toFixed(1) +
+    ' KB';
+
+  }
+
+
+  return (
+    bytes /
+    1024 /
+    1024
+  ).toFixed(1) +
+  ' MB';
+
+}
+
+
+/* =====================================================
+   선택 취소
+===================================================== */
+
+function cancelSelectedImage() {
+
+  selectedFile = null;
+
+
+  document
+    .getElementById('fileInput')
+    .value = '';
+
+
+  document
+    .getElementById('previewBox')
+    .style.display =
+    'none';
+
+
+  setUploadStatus(
+    '',
+    ''
+  );
+
+}
+
+
+/* =====================================================
+   이미지 Google Drive 업로드
+===================================================== */
+
+function uploadSelectedImage() {
+
+  if (
+    !selectedFile
+  ) {
+
+    alert(
+      '먼저 사진을 선택해 주세요.'
+    );
+
+    return;
+
+  }
+
+
+  const button =
+    document.getElementById(
+      'uploadButton'
+    );
+
+
+  button.disabled = true;
+
+  button.textContent =
+    '업로드 중...';
+
+
+  setUploadStatus(
+    'loading',
+    '사진을 Google Drive에 업로드하고 있습니다. 잠시 기다려 주세요.'
+  );
+
+
+  const reader =
+    new FileReader();
+
+
+  reader.onload =
+    async function (event) {
+
+      try {
+
+        const payload = {
+
+          action:
+            'uploadImage',
+
+          fileName:
+            selectedFile.name,
+
+          mimeType:
+            selectedFile.type,
+
+          base64Data:
+            event.target.result
+
+        };
+
+
+        const response =
+          await fetch(
+            SCRIPT_URL,
+            {
+
+              method:
+                'POST',
+
+              headers: {
+                'Content-Type':
+                  'text/plain;charset=utf-8'
+              },
+
+              body:
+                JSON.stringify(
+                  payload
+                )
+
+            }
+          );
+
+
+        const result =
+          await response.json();
+
+
+        if (
+          !result.success
+        ) {
+
+          throw new Error(
+            result.message ||
+            '이미지 업로드에 실패했습니다.'
+          );
+
+        }
+
+
+        document
+          .getElementById(
+            'imageUrl'
+          )
+          .value =
+          result.imageUrl;
+
+
+        setUploadStatus(
+          'success',
+          '사진 업로드가 완료되었습니다. 아래의 "내용 저장" 버튼을 눌러 주세요.'
+        );
+
+
+        selectedFile = null;
+
+
+        document
+          .getElementById(
+            'fileInput'
+          )
+          .value = '';
+
+
+      }
+
+      catch (error) {
+
+        console.error(error);
+
+
+        setUploadStatus(
+          'error',
+          '사진 업로드 중 오류가 발생했습니다: ' +
+          error.message
+        );
+
+      }
+
+      finally {
+
+        button.disabled =
+          false;
+
+        button.textContent =
+          '이 사진 업로드';
+
+      }
+
+    };
+
+
+  reader.readAsDataURL(
+    selectedFile
+  );
+
+}
+
+
+/* =====================================================
+   업로드 상태
+===================================================== */
+
+function setUploadStatus(
+  type,
+  message
+) {
+
+  const box =
+    document.getElementById(
+      'uploadStatus'
+    );
+
+
+  box.className =
+    'upload-status';
+
+
+  if (
+    !type
+  ) {
+
+    box.style.display =
+      'none';
+
+    box.textContent =
+      '';
+
+    return;
+
+  }
+
+
+  box.classList.add(
+    type
+  );
+
+
+  box.textContent =
+    message;
+
+}
+
+
+/* =====================================================
+   설정 불러오기
+===================================================== */
+
+async function loadSettings() {
+
+  try {
+
+    const response =
+      await fetch(
+        SCRIPT_URL +
+        '?action=settings'
+      );
+
+
+    const result =
+      await response.json();
+
+
+    const data =
+      result.settings ||
+      result.data ||
+      result;
+
+
+    if (
+      !data
+    ) {
+
+      return;
+
+    }
+
+
+    document
+      .getElementById('title')
+      .value =
+      data.title || '';
+
+
+    document
+      .getElementById('price')
+      .value =
+      data.price || '';
+
+
+    document
+      .getElementById('imageUrl')
+      .value =
+      data.image ||
+      data.imageUrl ||
+      '';
+
+
+    document
+      .getElementById('desc')
+      .value =
+      data.description ||
+      data.desc ||
+      '';
+
+  }
+
+  catch (error) {
+
+    console.error(
+      '설정 불러오기 오류:',
+      error
+    );
+
+  }
+
+}
+
+
+/* =====================================================
+   랜딩페이지 설정 저장
+===================================================== */
+
+async function saveSettings() {
+
+  const payload = {
+
+    action:
+      'saveSettings',
+
+    title:
+      document
+        .getElementById('title')
+        .value
+        .trim(),
+
+    price:
+      document
+        .getElementById('price')
+        .value,
+
+    image:
+      document
+        .getElementById('imageUrl')
+        .value
+        .trim(),
+
+    description:
+      document
+        .getElementById('desc')
+        .value
+        .trim()
+
+  };
+
+
+  try {
+
+    const response =
+      await fetch(
+        SCRIPT_URL,
+        {
+
+          method:
+            'POST',
+
+          headers: {
+            'Content-Type':
+              'text/plain;charset=utf-8'
+          },
+
+          body:
+            JSON.stringify(
+              payload
+            )
+
+        }
+      );
+
+
+    const result =
+      await response.json();
+
+
+    if (
+      result.success === false
+    ) {
+
+      throw new Error(
+        result.message ||
+        '저장 실패'
+      );
+
+    }
+
+
+    const message =
+      document.getElementById(
+        'saveMessage'
+      );
+
+
+    message.style.display =
+      'block';
+
+
+    setTimeout(
+      function () {
+
+        message.style.display =
+          'none';
+
+      },
+      3000
+    );
+
+  }
+
+  catch (error) {
+
+    alert(
+      '저장 중 오류가 발생했습니다.\n' +
+      error.message
+    );
+
+  }
+
+}
+
+
+/* =====================================================
+   주문 목록
+===================================================== */
+
+async function loadOrders() {
+
+  const body =
+    document.getElementById(
+      'ordersBody'
+    );
+
+
+  body.innerHTML =
+    '<tr><td colspan="11" class="empty">주문내역을 불러오는 중입니다.</td></tr>';
+
+
+  try {
+
+    const response =
+      await fetch(
+        SCRIPT_URL +
+        '?action=orders'
+      );
+
+
+    const result =
+      await response.json();
+
+
+    const orders =
+      Array.isArray(result)
+      ? result
+      : (
+          result.orders ||
+          result.data ||
+          []
+        );
+
+
+    document
+      .getElementById(
+        'orderCount'
+      )
+      .textContent =
+      orders.length;
+
+
+    if (
+      orders.length === 0
+    ) {
+
+      body.innerHTML =
+        '<tr><td colspan="11" class="empty">현재 접수된 주문이 없습니다.</td></tr>';
+
+      return;
+
+    }
+
+
+    body.innerHTML =
+      orders.map(
+        function (order) {
+
+          return createOrderRow(
+            order
+          );
+
+        }
+      ).join('');
+
+  }
+
+  catch (error) {
+
+    console.error(error);
+
+
+    body.innerHTML =
+      '<tr><td colspan="11" class="empty">주문내역을 불러오지 못했습니다.</td></tr>';
+
+  }
+
+}
+
+
+/* =====================================================
+   주문 한 줄 만들기
+===================================================== */
+
+function createOrderRow(order) {
+
+  const id =
+    order.id ||
+    order.orderId ||
+    order.row ||
+    '';
+
+
+  const name =
+    escapeHtml(
+      order.name || ''
+    );
+
+
+  const phone =
+    escapeHtml(
+      order.phone || ''
+    );
+
+
+  const qty =
+    escapeHtml(
+      order.qty ||
+      order.quantity ||
+      ''
+    );
+
+
+  const address =
+    escapeHtml(
+      order.address || ''
+    );
+
+
+  const memo =
+    escapeHtml(
+      order.memo ||
+      order.request ||
+      ''
+    );
+
+
+  const date =
+    escapeHtml(
+      order.created_at ||
+      order.createdAt ||
+      order.date ||
+      ''
+    );
+
+
+  return `
+
+    <tr>
+
+      <td>${date}</td>
+
+      <td>${name}</td>
+
+      <td>${phone}</td>
+
+      <td>${qty}</td>
+
+      <td class="address">
+        ${address}
+      </td>
+
+      <td class="memo">
+        ${memo}
+      </td>
+
+      <td>
+
+        ${statusButton(
+          id,
+          'status_call',
+          order.status_call ||
+          order.callConfirmed,
+          '전화'
+        )}
+
+      </td>
+
+      <td>
+
+        ${statusButton(
+          id,
+          'status_paid',
+          order.status_paid ||
+          order.paid,
+          '입금'
+        )}
+
+      </td>
+
+      <td>
+
+        ${statusButton(
+          id,
+          'status_notice',
+          order.status_notice ||
+          order.notice,
+          '안내'
+        )}
+
+      </td>
+
+      <td>
+
+        ${statusButton(
+          id,
+          'status_shipping',
+          order.status_shipping ||
+          order.shipping,
+          '배송'
+        )}
+
+      </td>
+
+      <td>
+
+        <button
+          class="copy-btn"
+          onclick='copyPaymentMessage(${JSON.stringify(
+            order.name || ''
+          )})'
+        >
+          입금확인 문자 복사
+        </button>
+
+      </td>
+
+    </tr>
+
+  `;
+
+}
+
+
+/* =====================================================
+   상태 버튼
+===================================================== */
+
+function statusButton(
+  id,
+  key,
+  value,
+  label
+) {
+
+  const active =
+    value === true ||
+    value === 'TRUE' ||
+    value === 1 ||
+    value === '1';
+
+
+  return `
+
+    <button
+      class="status-btn ${active ? 'on' : 'off'}"
+      onclick='toggleOrderStatus(
+        ${JSON.stringify(id)},
+        ${JSON.stringify(key)},
+        ${active ? 'false' : 'true'}
+      )'
+    >
+      ${active ? '✓ ' : ''}
+      ${label}
+    </button>
+
+  `;
+
+}
+
+
+/* =====================================================
+   주문 상태 변경
+===================================================== */
+
+async function toggleOrderStatus(
+  id,
+  key,
+  value
+) {
+
+  try {
+
+    const payload = {
+
+      action:
+        'updateOrderStatus',
+
+      id:
+        id,
+
+      field:
+        key,
+
+      value:
+        value
+
+    };
+
+
+    const response =
+      await fetch(
+        SCRIPT_URL,
+        {
+
+          method:
+            'POST',
+
+          headers: {
+            'Content-Type':
+              'text/plain;charset=utf-8'
+          },
+
+          body:
+            JSON.stringify(
+              payload
+            )
+
+        }
+      );
+
+
+    const result =
+      await response.json();
+
+
+    if (
+      result.success === false
+    ) {
+
+      throw new Error(
+        result.message ||
+        '상태 변경 실패'
+      );
+
+    }
+
+
+    loadOrders();
+
+  }
+
+  catch (error) {
+
+    alert(
+      '주문 상태 변경 중 오류가 발생했습니다.\n' +
+      error.message
+    );
+
+  }
+
+}
+
+
+/* =====================================================
+   입금 확인 문자 복사
+===================================================== */
+
+async function copyPaymentMessage(
+  name
+) {
+
+  const customer =
+    name || '고객';
+
+
+  const text =
+    customer +
+    ' 고객님, 입금 확인되었습니다. 주문해 주셔서 감사합니다.';
+
+
+  try {
+
+    await navigator
+      .clipboard
+      .writeText(text);
+
+
+    alert(
+      '입금 확인 문구를 복사했습니다.\n\n' +
+      text
+    );
+
+  }
+
+  catch (error) {
+
+    prompt(
+      '아래 문구를 복사해 주세요.',
+      text
+    );
+
+  }
+
+}
+
+
+/* =====================================================
+   HTML 문자 안전처리
+===================================================== */
+
+function escapeHtml(value) {
+
+  return String(
+    value ?? ''
+  )
+
+  .replace(
+    /&/g,
+    '&amp;'
+  )
+
+  .replace(
+    /</g,
+    '&lt;'
+  )
+
+  .replace(
+    />/g,
+    '&gt;'
+  )
+
+  .replace(
+    /"/g,
+    '&quot;'
+  )
+
+  .replace(
+    /'/g,
+    '&#039;'
+  );
+
+}
+
+</script>
+
+</body>
+</html>
