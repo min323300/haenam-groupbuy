@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>해남 공구마켓 | AI 자동 홍보센터</title>
+<style>
+:root{--green:#16875a;--dark:#173a2a;--line:#dfe8e0;--bg:#f4f7f4}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,"Noto Sans KR",sans-serif;color:#25332b;line-height:1.55}
+header{background:var(--dark);color:white;padding:24px max(18px,calc((100% - 1100px)/2))}
+header h1{margin:0;font-size:26px}header p{margin:5px 0 0;color:#d7e8dc}
+main{max-width:1100px;margin:24px auto;padding:0 16px 50px}
+nav{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+a.button,button{border:0;border-radius:9px;padding:11px 15px;font-size:14px;font-weight:bold;cursor:pointer;text-decoration:none}
+a.button{background:white;color:var(--dark);border:1px solid var(--line)}
+button.primary{background:var(--green);color:white}button.secondary{background:#e8f1ea;color:var(--dark)}
+button:disabled{opacity:.55;cursor:not-allowed}
+.card{background:white;border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:18px;box-shadow:0 3px 12px #183b2410}
+h2{font-size:20px;margin:0 0 12px}h3{font-size:16px;margin:0 0 10px}
+small,.muted{color:#64776a}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+label{display:block;font-weight:bold;margin:0 0 7px}
+select,textarea{width:100%;padding:12px;border:1px solid #bdccbf;border-radius:9px;background:white;font:inherit}
+textarea{min-height:230px;resize:vertical}
+.product{display:grid;grid-template-columns:190px 1fr;gap:20px;align-items:start;margin-top:16px}
+.product img{width:190px;height:170px;object-fit:contain;background:#f0f3f0;border-radius:12px}
+dl{display:grid;grid-template-columns:95px 1fr;gap:8px 12px;margin:0}dt{font-weight:bold;color:#52685a}dd{margin:0;overflow-wrap:anywhere}
+.notice{padding:12px;border-radius:9px;background:#eef7f0;color:#225d39;margin-top:12px}
+.notice.error{background:#fff0ed;color:#9a3526}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.pill{display:inline-block;background:#e8f4ec;color:#17613e;padding:5px 10px;border-radius:20px;font-size:12px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;background:#f7faf7;border:1px solid var(--line);padding:16px;border-radius:10px;min-height:110px}
+@media(max-width:650px){.grid,.product{grid-template-columns:1fr}.product img{width:100%;max-height:240px}header h1{font-size:22px}.card{padding:16px}dl{grid-template-columns:85px 1fr}}
+</style>
+</head>
+<body>
+<header><h1>🌱 해남 공구마켓 AI 자동 홍보센터</h1><p>1차 버전 · 기존 상품정보 연결 및 홍보 원고 작업 공간</p></header>
+<main>
+<nav><a class="button" href="admin.html">← 기존 관리자</a><a class="button" href="index.html" target="_blank" rel="noopener">고객용 마켓 보기 ↗</a></nav>
+<section class="card">
+<h2>① 홍보할 상품 선택</h2>
+<p class="muted">기존 Google Sheets 상품관리 데이터를 읽기 전용으로 불러옵니다. 상품과 주문 데이터는 변경하지 않습니다.</p>
+<div class="grid"><div><label for="productSelect">등록 상품</label><select id="productSelect"><option value="">상품을 불러오는 중...</option></select></div>
+<div style="align-self:end"><button class="secondary" id="reload">↻ 상품 새로고침</button></div></div>
+<div id="status" class="notice" role="status">상품 연결을 준비하고 있습니다.</div>
+<div class="product" id="productPanel" hidden>
+<div><img id="productImage" alt="상품 대표 이미지" hidden><div id="noImage" class="notice">대표 이미지 없음</div></div>
+<dl><dt>상품명</dt><dd id="name"></dd><dt>판매가격</dt><dd id="price"></dd><dt>정상가격</dt><dd id="normalPrice"></dd><dt>공구기간</dt><dd id="period"></dd><dt>판매상태</dt><dd id="saleStatus"></dd><dt>상품설명</dt><dd id="description"></dd></dl>
+</div>
+</section>
+<section class="card">
+<h2>② 홍보 원고 작업 공간 <span class="pill">AI 자동생성은 다음 단계</span></h2>
+<p class="muted">1차 버전에서는 상품정보를 바탕으로 <b>확인 가능한 정보만 담은 기본 초안</b>을 만듭니다. AI API는 연결하지 않았으며, 내용은 직접 수정할 수 있습니다.</p>
+<div class="grid"><div><label for="channel">홍보 채널</label><select id="channel"><option value="blog">네이버 블로그</option><option value="instagram">인스타그램</option><option value="notice">공동구매 안내문</option></select></div>
+<div style="align-self:end"><button class="primary" id="makeDraft" disabled>기본 홍보 초안 만들기</button></div></div>
+<label for="draft" style="margin-top:18px">원고 편집</label>
+<textarea id="draft" placeholder="상품을 선택하고 기본 홍보 초안을 만들어 주세요."></textarea>
+<div class="actions"><button class="secondary" id="copyDraft">원고 복사</button><button class="secondary" id="downloadDraft">원고 TXT 저장</button></div>
+<p class="muted">네이버 블로그: 원고 확인 → 복사 → 본문에 커서 배치 → F2(AutoHotkey) → 사진 직접 삽입 → 예약 발행</p>
+</section>
+<section class="card"><h2>③ 다음 개발 예정</h2><p>AI 원고 자동생성, 홍보 콘텐츠 별도 저장, 월·수·금 홍보 캘린더는 상품 불러오기 테스트가 끝난 후 하나씩 추가합니다.</p></section>
+</main>
+<script>
+'use strict';
+// 기존 admin.html에서 확인한 상품 조회용 Google Apps Script 웹앱 주소입니다.
+// 이 페이지는 GET 상품 조회만 수행하며 기존 데이터를 수정하지 않습니다.
+const API_URL='https://script.google.com/macros/s/AKfycbz9-pk6kkPk01Lh11agNKxeV1Gjo_kzAPYOXyJ9kXUVY7r8t3ptrLurCjOwdTf31f00ug/exec';
+const $=id=>document.getElementById(id);
+let products=[];
+function showStatus(message,error=false){$('status').textContent=message;$('status').className='notice'+(error?' error':'');}
+function str(v){return v===null||v===undefined?'':String(v);}
+function price(v){const n=Number(v);return str(v)!==''&&Number.isFinite(n)?n.toLocaleString('ko-KR')+'원':'미입력';}
+function date(v){return str(v).replace('T',' ').slice(0,16)||'미입력';}
+function selected(){return products.find(p=>str(p.productCode||p.code)===$('productSelect').value);}
+function driveImageUrl(url){
+ const raw=str(url).trim();if(!raw)return '';
+ const match=raw.match(/(?:\/file\/d\/|[?&]id=)([-\w]{20,})/);
+ return match?'https://drive.google.com/thumbnail?id='+encodeURIComponent(match[1])+'&sz=w800':raw;
+}
+function showProduct(){
+ const p=selected();$('productPanel').hidden=!p;$('makeDraft').disabled=!p;if(!p)return;
+ const field=(id,value)=>$(id).textContent=value;
+ field('name',str(p.productName||p.name)||'미입력');
+ field('price',price(p.salePrice??p.price));
+ field('normalPrice',price(p.normalPrice));
+ field('period',date(p.startAt||p.startDate)+' ~ '+date(p.endAt||p.endDate));
+ field('saleStatus',str(p.saleStatus||p.status)||'미입력');
+ field('description',str(p.description||p.productDescription)||'미입력');
+ const url=driveImageUrl(p.image||p.productImage);
+ $('productImage').hidden=!url;$('noImage').hidden=!!url;
+ if(url){$('productImage').src=url;$('productImage').onerror=()=>{$('productImage').hidden=true;$('noImage').hidden=false;};}
+}
+async function loadProducts(){
+ $('reload').disabled=true;showStatus('Google Sheets 상품정보를 불러오는 중입니다...');
+ try{
+  const url=new URL(API_URL);url.searchParams.set('action','products');
+  const response=await fetch(url.toString(),{method:'GET',redirect:'follow'});
+  if(!response.ok)throw new Error('HTTP '+response.status);
+  const result=await response.json();
+  if(!result.success)throw new Error(result.message||'상품 조회 실패');
+  products=Array.isArray(result.products)?result.products:(Array.isArray(result.data)?result.data:[]);
+  const select=$('productSelect');select.replaceChildren();
+  select.add(new Option('상품을 선택하세요',''));
+  products.forEach(p=>select.add(new Option(str(p.productName||p.name||'이름 없는 상품')+' ('+str(p.productCode||p.code)+')',str(p.productCode||p.code))));
+  showStatus(products.length+'개 상품을 불러왔습니다. 홍보할 상품을 선택하세요.');
+  showProduct();
+ }catch(e){showStatus('상품 조회 오류: '+e.message+' — 웹앱 배포 및 접근 권한을 확인하세요.',true);$('productSelect').replaceChildren(new Option('상품 조회 실패',''));$('productPanel').hidden=true;$('makeDraft').disabled=true;}
+ finally{$('reload').disabled=false;}
+}
+function makeDraft(){
+ const p=selected();if(!p)return;
+ const name=str(p.productName||p.name).trim();
+ const sale=price(p.salePrice??p.price);
+ const desc=str(p.description||p.productDescription).trim();
+ const start=date(p.startAt||p.startDate),end=date(p.endAt||p.endDate);
+ const period=(start==='미입력'&&end==='미입력')?'공구기간은 상품 페이지에서 확인해 주세요.':'공구기간: '+start+' ~ '+end;
+ const details=[name,sale!=='미입력'?'판매가격: '+sale:'',period,desc].filter(Boolean).join('\n');
+ const channel=$('channel').value;
+ if(channel==='blog'){
+  $('draft').value=`${name} | 해남 공구마켓 공동구매 안내\n\n안녕하세요. 해남 공구마켓입니다.\n오늘은 ${name} 상품을 소개합니다.\n\n[사진 1 - 실제 상품 또는 산지 사진을 직접 선택]\n\n${desc||'상품에 관한 실제 농사·산지·먹거리 이야기를 직접 작성해 주세요.'}\n\n[사진 2 - 상품 실물 사진을 직접 선택]\n\n공동구매 안내\n${details}\n\n[사진 3 - 실제 포장 또는 배송 준비 사진을 직접 선택]\n\n구매 전 상세페이지의 최신 판매조건과 배송정보를 확인해 주세요.\n\n※ 농사·산지 이야기 70% / 상품 홍보 30% 비율로 직접 보완할 초안입니다.`;
+ }else if(channel==='instagram'){
+  $('draft').value=`🌱 ${name}\n\n${desc||'실제 상품 이야기를 입력해 주세요.'}\n\n${sale!=='미입력'?'공동구매 판매가: '+sale+'\n':''}${period}\n\n자세한 상품정보는 해남 공구마켓에서 확인해 주세요.\n\n#해남공구마켓 #해남농산물 #공동구매\n\n[실제 상품 사진 또는 영상 추가]`;
+ }else{
+  $('draft').value=`[해남 공구마켓 공동구매 안내]\n\n${details}\n\n상품별 배송 및 주문 조건은 공구마켓 상세페이지에서 확인해 주세요.`;
+ }
+}
+async function copyDraft(){
+ const text=$('draft').value;if(!text.trim())return alert('복사할 원고가 없습니다.');
+ try{await navigator.clipboard.writeText(text);alert('원고를 복사했습니다.');}
+ catch(e){$('draft').focus();$('draft').select();alert('자동 복사가 제한되었습니다. 선택된 원고를 Ctrl+C로 복사해 주세요.');}
+}
+function downloadDraft(){
+ const content=$('draft').value;if(!content.trim())return alert('저장할 원고가 없습니다.');
+ const blob=new Blob(['\ufeff',content],{type:'text/plain;charset=utf-8'});
+ const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='해남공구마켓_홍보원고.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+$('reload').addEventListener('click',loadProducts);
+$('productSelect').addEventListener('change',showProduct);
+$('makeDraft').addEventListener('click',makeDraft);
+$('copyDraft').addEventListener('click',copyDraft);
+$('downloadDraft').addEventListener('click',downloadDraft);
+loadProducts();
+</script>
+</body></html>
