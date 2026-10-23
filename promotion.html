@@ -56,14 +56,22 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;background:#f7faf7;
 <p class="small-note">홍보 채널을 선택한 후 복사하세요. 블로그는 오레오(O-R-E-O) 구성과 본문 2,500자 이상, 인스타그램은 짧은 게시글과 해시태그 지침을 포함합니다. ChatGPT에서 생성한 글은 자동 저장되지 않습니다.</p>
 <label for="draft" style="margin-top:18px">원고 편집</label>
 <textarea id="draft" placeholder="상품을 선택하고 기본 홍보 초안을 만들어 주세요."></textarea>
-<div class="actions"><button class="secondary" id="cleanDraft">✨ 블로그 원고 정리·미리보기</button><button class="secondary" id="copyDraft">원고 복사</button><button class="secondary" id="downloadDraft">원고 TXT 저장</button><button class="primary" id="prepareAhk">⌨ AutoHotkey F2 입력 준비</button></div>
+<div class="actions"><button class="secondary" id="cleanDraft">✨ 블로그 원고 정리·미리보기</button><button class="secondary" id="copyDraft">원고 복사</button><button class="secondary" id="downloadDraft">원고 TXT 저장</button><button class="primary" id="prepareAhk">⌨ 정리된 원고 F2 입력 준비</button><button class="secondary" id="ahkHelp">🖥 AutoHotkey 연결 안내</button></div>
 <div id="cleanPanel" class="notice" hidden>
  <label for="cleanPreview">정리된 원고 미리보기 (원본은 그대로 유지됩니다)</label>
  <p class="small-note">제목의 #, 강조용 **, 구분선 --- 등을 정리합니다. 사진 삽입 안내와 문단은 유지합니다. 결과를 확인한 뒤 적용하세요.</p>
  <textarea id="cleanPreview" readonly style="min-height:260px"></textarea>
  <div class="actions"><button class="primary" id="applyClean">확인 후 원고 편집창에 적용</button><button class="secondary" id="copyClean">정리된 원고 복사</button><button class="secondary" id="closeClean">미리보기 닫기</button></div>
 </div>
-<div id="ahkStatus" class="notice" role="status">F2 입력 준비 버튼을 누르면 편집창 원고가 클립보드에 복사됩니다. PC에서 AutoHotkey 입력기를 실행한 뒤 네이버 블로그 본문에 커서를 놓고 F2를 누르세요. 다른 내용을 복사하면 다시 준비해야 합니다.</div>
+<div id="ahkStatus" class="notice" role="status">정리된 원고만 F2 입력용으로 복사합니다. 원본 원고는 변경되지 않습니다.</div>
+<div id="ahkPanel" class="notice" hidden>
+ <h3>🖥 AutoHotkey F2 연결 안내</h3>
+ <p>① 아래 입력용 메모장에서 정리된 원고 확인 → ② 「정리된 원고 복사」 → ③ Windows에서 <strong>Haenam_Blog_Clipboard_F2_v2.ahk</strong> 실행 → ④ 네이버 블로그 본문 클릭 → F2</p>
+ <label for="ahkMemo">F2 입력용 메모장 (정리된 원고)</label>
+ <textarea id="ahkMemo" style="min-height:260px" placeholder="정리된 원고가 이곳에 표시됩니다. 필요한 경우 이 메모장에서 수정할 수 있습니다."></textarea>
+ <div class="actions"><button class="primary" id="copyAhkMemo">📋 정리된 원고 복사</button><button class="secondary" id="closeAhkPanel">안내 닫기</button></div>
+ <p class="small-note">F2: 입력 시작 / ESC 또는 F3: 입력 중단. 중간에 다른 내용을 복사했다면 다시 「정리된 원고 복사」를 누르세요. Windows 프로그램은 웹페이지에서 직접 실행할 수 없습니다.</p>
+</div>
 <p class="muted">네이버 블로그: 원고 정리 → AutoHotkey F2 입력 준비 → 블로그 본문에 커서 배치 → F2 → 사진 직접 삽입 → 예약 발행</p>
 </section>
 <section class="card">
@@ -124,7 +132,8 @@ async function loadProducts(){
  $('reload').disabled=true;showStatus('Google Sheets 상품정보를 불러오는 중입니다...');
  try{
   const url=new URL(API_URL);url.searchParams.set('action','products');
-  const response=await fetch(url.toString(),{method:'GET',redirect:'follow'});
+  const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),15000);
+  let response;try{response=await fetch(url.toString(),{method:'GET',redirect:'follow',signal:controller.signal});}finally{clearTimeout(timeout);}
   if(!response.ok)throw new Error('HTTP '+response.status);
   const result=await response.json();
   if(!result.success)throw new Error(result.message||'상품 조회 실패');
@@ -134,7 +143,7 @@ async function loadProducts(){
   products.forEach(p=>select.add(new Option(str(p.productName||p.name||'이름 없는 상품')+' ('+str(p.productCode||p.code)+')',str(p.productCode||p.code))));
   showStatus(products.length+'개 상품을 불러왔습니다. 홍보할 상품을 선택하세요.');
   showProduct();
- }catch(e){showStatus('상품 조회 오류: '+e.message+' — 웹앱 배포 및 접근 권한을 확인하세요.',true);$('productSelect').replaceChildren(new Option('상품 조회 실패',''));$('productPanel').hidden=true;$('makeDraft').disabled=true;$('copyAiPrompt').disabled=true;}
+ }catch(e){showStatus('상품 조회 오류: '+(e.name==='AbortError'?'15초 동안 응답이 없어 요청을 중단했습니다. 잠시 후 상품 새로고침을 눌러주세요.':e.message)+' — 웹앱 배포 및 접근 권한을 확인하세요.',true);$('productSelect').replaceChildren(new Option('상품 조회 실패',''));$('productPanel').hidden=true;$('makeDraft').disabled=true;$('copyAiPrompt').disabled=true;}
  finally{$('reload').disabled=false;}
 }
 function makeDraft(){
@@ -226,18 +235,26 @@ async function copyDraft(){
  try{await navigator.clipboard.writeText(text);alert('원고를 복사했습니다.');}
  catch(e){$('draft').focus();$('draft').select();alert('자동 복사가 제한되었습니다. 선택된 원고를 Ctrl+C로 복사해 주세요.');}
 }
-async function prepareAhk(){
- const content=$('draft').value;
- if(!content.trim())return alert('먼저 원고를 편집창에 넣어주세요.');
- if($('channel').value!=='blog'&&!confirm('현재 블로그 채널이 아닙니다. 이 원고를 F2 입력용으로 준비할까요?'))return;
+function showAhkPanel(){
+ const raw=$('draft').value;
+ if(!raw.trim())return alert('먼저 원고를 편집창에 넣어주세요.');
+ $('ahkMemo').value=cleanBlogMarkdown(raw);
+ $('ahkPanel').hidden=false;
+ $('ahkPanel').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+async function copyAhkMemo(){
+ const content=$('ahkMemo').value;
+ if(!content.trim())return alert('복사할 원고가 없습니다.');
  try{
   await navigator.clipboard.writeText(content);
-  $('ahkStatus').textContent='✓ F2 입력 준비 완료: '+content.length.toLocaleString('ko-KR')+'자 복사됨. PC에서 Haenam_Blog_Clipboard_F2.ahk를 실행하고 네이버 블로그 본문에 커서를 놓은 뒤 F2를 누르세요. 중간에 다른 내용을 복사했다면 다시 준비하세요.';
+  $('ahkStatus').textContent='✓ 정리된 원고 '+content.length.toLocaleString('ko-KR')+'자 복사 완료. AutoHotkey v2 실행 후 메모장에서 F2를 먼저 테스트하세요. ESC/F3 중단.';
   $('ahkStatus').className='notice';
- }catch(e){
-  $('ahkStatus').textContent='클립보드 복사가 차단되었습니다. 브라우저 권한을 확인하거나 원고 복사 버튼을 이용해 주세요.';
-  $('ahkStatus').className='notice error';
- }
+ }catch(e){$('ahkMemo').focus();$('ahkMemo').select();$('ahkStatus').textContent='자동 복사가 차단되었습니다. 선택된 내용을 Ctrl+C로 복사해 주세요.';$('ahkStatus').className='notice error';}
+}
+async function prepareAhk(){
+ if($('channel').value!=='blog'&&!confirm('블로그 채널이 아닙니다. 정리된 원고를 F2용으로 준비할까요?'))return;
+ showAhkPanel();
+ if(!$('ahkPanel').hidden)await copyAhkMemo();
 }
 function downloadDraft(){
  const content=$('draft').value;if(!content.trim())return alert('저장할 원고가 없습니다.');
@@ -299,7 +316,7 @@ async function saveShared(){
   sharedMessage('공동 저장 완료! 다른 PC에서 목록 새로고침 후 불러올 수 있습니다.');
  }catch(e){sharedMessage('공동 저장 오류: '+e.message,true);}finally{btn.disabled=false;}
 }
-$('draft').addEventListener('input',()=>{dirty=true;$('cleanPanel').hidden=true;});
+$('draft').addEventListener('input',()=>{dirty=true;$('cleanPanel').hidden=true;$('ahkPanel').hidden=true;});
 $('draftTitle').addEventListener('input',()=>dirty=true);
 ['channel','writer','draftState','publishDate'].forEach(id=>$(id).addEventListener('change',()=>dirty=true));
 $('saveShared').addEventListener('click',saveShared);
@@ -319,6 +336,9 @@ $('closeClean').addEventListener('click',()=>{$('cleanPanel').hidden=true;});
 $('copyDraft').addEventListener('click',copyDraft);
 $('downloadDraft').addEventListener('click',downloadDraft);
 $('prepareAhk').addEventListener('click',prepareAhk);
+$('ahkHelp').addEventListener('click',showAhkPanel);
+$('copyAhkMemo').addEventListener('click',copyAhkMemo);
+$('closeAhkPanel').addEventListener('click',()=>{$('ahkPanel').hidden=true;});
 loadProducts();
 </script>
 </body></html>
