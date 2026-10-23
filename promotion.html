@@ -56,14 +56,15 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;background:#f7faf7;
 <p class="small-note">홍보 채널을 선택한 후 복사하세요. 블로그는 오레오(O-R-E-O) 구성과 본문 2,500자 이상, 인스타그램은 짧은 게시글과 해시태그 지침을 포함합니다. ChatGPT에서 생성한 글은 자동 저장되지 않습니다.</p>
 <label for="draft" style="margin-top:18px">원고 편집</label>
 <textarea id="draft" placeholder="상품을 선택하고 기본 홍보 초안을 만들어 주세요."></textarea>
-<div class="actions"><button class="secondary" id="cleanDraft">✨ 블로그 원고 정리·미리보기</button><button class="secondary" id="copyDraft">원고 복사</button><button class="secondary" id="downloadDraft">원고 TXT 저장</button></div>
+<div class="actions"><button class="secondary" id="cleanDraft">✨ 블로그 원고 정리·미리보기</button><button class="secondary" id="copyDraft">원고 복사</button><button class="secondary" id="downloadDraft">원고 TXT 저장</button><button class="primary" id="prepareAhk">⌨ AutoHotkey F2 입력 준비</button></div>
 <div id="cleanPanel" class="notice" hidden>
  <label for="cleanPreview">정리된 원고 미리보기 (원본은 그대로 유지됩니다)</label>
  <p class="small-note">제목의 #, 강조용 **, 구분선 --- 등을 정리합니다. 사진 삽입 안내와 문단은 유지합니다. 결과를 확인한 뒤 적용하세요.</p>
  <textarea id="cleanPreview" readonly style="min-height:260px"></textarea>
  <div class="actions"><button class="primary" id="applyClean">확인 후 원고 편집창에 적용</button><button class="secondary" id="copyClean">정리된 원고 복사</button><button class="secondary" id="closeClean">미리보기 닫기</button></div>
 </div>
-<p class="muted">네이버 블로그: 원고 확인 → 복사 → 본문에 커서 배치 → F2(AutoHotkey) → 사진 직접 삽입 → 예약 발행</p>
+<div id="ahkStatus" class="notice" role="status">F2 입력 준비 버튼을 누르면 편집창 원고가 클립보드에 복사됩니다. PC에서 AutoHotkey 입력기를 실행한 뒤 네이버 블로그 본문에 커서를 놓고 F2를 누르세요. 다른 내용을 복사하면 다시 준비해야 합니다.</div>
+<p class="muted">네이버 블로그: 원고 정리 → AutoHotkey F2 입력 준비 → 블로그 본문에 커서 배치 → F2 → 사진 직접 삽입 → 예약 발행</p>
 </section>
 <section class="card">
 <h2>③ 공동 홍보 원고 저장·불러오기</h2>
@@ -225,6 +226,19 @@ async function copyDraft(){
  try{await navigator.clipboard.writeText(text);alert('원고를 복사했습니다.');}
  catch(e){$('draft').focus();$('draft').select();alert('자동 복사가 제한되었습니다. 선택된 원고를 Ctrl+C로 복사해 주세요.');}
 }
+async function prepareAhk(){
+ const content=$('draft').value;
+ if(!content.trim())return alert('먼저 원고를 편집창에 넣어주세요.');
+ if($('channel').value!=='blog'&&!confirm('현재 블로그 채널이 아닙니다. 이 원고를 F2 입력용으로 준비할까요?'))return;
+ try{
+  await navigator.clipboard.writeText(content);
+  $('ahkStatus').textContent='✓ F2 입력 준비 완료: '+content.length.toLocaleString('ko-KR')+'자 복사됨. PC에서 Haenam_Blog_Clipboard_F2.ahk를 실행하고 네이버 블로그 본문에 커서를 놓은 뒤 F2를 누르세요. 중간에 다른 내용을 복사했다면 다시 준비하세요.';
+  $('ahkStatus').className='notice';
+ }catch(e){
+  $('ahkStatus').textContent='클립보드 복사가 차단되었습니다. 브라우저 권한을 확인하거나 원고 복사 버튼을 이용해 주세요.';
+  $('ahkStatus').className='notice error';
+ }
+}
 function downloadDraft(){
  const content=$('draft').value;if(!content.trim())return alert('저장할 원고가 없습니다.');
  const blob=new Blob(['\ufeff',content],{type:'text/plain;charset=utf-8'});
@@ -304,6 +318,7 @@ $('copyClean').addEventListener('click',copyCleanPreview);
 $('closeClean').addEventListener('click',()=>{$('cleanPanel').hidden=true;});
 $('copyDraft').addEventListener('click',copyDraft);
 $('downloadDraft').addEventListener('click',downloadDraft);
+$('prepareAhk').addEventListener('click',prepareAhk);
 loadProducts();
 </script>
 </body></html>
