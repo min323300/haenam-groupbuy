@@ -64,17 +64,57 @@ input,select,textarea{width:100%;padding:12px;border:1px solid #ccd3cc;border-ra
 textarea{min-height:80px;resize:vertical} .privacy{display:flex;gap:8px;align-items:flex-start;margin:13px 0;font-size:12px;color:#666} .privacy input{width:auto;margin-top:2px}
 .msg{margin-top:12px;padding:11px;border-radius:9px;display:none} .ok{display:block;background:#e8f6ed;color:#17623f} .err{display:block;background:#fdeaea;color:#a32121}
 .detail-blocks{margin:24px 0}.detail-block{margin:0 0 22px}.detail-block.image img{display:block;width:100%;height:auto;border-radius:14px;background:#f5f5f5}.detail-block.text{font-size:16px;line-height:1.85;white-space:pre-wrap;color:#303a34}.detail-block.emphasis{font-size:20px;line-height:1.65;font-weight:900;text-align:center;padding:22px 18px;border-radius:14px;background:#f1f8f3;color:var(--green);white-space:pre-wrap}.detail-order-btn{margin-top:22px;padding:16px;font-size:17px}
+
+.review-section{margin-top:55px;padding-top:42px;border-top:1px solid var(--line)}
+.review-head{display:flex;justify-content:space-between;gap:18px;align-items:end;margin-bottom:20px}
+.review-head h2{font-size:31px;margin:0}.review-head p{margin:7px 0 0;color:#777}
+.review-write{width:auto;padding:12px 18px;margin:0;white-space:nowrap}
+.review-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.review-card{background:#fff;border-radius:18px;padding:20px;box-shadow:0 5px 20px rgba(0,0,0,.06);min-height:185px}
+.review-stars{color:#e5a116;font-size:18px;letter-spacing:1px}.review-name{font-weight:900;margin:9px 0 4px}.review-product{font-size:12px;color:var(--green);font-weight:800}.review-text{margin-top:13px;color:#56615a;line-height:1.7;font-size:14px}.review-empty{grid-column:1/-1;text-align:center;background:#fff;border-radius:18px;padding:34px;color:#777}
+.participation{margin-top:30px;background:#fff;border-radius:18px;padding:22px;box-shadow:0 5px 20px rgba(0,0,0,.05)}
+.participation h3{margin:0 0 6px;font-size:21px}.participation-note{font-size:12px;color:#888;margin-bottom:14px}.participation-list{display:grid;gap:9px}.participation-item{padding:12px 14px;background:#f5f8f5;border-radius:11px;color:#4f5b54;font-size:14px}.participation-item b{color:var(--green)}
+.review-modal-card{max-width:600px}.star-select{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.star-select label{margin:0}.star-select input{display:none}.star-select span{display:block;text-align:center;padding:10px 4px;border:1px solid #d8ddd8;border-radius:9px;cursor:pointer;background:#fff}.star-select input:checked+span{background:#fff5d8;border-color:#e5a116;color:#9b6b00;font-weight:900}.review-help{font-size:12px;color:#777;line-height:1.6;margin-top:8px}.review-photo{background:#f7f8f7;padding:10px;border-radius:9px}
 footer{background:#203028;color:#dbe4df;text-align:center;padding:30px 20px;font-size:13px}
-@media(max-width:850px){.hero-in{grid-template-columns:1fr}.hero h1{font-size:38px}.grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:580px){.hero{padding:38px 15px}.hero h1{font-size:32px}.hero p{font-size:15px}.grid{grid-template-columns:1fr}main{padding:0 12px 50px}.stats{padding:0 12px}.stat{padding:15px 6px}.stat b{font-size:20px}.section-head{display:block}.section-head p{margin-top:8px}}
+@media(max-width:850px){.hero-in{grid-template-columns:1fr}.hero h1{font-size:38px}.grid{grid-template-columns:repeat(2,1fr)}.review-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:580px){.hero{padding:38px 15px}.hero h1{font-size:32px}.hero p{font-size:15px}.grid{grid-template-columns:1fr}main{padding:0 12px 50px}.stats{padding:0 12px}.stat{padding:15px 6px}.stat b{font-size:20px}.section-head{display:block}.section-head p{margin-top:8px}.review-head{display:block}.review-write{margin-top:14px;width:100%}.review-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <header><div class="header-in"><div class="logo">해남공구마켓<small>해남 농수산물 산지 공동구매</small></div><a class="header-link" href="#products">진행 공구 보기</a></div></header>
 <section class="hero"><div class="hero-in"><div><div class="eyebrow">HAENAM GROUP BUY MARKET</div><h1>해남의 좋은 상품을<br>함께 더 합리적으로</h1><p>쌀·고구마·배추 등 해남에서 준비한 농수산물 공동구매를 한곳에서 확인하세요.<br>남은 기간과 현재 주문 현황도 실시간으로 확인할 수 있습니다.</p></div><div class="hero-box"><strong>🌾 지금 진행 중인 공구</strong><span>관리자에서 상품을 등록하면 이 화면에 자동으로 추가됩니다. 상품별 공구기간·주문현황·결제계좌도 각각 관리됩니다.</span></div></div></section>
 <div class="stats"><div class="stats-in"><div class="stat"><span>진행 중 공구</span><b id="activeCount">-</b></div><div class="stat"><span>전체 주문</span><b id="totalOrders">-</b></div><div class="stat"><span>등록 상품</span><b id="totalProducts">-</b></div></div></div>
-<main id="products"><div class="section-head"><div><div class="eyebrow">NOW OPEN</div><h2>진행 중인 공동구매</h2></div><p>상품을 눌러 주문과 결제계좌를 확인하세요.</p></div><div id="productGrid" class="grid"><div class="loading">공구상품을 불러오는 중입니다.</div></div></main>
+<main id="products"><div class="section-head"><div><div class="eyebrow">NOW OPEN</div><h2>진행 중인 공동구매</h2></div><p>상품을 눌러 주문과 결제계좌를 확인하세요.</p></div><div id="productGrid" class="grid"><div class="loading">공구상품을 불러오는 중입니다.</div></div>
+
+<section class="review-section" id="reviews">
+ <div class="review-head"><div><div class="eyebrow">CUSTOMER REVIEW</div><h2>고객 구매후기</h2><p>실제 구매후기는 관리자 확인 후 공개됩니다.</p></div><button class="btn review-write" type="button" onclick="openReviewModal()">후기 작성하기</button></div>
+ <div id="reviewGrid" class="review-grid"><div class="review-empty">아직 공개된 구매후기가 없습니다.<br>첫 후기를 남겨주세요.</div></div>
+ <div class="participation">
+  <h3>🛒 최근 공동구매 참여</h3><div class="participation-note">실제 주문 데이터 연결 전 화면 구성 예시입니다. 공개 시 이름은 자동으로 가려집니다.</div>
+  <div id="participationList" class="participation-list"><div class="participation-item">주문 데이터 연결 후 <b>김○수님</b>처럼 이름 일부만 표시됩니다.</div></div>
+ </div>
+</section>
+</main>
 <footer>해남공구마켓 · 해남 농수산물 공동구매</footer>
+
+<div id="reviewModal" class="modal" onclick="reviewBackdropClose(event)">
+ <div class="modal-card review-modal-card">
+  <div class="modal-top"><strong>구매후기 작성</strong><button class="close" type="button" onclick="closeReviewModal()">×</button></div>
+  <div class="modal-body">
+   <form id="reviewForm">
+    <label>구매상품</label><select id="reviewProduct" required><option value="">상품을 선택해주세요</option></select>
+    <label>성함</label><input id="reviewName" required placeholder="예: 김민수"><div class="review-help">홈페이지 공개 시 김○수처럼 이름 일부를 가려서 표시할 예정입니다.</div>
+    <label>별점</label><div class="star-select">
+     <label><input type="radio" name="reviewRating" value="1"><span>★ 1</span></label><label><input type="radio" name="reviewRating" value="2"><span>★ 2</span></label><label><input type="radio" name="reviewRating" value="3"><span>★ 3</span></label><label><input type="radio" name="reviewRating" value="4"><span>★ 4</span></label><label><input type="radio" name="reviewRating" value="5" checked><span>★ 5</span></label>
+    </div>
+    <label>후기 내용</label><textarea id="reviewText" required placeholder="받아보신 상품에 대한 후기를 남겨주세요."></textarea>
+    <label>사진 첨부 <span style="font-weight:400;color:#888">(선택)</span></label><input class="review-photo" id="reviewPhoto" type="file" accept="image/*">
+    <div class="review-help">현재 1차 화면 테스트 단계입니다. 아직 Google Sheets/Drive 저장은 연결하지 않았습니다.</div>
+    <button class="btn" type="submit" style="margin-top:16px">후기 등록하기</button><div id="reviewMsg" class="msg"></div>
+   </form>
+  </div>
+ </div>
+</div>
 
 <div id="orderModal" class="modal" onclick="backdropClose(event)">
  <div class="modal-card">
@@ -104,6 +144,22 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbz9-pk6kkPk01Lh11agNKxe
 let products = [];
 let currentProduct = null;
 let timerHandle = null;
+
+function maskName(name){
+ const n=s(name).trim();
+ if(!n)return '';
+ if(n.length===1)return n;
+ if(n.length===2)return n[0]+'○';
+ return n[0]+'○'.repeat(Math.max(1,n.length-2))+n[n.length-1];
+}
+function fillReviewProducts(){
+ const sel=document.getElementById('reviewProduct'); if(!sel)return;
+ sel.innerHTML='<option value="">상품을 선택해주세요</option>'+products.map(p=>`<option value="${e(p.productCode)}">${e(p.productName)}</option>`).join('');
+}
+function openReviewModal(){fillReviewProducts();reviewModal.classList.add('open');document.body.style.overflow='hidden'}
+function closeReviewModal(){reviewModal.classList.remove('open');document.body.style.overflow=''}
+function reviewBackdropClose(ev){if(ev.target.id==='reviewModal')closeReviewModal()}
+
 
 function s(v){return String(v==null?'':v)}
 function e(v){return s(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
@@ -269,6 +325,14 @@ orderForm.addEventListener('submit',async ev=>{
  }catch(err){showMsg('주문 오류: '+err.message,true)}
  finally{orderButton.disabled=false;orderButton.textContent='공동구매 주문하기'}
 });
+reviewForm.addEventListener('submit',ev=>{
+ ev.preventDefault();
+ const rating=document.querySelector('input[name="reviewRating"]:checked');
+ if(!reviewProduct.value||!reviewName.value.trim()||!reviewText.value.trim()||!rating){return}
+ reviewMsg.textContent='화면 테스트가 정상입니다. 다음 단계에서 관리자 승인형 후기 저장 기능을 연결합니다.';
+ reviewMsg.className='msg ok';
+});
+
 function showMsg(text,isErr){msg.textContent=text;msg.className='msg '+(isErr?'err':'ok')}
 loadProducts();timerHandle=setInterval(tick,1000);
 </script>
