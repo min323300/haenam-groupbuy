@@ -414,7 +414,9 @@ async function loadOrders(){
     const password=$('adminPassword').value;
     const res=await apiGet({action:'orders',password});
     if(!res.success) throw new Error(res.message||'주문 조회 실패');
-    const rows=res.orders||res.data||[];
+    const rows=(res.orders||res.data||[]).filter(o =>
+      String(o.orderNo || o.orderNumber || '').trim() !== ''
+    );
     $('orderRows').innerHTML=rows.map((o,i)=>`
       <tr data-order="${esc(o.orderNo||o.orderNumber||'')}">
         <td>${esc(o.orderNo||o.orderNumber||'')}</td><td>${esc(o.createdAt||o.date||'')}</td>
