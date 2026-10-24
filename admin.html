@@ -47,6 +47,7 @@
     .review-status{font-weight:700}
     @media(max-width:800px){.grid,.grid3{grid-template-columns:1fr}.full{grid-column:auto}}
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -441,15 +442,17 @@ async function downloadOrdersExcel(){
       return;
     }
 
-    const res = await apiGet({action:'orders', password});
+    const res = await apiGet({
+      action:'orders',
+      password
+    });
 
     if(!res.success){
       throw new Error(res.message || '주문 조회 실패');
     }
 
-    // 실제 주문번호가 있는 주문만 다운로드
     const orders = (res.orders || res.data || []).filter(o =>
-      String(o.orderNo || o.orderNumber || '').trim()
+      String(o.orderNo || o.orderNumber || '').trim() !== ''
     );
 
     if(!orders.length){
@@ -457,75 +460,64 @@ async function downloadOrdersExcel(){
       return;
     }
 
-    const headers = [
-      '주문번호',
-      '접수일시',
-      '상품명',
-      '이름',
-      '연락처',
-      '수량',
-      '주소',
-      '요청사항',
-      '전화확인',
-      '입금확인',
-      '안내완료',
-      '배송완료',
-      '관리자메모'
-    ];
+    function formatPhone(phone){
+      let p = String(phone || '').replace(/[^0-9]/g,'');
 
-    const rows = orders.map(o => [
-      o.orderNo || o.orderNumber || '',
-      o.createdAt || o.date || '',
-      o.productName || '',
-      o.name || '',
-      formatPhoneForExcel(o.phone),
-      o.quantity || o.qty || '',
-      o.address || '',
-      o.memo || '',
-      o.phoneConfirmed ? '완료' : '',
-      o.paymentConfirmed ? '완료' : '',
-      o.guideCompleted ? '완료' : '',
-      o.shippingCompleted ? '완료' : '',
-      o.adminMemo || ''
-    ]);
-    function formatPhoneForExcel(phone){
-  let p = String(phone || '').replace(/[^0-9]/g, '');
-
-  // 엑셀/구글시트에서 앞자리 0이 사라진 휴대전화 번호 복구
-  if(p.length === 10 && p.startsWith('10')){
-    p = '0' + p;
-  }
-
-  // 010-1234-5678 형태
-  if(p.length === 11 && p.startsWith('010')){
-    p = p.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
-  }
-
-  return p;
-}
-
-    function csvCell(value){
-      let text = String(value ?? '');
-
-      if(/^[=+\-@]/.test(text)){
-        text = "'" + text;
+      if(p.length === 10 && p.startsWith('10')){
+        p = '0' + p;
       }
 
-      return '"' + text.replace(/"/g,'""') + '"';
+      if(p.length === 11 && p.startsWith('010')){
+        return p.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+      }
+
+      return p;
     }
 
-    const csv = [
-      headers.map(csvCell).join(','),
-      ...rows.map(row => row.map(csvCell).join(','))
-    ].join('\r\n');
+    const excelData = orders.map(o => ({
+      '주문번호': String(o.orderNo || o.orderNumber || ''),
+      '접수일시': String(o.createdAt || o.date || ''),
+      '상품명': String(o.productName || ''),
+      '이름': String(o.name || ''),
+      '연락처': formatPhone(o.phone),
+      '수량': Number(o.quantity || o.qty || 0),
+      '주소': String(o.address || ''),
+      '요청사항': String(o.memo || ''),
+      '전화확인': o.phoneConfirmed ? '완료' : '',
+      '입금확인': o.paymentConfirmed ? '완료' : '',
+      '안내완료': o.guideCompleted ? '완료' : '',
+      '배송완료': o.shippingCompleted ? '완료' : '',
+      '관리자메모': String(o.adminMemo || '')
+    }));
 
-    const BOM = '\uFEFF';
-    const blob = new Blob(
-      [BOM + csv],
-      {type:'text/csv;charset=utf-8;'}
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+    worksheet['!cols'] = [
+      {wch:25},
+      {wch:22},
+      {wch:22},
+      {wch:12},
+      {wch:16},
+      {wch:8},
+      {wch:45},
+      {wch:30},
+      {wch:12},
+      {wch:12},
+      {wch:12},
+      {wch:12},
+      {wch:30}
+    ];
+
+    const workbook = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      '주문목록'
     );
 
     const now = new Date();
+
     const p = n => String(n).padStart(2,'0');
 
     const fileName =
@@ -533,23 +525,13 @@ async function downloadOrdersExcel(){
       now.getFullYear() +
       p(now.getMonth()+1) +
       p(now.getDate()) +
-      '.csv';
+      '.xlsx';
 
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-
-    a.href = url;
-    a.download = fileName;
-
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    URL.revokeObjectURL(url);
+    XLSX.writeFile(workbook,fileName);
 
     showMessage(
       'orderMessage',
-      `${orders.length}건의 주문을 엑셀용 파일로 다운로드했습니다.`
+      `${orders.length}건의 주문을 엑셀 파일로 다운로드했습니다.`
     );
 
   }catch(e){
@@ -559,7 +541,7 @@ async function downloadOrdersExcel(){
       true
     );
   }
-}  
+}
 async function saveOrderRow(btn){
   const tr=btn.closest('tr');
   try{
