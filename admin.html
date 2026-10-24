@@ -478,7 +478,7 @@ async function downloadOrdersExcel(){
       o.createdAt || o.date || '',
       o.productName || '',
       o.name || '',
-      '="' + String(o.phone || '') + '"',
+      formatPhoneForExcel(o.phone),
       o.quantity || o.qty || '',
       o.address || '',
       o.memo || '',
@@ -488,6 +488,21 @@ async function downloadOrdersExcel(){
       o.shippingCompleted ? '완료' : '',
       o.adminMemo || ''
     ]);
+    function formatPhoneForExcel(phone){
+  let p = String(phone || '').replace(/[^0-9]/g, '');
+
+  // 엑셀/구글시트에서 앞자리 0이 사라진 휴대전화 번호 복구
+  if(p.length === 10 && p.startsWith('10')){
+    p = '0' + p;
+  }
+
+  // 010-1234-5678 형태
+  if(p.length === 11 && p.startsWith('010')){
+    p = p.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+  }
+
+  return p;
+}
 
     function csvCell(value){
       let text = String(value ?? '');
