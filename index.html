@@ -347,13 +347,16 @@ orderForm.addEventListener('submit',async ev=>{
  if(stateOf(currentProduct)!=='판매중'){showMsg('현재 주문할 수 없는 상품입니다.',true);return}
  orderButton.disabled=true;orderButton.textContent='주문 접수 중...';
  try{
-  const payload={action:'addOrder',productCode:currentProduct.productCode,productName:currentProduct.productName,
-  name:String(name?.value || '').trim(),
-  phone:String(phone?.value || '').trim(),
-  qty:qty?.value || 1,
-  address:String(address?.value || '').trim(),
-  memo:String(memo?.value || '').trim()
-  };
+  const payload = {
+  action: 'addOrder',
+  productCode: currentProduct.productCode,
+  productName: currentProduct.productName,
+  name: String(document.getElementById('name').value || '').trim(),
+  phone: String(document.getElementById('phone').value || '').trim(),
+  qty: document.getElementById('qty').value || 1,
+  address: String(document.getElementById('address').value || '').trim(),
+  memo: String(document.getElementById('memo').value || '').trim()
+};
   const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
   const data=await r.json(); if(data.success===false)throw new Error(data.message||'주문 접수 실패');
   showMsg('주문이 정상적으로 접수되었습니다. 결제 안내에 따라 입금해 주세요.',false);
