@@ -71,7 +71,7 @@ textarea{min-height:80px;resize:vertical} .privacy{display:flex;gap:8px;align-it
 .review-write{width:auto;padding:12px 18px;margin:0;white-space:nowrap}
 .review-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
 .review-card{background:#fff;border-radius:18px;padding:20px;box-shadow:0 5px 20px rgba(0,0,0,.06);min-height:185px}
-.review-stars{color:#e5a116;font-size:18px;letter-spacing:1px}.review-name{font-weight:900;margin:9px 0 4px}.review-product{font-size:12px;color:var(--green);font-weight:800}.review-text{margin-top:13px;color:#56615a;line-height:1.7;font-size:14px}.review-empty{grid-column:1/-1;text-align:center;background:#fff;border-radius:18px;padding:34px;color:#777}
+.review-stars{color:#e5a116;font-size:18px;letter-spacing:1px}.review-name{font-weight:900;margin:9px 0 4px}.review-product{font-size:12px;color:var(--green);font-weight:800}.review-text{margin-top:13px;color:#56615a;line-height:1.7;font-size:14px}.review-card-photo{width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-top:14px;border:1px solid var(--line)}.review-empty{grid-column:1/-1;text-align:center;background:#fff;border-radius:18px;padding:34px;color:#777}
 .participation{margin-top:30px;background:#fff;border-radius:18px;padding:22px;box-shadow:0 5px 20px rgba(0,0,0,.05)}
 .participation h3{margin:0 0 6px;font-size:21px}.participation-note{font-size:12px;color:#888;margin-bottom:14px}.participation-list{display:grid;gap:9px}.participation-item{padding:12px 14px;background:#f5f8f5;border-radius:11px;color:#4f5b54;font-size:14px}.participation-item b{color:var(--green)}
 .review-modal-card{max-width:600px}.star-select{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.star-select label{margin:0}.star-select input{display:none}.star-select span{display:block;text-align:center;padding:10px 4px;border:1px solid #d8ddd8;border-radius:9px;cursor:pointer;background:#fff}.star-select input:checked+span{background:#fff5d8;border-color:#e5a116;color:#9b6b00;font-weight:900}.review-help{font-size:12px;color:#777;line-height:1.6;margin-top:8px}.review-photo{background:#f7f8f7;padding:10px;border-radius:9px}
@@ -152,6 +152,37 @@ function maskName(name){
  if(n.length===2)return n[0]+'○';
  return n[0]+'○'.repeat(Math.max(1,n.length-2))+n[n.length-1];
 }
+
+async function loadPublicReviews(){
+ const grid=document.getElementById('reviewGrid');
+ if(!grid)return;
+ try{
+  const r=await fetch(API_URL+'?action=publicReviews&t='+Date.now());
+  const data=await r.json();
+  if(data.success===false)throw new Error(data.message||'후기 조회 실패');
+  const reviews=Array.isArray(data.reviews)?data.reviews:[];
+  if(!reviews.length){
+   grid.innerHTML='<div class="review-empty">아직 공개된 구매후기가 없습니다.<br>첫 후기를 남겨주세요.</div>';
+   return;
+  }
+  grid.innerHTML=reviews.map(r=>{
+   const rating=Math.max(0,Math.min(5,Number(r.rating||0)));
+   const stars='★'.repeat(rating)+'☆'.repeat(5-rating);
+   const img=imageUrl(r.imageUrl||'');
+   return `<article class="review-card">
+     <div class="review-stars">${stars}</div>
+     <div class="review-name">${e(r.name||'')}</div>
+     <div class="review-product">${e(r.productName||'')}</div>
+     <div class="review-text">${e(r.content||'').replace(/\n/g,'<br>')}</div>
+     ${img?`<img class="review-card-photo" src="${e(img)}" alt="구매후기 사진" loading="lazy">`:''}
+   </article>`;
+  }).join('');
+ }catch(err){
+  console.error('공개 후기 조회 오류:',err);
+  grid.innerHTML='<div class="review-empty">구매후기를 불러오지 못했습니다.<br>잠시 후 다시 확인해주세요.</div>';
+ }
+}
+
 function fillReviewProducts(){
  const sel=document.getElementById('reviewProduct'); if(!sel)return;
  sel.innerHTML='<option value="">상품을 선택해주세요</option>'+products.map(p=>`<option value="${e(p.productCode)}">${e(p.productName)}</option>`).join('');
@@ -375,6 +406,7 @@ reviewForm.addEventListener('submit',async ev=>{
   reviewForm.reset();
   const five=document.querySelector('input[name="reviewRating"][value="5"]');
   if(five)five.checked=true;
+  loadPublicReviews();
  }catch(err){
   reviewMsg.textContent='후기 등록 오류: '+err.message;
   reviewMsg.className='msg err';
@@ -385,7 +417,7 @@ reviewForm.addEventListener('submit',async ev=>{
 });
 
 function showMsg(text,isErr){msg.textContent=text;msg.className='msg '+(isErr?'err':'ok')}
-loadProducts();timerHandle=setInterval(tick,1000);
+loadProducts();loadPublicReviews();timerHandle=setInterval(tick,1000);
 </script>
 </body>
 </html>
