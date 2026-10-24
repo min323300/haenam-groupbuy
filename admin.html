@@ -115,7 +115,66 @@
       </table>
     </div>
   </div>
+    <!-- 방문자 분석 -->
+  <div class="card">
+    <h2>③ 방문자 분석</h2>
 
+    <div class="toolbar">
+      <input id="analyticsPassword"
+             type="password"
+             placeholder="관리자 비밀번호"
+             style="max-width:220px">
+      <button class="primary"
+              type="button"
+              onclick="loadAnalytics()">방문통계 불러오기</button>
+    </div>
+
+    <div id="analyticsMessage" class="notice"></div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:12px;">
+      <div class="card" style="margin:0;text-align:center;">
+        <div>현재 접속자</div>
+        <strong id="statCurrent" style="font-size:26px;">0</strong>명
+      </div>
+
+      <div class="card" style="margin:0;text-align:center;">
+        <div>오늘 방문자</div>
+        <strong id="statToday" style="font-size:26px;">0</strong>명
+      </div>
+
+      <div class="card" style="margin:0;text-align:center;">
+        <div>누적 방문자</div>
+        <strong id="statTotal" style="font-size:26px;">0</strong>명
+      </div>
+
+      <div class="card" style="margin:0;text-align:center;">
+        <div>페이지 조회</div>
+        <strong id="statPageViews" style="font-size:26px;">0</strong>회
+      </div>
+
+      <div class="card" style="margin:0;text-align:center;">
+        <div>공구 클릭</div>
+        <strong id="statClicks" style="font-size:26px;">0</strong>회
+      </div>
+    </div>
+
+    <h3 style="margin-top:20px;">유입경로</h3>
+    <div id="analyticsSources"></div>
+
+    <h3 style="margin-top:20px;">상품별 관심도</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>상품명</th>
+            <th>조회</th>
+            <th>공구클릭</th>
+          </tr>
+        </thead>
+        <tbody id="analyticsProducts"></tbody>
+      </table>
+    </div>
+  </div>
   <div class="card">
     <h2>② 주문관리</h2>
     <div class="toolbar">
@@ -594,7 +653,130 @@ async function saveReviewStatus(btn,status){
   }catch(e){showMessage('reviewMessage','후기 저장 오류: '+e.message,true)}
 }
 
-renderProductDetailBuilder();
+  /* ---------- 방문자 분석 ---------- */
+async function loadAnalytics(){
+  try{
+    const password = $('analyticsPassword').value || $('adminPassword').value;
+
+    if(!password){
+      showMessage(
+        'analyticsMessage',
+        '관리자 비밀번호를 입력해 주세요.',
+        true
+      );
+      return;
+    }
+
+    showMessage(
+      'analyticsMessage',
+      '방문통계를 불러오고 있습니다...'
+    );
+
+    const res = await apiGet({
+      action: 'analyticsSummary',
+      password: password
+    });
+
+    if(!res.success){
+      throw new Error(res.message || '방문통계 조회 실패');
+    }
+
+    // 상단 통계 숫자
+    $('statCurrent').textContent = Number(res.currentVisitors || 0).toLocaleString('ko-KR');
+    $('statToday').textContent = Number(res.todayVisitors || 0).toLocaleString('ko-KR');
+    $('statTotal').textContent = Number(res.totalVisitors || 0).toLocaleString('ko-KR');
+    $('statPageViews').textContent = Number(res.pageViews || 0).toLocaleString('ko-KR');
+    $('statClicks').textContent = Number(res.groupbuyClicks || 0).toLocaleString('ko-KR');
+
+    // 유입경로
+    const sources = Array.isArray(res.sources) ? res.sources : [];
+    const sourceBox = $('analyticsSources');
+
+    if(!sources.length){
+      sourceBox.innerHTML =
+        '<div class="muted">아직 유입경로 데이터가 없습니다.</div>';
+    }else{
+      const maxCount = Math.max(
+        ...sources.map(s => Number(s.count || 0)),
+        1
+      );
+
+      sourceBox.innerHTML = sources.map(s => {
+        const count = Number(s.count || 0);
+        const width = Math.max(
+          3,
+          Math.round((count / maxCount) * 100)
+        );
+
+        return `
+          <div style="margin-bottom:12px;">
+            <div style="
+              display:flex;
+              justify-content:space-between;
+              margin-bottom:5px;
+              font-size:13px;
+            ">
+              <strong>${esc(s.name || '직접접속')}</strong>
+              <span>${count.toLocaleString('ko-KR')}회</span>
+            </div>
+
+            <div style="
+              height:18px;
+              background:#edf1ed;
+              border-radius:9px;
+              overflow:hidden;
+            ">
+              <div style="
+                width:${width}%;
+                height:100%;
+                background:#16875a;
+                border-radius:9px;
+              "></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 상품별 관심도
+    const products = Array.isArray(res.products) ? res.products : [];
+
+    $('analyticsProducts').innerHTML = products.length
+      ? products.map(p => `
+          <tr>
+            <td class="left">
+              ${esc(p.productName || p.productCode || '-')}
+            </td>
+            <td>
+              ${Number(p.views || 0).toLocaleString('ko-KR')}회
+            </td>
+            <td>
+              ${Number(p.clicks || 0).toLocaleString('ko-KR')}회
+            </td>
+          </tr>
+        `).join('')
+      : `
+          <tr>
+            <td colspan="3">
+              아직 상품별 방문 데이터가 없습니다.
+            </td>
+          </tr>
+        `;
+
+    showMessage(
+      'analyticsMessage',
+      '방문통계를 불러왔습니다.'
+    );
+
+  }catch(e){
+    showMessage(
+      'analyticsMessage',
+      '방문통계 조회 오류: ' + e.message,
+      true
+    );
+  }
+}
+renderProductDetailBuilder();  
 if(!API_URL.includes('여기에_')){
   loadProducts();
 }else{
