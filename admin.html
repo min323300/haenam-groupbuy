@@ -42,6 +42,9 @@
     th,td{border:1px solid #ddd;padding:9px;text-align:center;font-size:13px}
     th{background:#eef4ef}
     td.left{text-align:left}
+    .review-photo{width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #ddd}
+    .review-actions{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+    .review-status{font-weight:700}
     @media(max-width:800px){.grid,.grid3{grid-template-columns:1fr}.full{grid-column:auto}}
   </style>
 </head>
@@ -123,6 +126,22 @@
       <table>
         <thead><tr><th>주문번호</th><th>접수일시</th><th>상품</th><th>이름</th><th>연락처</th><th>수량</th><th>주소</th><th>전화</th><th>입금</th><th>안내</th><th>배송</th><th>메모</th><th>저장</th></tr></thead>
         <tbody id="orderRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>③ 구매후기 관리</h2>
+    <p class="muted">고객이 등록한 후기를 확인한 뒤 승인하면 홈페이지에 공개됩니다. 주문관리와 같은 관리자 비밀번호를 사용합니다.</p>
+    <div class="toolbar">
+      <input id="reviewAdminPassword" type="password" placeholder="관리자 비밀번호" style="max-width:220px">
+      <button class="primary" type="button" onclick="loadReviews()">후기 불러오기</button>
+    </div>
+    <div id="reviewMessage" class="notice"></div>
+    <div class="table-wrap" style="margin-top:12px">
+      <table>
+        <thead><tr><th>작성일</th><th>상품</th><th>이름</th><th>별점</th><th>후기내용</th><th>사진</th><th>상태</th><th>관리자 메모</th><th>처리</th></tr></thead>
+        <tbody id="reviewRows"></tbody>
       </table>
     </div>
   </div>
@@ -422,6 +441,44 @@ async function saveOrderRow(btn){
     if(!res.success) throw new Error(res.message||'저장 실패');
     showMessage('orderMessage','주문 상태를 저장했습니다.');
   }catch(e){showMessage('orderMessage','주문 저장 오류: '+e.message,true)}
+}
+
+
+/* ---------- 구매후기 관리 ---------- */
+async function loadReviews(){
+  try{
+    const password=$('reviewAdminPassword').value || $('adminPassword').value;
+    if(!password) return showMessage('reviewMessage','관리자 비밀번호를 입력해 주세요.',true);
+    const res=await apiGet({action:'getReviewList',password});
+    if(!res.success) throw new Error(res.message||'후기 조회 실패');
+    const rows=res.reviews||res.data||[];
+    $('reviewRows').innerHTML=rows.length ? rows.map(r=>`
+      <tr data-review="${esc(r.id||r.reviewId||'')}">
+        <td>${esc(r.createdAt||r.date||'')}</td><td>${esc(r.productName||'')}</td><td>${esc(r.name||'')}</td>
+        <td>${'★'.repeat(Math.max(0,Math.min(5,Number(r.rating||0))))}</td>
+        <td class="left">${esc(r.content||r.reviewText||'')}</td>
+        <td>${r.imageUrl?`<a href="${esc(r.imageUrl)}" target="_blank" rel="noopener"><img class="review-photo" src="${esc(r.imageUrl)}" alt="후기 사진"></a>`:'-'}</td>
+        <td class="review-status">${esc(r.status||'승인대기')}</td>
+        <td><input class="reviewMemo" value="${esc(r.adminMemo||'')}" placeholder="관리자 메모"></td>
+        <td><div class="review-actions">
+          <button class="primary" type="button" onclick="saveReviewStatus(this,'승인')">승인</button>
+          <button class="secondary" type="button" onclick="saveReviewStatus(this,'승인대기')">대기</button>
+          <button class="danger" type="button" onclick="saveReviewStatus(this,'숨김')">숨김</button>
+        </div></td>
+      </tr>`).join(''):'<tr><td colspan="9">등록된 구매후기가 없습니다.</td></tr>';
+    showMessage('reviewMessage',`${rows.length}건의 후기를 불러왔습니다.`);
+  }catch(e){showMessage('reviewMessage','후기 조회 오류: '+e.message,true)}
+}
+async function saveReviewStatus(btn,status){
+  const tr=btn.closest('tr');
+  try{
+    const password=$('reviewAdminPassword').value || $('adminPassword').value;
+    const id=tr.dataset.review;
+    const res=await apiPost({action:'updateReviewStatus',password,id,reviewId:id,status,adminMemo:tr.querySelector('.reviewMemo').value});
+    if(!res.success) throw new Error(res.message||'후기 상태 저장 실패');
+    showMessage('reviewMessage',`후기 상태를 "${status}"(으)로 저장했습니다.`);
+    await loadReviews();
+  }catch(e){showMessage('reviewMessage','후기 저장 오류: '+e.message,true)}
 }
 
 renderProductDetailBuilder();
