@@ -120,6 +120,7 @@
     <div class="toolbar">
       <input id="adminPassword" type="password" placeholder="관리자 비밀번호" style="max-width:220px">
       <button class="primary" onclick="loadOrders()">주문 불러오기</button>
+      <button class="secondary" type="button" onclick="downloadOrdersExcel()">엑셀 다운로드</button>
     </div>
     <div id="orderMessage" class="notice"></div>
     <div class="table-wrap" style="margin-top:12px">
@@ -429,6 +430,119 @@ async function loadOrders(){
     showMessage('orderMessage',`${rows.length}건의 주문을 불러왔습니다.`);
   }catch(e){showMessage('orderMessage','주문 조회 오류: '+e.message,true)}
 }
+async function downloadOrdersExcel(){
+  try{
+    const password = $('adminPassword').value;
+
+    if(!password){
+      showMessage('orderMessage','관리자 비밀번호를 입력해주세요.',true);
+      return;
+    }
+
+    const res = await apiGet({action:'orders', password});
+
+    if(!res.success){
+      throw new Error(res.message || '주문 조회 실패');
+    }
+
+    // 실제 주문번호가 있는 주문만 다운로드
+    const orders = (res.orders || res.data || []).filter(o =>
+      String(o.orderNo || o.orderNumber || '').trim()
+    );
+
+    if(!orders.length){
+      showMessage('orderMessage','다운로드할 주문이 없습니다.',true);
+      return;
+    }
+
+    const headers = [
+      '주문번호',
+      '접수일시',
+      '상품명',
+      '이름',
+      '연락처',
+      '수량',
+      '주소',
+      '요청사항',
+      '전화확인',
+      '입금확인',
+      '안내완료',
+      '배송완료',
+      '관리자메모'
+    ];
+
+    const rows = orders.map(o => [
+      o.orderNo || o.orderNumber || '',
+      o.createdAt || o.date || '',
+      o.productName || '',
+      o.name || '',
+      o.phone || '',
+      o.quantity || o.qty || '',
+      o.address || '',
+      o.memo || '',
+      o.phoneConfirmed ? '완료' : '',
+      o.paymentConfirmed ? '완료' : '',
+      o.guideCompleted ? '완료' : '',
+      o.shippingCompleted ? '완료' : '',
+      o.adminMemo || ''
+    ]);
+
+    function csvCell(value){
+      let text = String(value ?? '');
+
+      if(/^[=+\-@]/.test(text)){
+        text = "'" + text;
+      }
+
+      return '"' + text.replace(/"/g,'""') + '"';
+    }
+
+    const csv = [
+      headers.map(csvCell).join(','),
+      ...rows.map(row => row.map(csvCell).join(','))
+    ].join('\r\n');
+
+    const BOM = '\uFEFF';
+    const blob = new Blob(
+      [BOM + csv],
+      {type:'text/csv;charset=utf-8;'}
+    );
+
+    const now = new Date();
+    const p = n => String(n).padStart(2,'0');
+
+    const fileName =
+      '해남공구마켓_주문목록_' +
+      now.getFullYear() +
+      p(now.getMonth()+1) +
+      p(now.getDate()) +
+      '.csv';
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+
+    a.href = url;
+    a.download = fileName;
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    URL.revokeObjectURL(url);
+
+    showMessage(
+      'orderMessage',
+      `${orders.length}건의 주문을 엑셀용 파일로 다운로드했습니다.`
+    );
+
+  }catch(e){
+    showMessage(
+      'orderMessage',
+      '엑셀 다운로드 오류: ' + e.message,
+      true
+    );
+  }
+}  
 async function saveOrderRow(btn){
   const tr=btn.closest('tr');
   try{
