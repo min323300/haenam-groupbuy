@@ -352,7 +352,8 @@ orderForm.addEventListener('submit',async ev=>{
   phone:String(phone?.value || '').trim(),
   qty:qty?.value || 1,
   address:String(address?.value || '').trim(),
-  memo:String(memo?.value || '').trim() 
+  memo:String(memo?.value || '').trim()
+  };
   const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
   const data=await r.json(); if(data.success===false)throw new Error(data.message||'주문 접수 실패');
   showMsg('주문이 정상적으로 접수되었습니다. 결제 안내에 따라 입금해 주세요.',false);
