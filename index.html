@@ -109,7 +109,7 @@ footer{background:#203028;color:#dbe4df;text-align:center;padding:30px 20px;font
     </div>
     <label>후기 내용</label><textarea id="reviewText" required placeholder="받아보신 상품에 대한 후기를 남겨주세요."></textarea>
     <label>사진 첨부 <span style="font-weight:400;color:#888">(선택)</span></label><input class="review-photo" id="reviewPhoto" type="file" accept="image/*">
-    <div class="review-help">현재 1차 화면 테스트 단계입니다. 아직 Google Sheets/Drive 저장은 연결하지 않았습니다.</div>
+    <div class="review-help">후기는 관리자 확인 후 공개됩니다. 사진은 선택사항입니다.</div>
     <button class="btn" type="submit" style="margin-top:16px">후기 등록하기</button><div id="reviewMsg" class="msg"></div>
    </form>
   </div>
@@ -325,12 +325,63 @@ orderForm.addEventListener('submit',async ev=>{
  }catch(err){showMsg('주문 오류: '+err.message,true)}
  finally{orderButton.disabled=false;orderButton.textContent='공동구매 주문하기'}
 });
-reviewForm.addEventListener('submit',ev=>{
+reviewForm.addEventListener('submit',async ev=>{
  ev.preventDefault();
  const rating=document.querySelector('input[name="reviewRating"]:checked');
- if(!reviewProduct.value||!reviewName.value.trim()||!reviewText.value.trim()||!rating){return}
- reviewMsg.textContent='화면 테스트가 정상입니다. 다음 단계에서 관리자 승인형 후기 저장 기능을 연결합니다.';
- reviewMsg.className='msg ok';
+ if(!reviewProduct.value||!reviewName.value.trim()||!reviewText.value.trim()||!rating){
+  reviewMsg.textContent='상품, 성함, 별점, 후기 내용을 확인해주세요.';
+  reviewMsg.className='msg err';
+  return;
+ }
+ const selectedProduct=products.find(p=>String(p.productCode)===String(reviewProduct.value));
+ if(!selectedProduct){
+  reviewMsg.textContent='선택한 상품 정보를 찾을 수 없습니다. 새로고침 후 다시 시도해주세요.';
+  reviewMsg.className='msg err';
+  return;
+ }
+ const submitBtn=reviewForm.querySelector('button[type="submit"]');
+ submitBtn.disabled=true;
+ submitBtn.textContent='후기 등록 중...';
+ reviewMsg.textContent='';
+ reviewMsg.className='msg';
+ try{
+  const payload={
+   action:'addReview',
+   productCode:selectedProduct.productCode||'',
+   productName:selectedProduct.productName||'',
+   name:reviewName.value.trim(),
+   rating:Number(rating.value),
+   content:reviewText.value.trim()
+  };
+  const file=reviewPhoto.files&&reviewPhoto.files[0];
+  if(file){
+   if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw new Error('사진은 JPG, PNG, WEBP 파일만 등록할 수 있습니다.');
+   if(file.size>6*1024*1024)throw new Error('사진은 6MB 이하로 등록해주세요.');
+   const dataUrl=await new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=()=>reject(new Error('사진을 읽지 못했습니다.'));
+    reader.readAsDataURL(file);
+   });
+   payload.imageBase64=String(dataUrl);
+   payload.imageFileName=file.name;
+   payload.imageMimeType=file.type;
+  }
+  const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+  const data=await r.json();
+  if(data.success===false)throw new Error(data.message||'후기 등록에 실패했습니다.');
+  reviewMsg.textContent=data.message||'후기가 등록되었습니다. 관리자 확인 후 공개됩니다.';
+  reviewMsg.className='msg ok';
+  reviewForm.reset();
+  const five=document.querySelector('input[name="reviewRating"][value="5"]');
+  if(five)five.checked=true;
+ }catch(err){
+  reviewMsg.textContent='후기 등록 오류: '+err.message;
+  reviewMsg.className='msg err';
+ }finally{
+  submitBtn.disabled=false;
+  submitBtn.textContent='후기 등록하기';
+ }
 });
 
 function showMsg(text,isErr){msg.textContent=text;msg.className='msg '+(isErr?'err':'ok')}
