@@ -478,7 +478,7 @@ async function downloadOrdersExcel(){
       o.createdAt || o.date || '',
       o.productName || '',
       o.name || '',
-      o.phone || '',
+      '="' + String(o.phone || '') + '"',
       o.quantity || o.qty || '',
       o.address || '',
       o.memo || '',
