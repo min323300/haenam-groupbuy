@@ -417,6 +417,78 @@ reviewForm.addEventListener('submit',async ev=>{
 });
 
 function showMsg(text,isErr){msg.textContent=text;msg.className='msg '+(isErr?'err':'ok')}
+// ==========================================
+// 해남공구마켓 방문자 분석
+// ==========================================
+(function () {
+
+  // 방문자별 식별값 생성
+  let visitorId = localStorage.getItem('haenamVisitorId');
+  if (!visitorId) {
+    visitorId = 'V-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10);
+    localStorage.setItem('haenamVisitorId', visitorId);
+  }
+
+  // 접속 세션값 생성
+  let sessionId = sessionStorage.getItem('haenamSessionId');
+  if (!sessionId) {
+    sessionId = 'S-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10);
+    sessionStorage.setItem('haenamSessionId', sessionId);
+  }
+
+  // 유입경로
+  const params = new URLSearchParams(location.search);
+
+  function getSource() {
+    const utmSource = params.get('utm_source');
+
+    if (utmSource) return utmSource;
+    if (document.referrer.includes('naver')) return 'naver';
+    if (document.referrer.includes('instagram')) return 'instagram';
+    if (document.referrer.includes('kakao')) return 'kakao';
+
+    return document.referrer ? 'other' : 'direct';
+  }
+
+  // Apps Script에 방문 기록 전송
+  function sendVisit(eventName) {
+
+    if (typeof API_URL === 'undefined' || !API_URL) return;
+
+    const payload = {
+      action: 'trackVisit',
+      eventName: eventName,
+      visitorId: visitorId,
+      sessionId: sessionId,
+      page: location.pathname,
+      productCode: '',
+      productName: '',
+      source: getSource(),
+      utmSource: params.get('utm_source') || '',
+      utmMedium: params.get('utm_medium') || '',
+      utmCampaign: params.get('utm_campaign') || ''
+    };
+
+    fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8'
+      },
+      body: JSON.stringify(payload)
+    }).catch(function (err) {
+      console.log('방문통계 기록 오류:', err);
+    });
+  }
+
+  // 최초 페이지 방문
+  sendVisit('page_view');
+
+  // 현재 접속자 추정을 위한 heartbeat
+  setInterval(function () {
+    sendVisit('heartbeat');
+  }, 60000);
+
+})(); 
 loadProducts();loadPublicReviews();timerHandle=setInterval(tick,1000);
 </script>
 </body>
