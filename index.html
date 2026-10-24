@@ -334,13 +334,39 @@ function openProduct(code){
  try { renderDetailBlocks(p); } catch(e) { console.error('상세페이지 오류:', e); }
  let pay='<b>결제 안내</b><br>';
  if(p.paymentMethod)pay+='결제방식: '+e(p.paymentMethod)+'<br>';
- if(p.bankName||p.accountNumber)pay+='입금계좌: '+e(p.bankName)+' '+e(p.accountNumber)+'<br>';
+ if(p.bankName||p.accountNumber){
+  pay+='입금계좌: '+e(p.bankName)+' '+e(p.accountNumber);
+  if(p.accountNumber){
+    pay+=' <button type="button" onclick="copyAccountNumber(\''+
+      String(p.accountNumber).replace(/'/g,"\\'")+
+      '\')" style="margin-left:8px;padding:5px 10px;border:0;border-radius:6px;background:#18794e;color:white;cursor:pointer;font-size:12px;">계좌번호 복사</button>';
+  }
+  pay+='<br>';
+}
  if(p.accountHolder)pay+='예금주: '+e(p.accountHolder)+'<br>';
  if(p.paymentMessage)pay+='<div style="margin-top:6px">'+e(p.paymentMessage)+'</div>';
  paymentBox.innerHTML=pay;
  orderModal.classList.add('open');document.body.style.overflow='hidden';
 }
-function closeModal(){orderModal.classList.remove('open');document.body.style.overflow=''}
+async function copyAccountNumber(account){
+  try{
+    await navigator.clipboard.writeText(account);
+    alert('계좌번호가 복사되었습니다.\n' + account);
+  }catch(err){
+    const textarea = document.createElement('textarea');
+    textarea.value = account;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
+    alert('계좌번호가 복사되었습니다.\n' + account);
+  }
+}
+
+function closeModal(){
+  orderModal.classList.remove('open');
+  document.body.style.overflow='';
+}
 function backdropClose(ev){if(ev.target.id==='orderModal')closeModal()}
 orderForm.addEventListener('submit',async ev=>{
  ev.preventDefault(); if(!currentProduct)return;
