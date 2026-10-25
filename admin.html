@@ -602,17 +602,73 @@ async function downloadOrdersExcel(){
   }
 }
 async function saveOrderRow(btn){
-  const tr=btn.closest('tr');
+  const tr = btn.closest('tr');
+
   try{
-    const res=await apiPost({
-      action:'updateOrderStatus',password:$('adminPassword').value,orderNo:tr.dataset.order,
-      phoneConfirmed:tr.querySelector('.tel').checked,paymentConfirmed:tr.querySelector('.pay').checked,
-      guideCompleted:tr.querySelector('.guide').checked,shippingCompleted:tr.querySelector('.ship').checked,
-      adminMemo:tr.querySelector('.memo').value
-    });
-    if(!res.success) throw new Error(res.message||'저장 실패');
-    showMessage('orderMessage','주문 상태를 저장했습니다.');
-  }catch(e){showMessage('orderMessage','주문 저장 오류: '+e.message,true)}
+    const password = $('adminPassword').value;
+    const orderNo = tr.dataset.order;
+
+    if(!password){
+      showMessage('orderMessage','관리자 비밀번호를 입력해주세요.',true);
+      return;
+    }
+
+    if(!orderNo){
+      showMessage('orderMessage','주문번호를 찾을 수 없습니다.',true);
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '저장 중...';
+
+    const statusList = [
+      {
+        field: 'status_call',
+        value: tr.querySelector('.tel').checked
+      },
+      {
+        field: 'status_paid',
+        value: tr.querySelector('.pay').checked
+      },
+      {
+        field: 'status_notice',
+        value: tr.querySelector('.guide').checked
+      },
+      {
+        field: 'status_shipping',
+        value: tr.querySelector('.ship').checked
+      }
+    ];
+
+    for(const item of statusList){
+      const res = await apiPost({
+        action: 'updateOrderStatus',
+        password: password,
+        id: orderNo,
+        field: item.field,
+        value: item.value
+      });
+
+      if(!res.success){
+        throw new Error(res.message || '주문 상태 저장 실패');
+      }
+    }
+
+    showMessage(
+      'orderMessage',
+      '주문 상태를 저장했습니다.'
+    );
+
+  }catch(e){
+    showMessage(
+      'orderMessage',
+      '주문 저장 오류: ' + e.message,
+      true
+    );
+  }finally{
+    btn.disabled = false;
+    btn.textContent = '저장';
+  }
 }
 
 
