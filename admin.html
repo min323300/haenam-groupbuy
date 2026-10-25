@@ -210,6 +210,10 @@
         <label>로그인 ID *</label>
         <input id="partnerLoginId" placeholder="예: daughter01">
       </div>
+      <div class="field">
+        <label>초기 로그인 비밀번호</label>
+        <input id="partnerLoginPassword" type="password" placeholder="6자 이상 (기존 파트너는 아래에서 재설정)">
+      </div>
       <div class="field full">
         <label>메모</label>
         <input id="partnerMemo" placeholder="예: 1차 시범 파트너">
@@ -773,6 +777,7 @@ function partnerPassword(){
 function clearPartnerForm(){
   $('partnerName').value='';
   $('partnerLoginId').value='';
+  $('partnerLoginPassword').value='';
   $('partnerMemo').value='';
 }
 
@@ -802,6 +807,7 @@ async function loadPartners(){
             onclick="changePartnerStatus('${esc(p.partnerCode||'')}','${p.status==='활성'?'정지':'활성'}')">
             ${p.status==='활성'?'정지':'활성'}
           </button>
+          <button class="secondary" type="button" style="margin-top:6px" onclick="setPartnerPassword('${esc(p.partnerCode||'')}')">비밀번호 설정</button>
         </td>
       </tr>`).join('')
       : '<tr><td colspan="7">등록된 파트너가 없습니다.</td></tr>';
@@ -826,6 +832,7 @@ async function savePartner(){
     const password=partnerPassword();
     const name=$('partnerName').value.trim();
     const loginId=$('partnerLoginId').value.trim();
+    const loginPassword=$('partnerLoginPassword').value;
     const memo=$('partnerMemo').value.trim();
 
     if(!password) return showMessage('partnerMessage','관리자 비밀번호를 입력해 주세요.',true);
@@ -837,6 +844,7 @@ async function savePartner(){
       password,
       name,
       loginId,
+      loginPassword,
       memo
     });
     if(!res.success) throw new Error(res.message||'파트너 등록 실패');
@@ -886,6 +894,19 @@ async function copyPartnerUrl(url){
   }
 }
 
+
+async function setPartnerPassword(partnerCode){
+  try{
+    const password=partnerPassword();
+    if(!password) return showMessage('partnerMessage','관리자 비밀번호를 입력해 주세요.',true);
+    const newPassword=prompt('파트너가 로그인할 새 비밀번호를 입력해 주세요. (6자 이상)');
+    if(newPassword===null) return;
+    if(String(newPassword).length<6) return showMessage('partnerMessage','파트너 비밀번호는 6자 이상으로 입력해 주세요.',true);
+    const res=await apiPost({action:'partnerPasswordSet',password,partnerCode,newPassword});
+    if(!res.success) throw new Error(res.message||'비밀번호 설정 실패');
+    showMessage('partnerMessage',`${partnerCode} 로그인 비밀번호를 설정했습니다.`);
+  }catch(e){ showMessage('partnerMessage','파트너 비밀번호 설정 오류: '+e.message,true); }
+}
 
 /* ---------- 본사 전체 파트너 실적 ---------- */
 let partnerPerformanceData = null;
