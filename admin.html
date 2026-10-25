@@ -191,6 +191,57 @@
     </div>
   </div>
 
+
+  <div class="card">
+    <h2>④ 파트너스 관리</h2>
+    <p class="muted">판매 파트너를 등록하고 전용 홍보 URL을 발급합니다. 1단계에서는 파트너 등록·활성/정지·전용 URL 복사까지만 관리합니다.</p>
+
+    <div class="toolbar">
+      <input id="partnerAdminPassword" type="password" placeholder="관리자 비밀번호" style="max-width:220px">
+      <button class="primary" type="button" onclick="loadPartners()">파트너 목록 불러오기</button>
+    </div>
+
+    <div class="grid" style="margin-top:14px">
+      <div class="field">
+        <label>파트너 이름 *</label>
+        <input id="partnerName" placeholder="예: 큰딸">
+      </div>
+      <div class="field">
+        <label>로그인 ID *</label>
+        <input id="partnerLoginId" placeholder="예: daughter01">
+      </div>
+      <div class="field full">
+        <label>메모</label>
+        <input id="partnerMemo" placeholder="예: 1차 시범 파트너">
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <button class="primary" type="button" onclick="savePartner()">파트너 등록</button>
+      <button class="secondary" type="button" onclick="clearPartnerForm()">입력 초기화</button>
+    </div>
+    <div id="partnerMessage" class="notice"></div>
+
+    <div class="table-wrap" style="margin-top:16px">
+      <table>
+        <thead>
+          <tr>
+            <th>파트너코드</th>
+            <th>이름</th>
+            <th>로그인 ID</th>
+            <th>상태</th>
+            <th>전용 홍보 URL</th>
+            <th>등록일</th>
+            <th>관리</th>
+          </tr>
+        </thead>
+        <tbody id="partnerRows">
+          <tr><td colspan="7">관리자 비밀번호를 입력한 뒤 목록을 불러와 주세요.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="card">
     <h2>③ 구매후기 관리</h2>
     <p class="muted">고객이 등록한 후기를 확인한 뒤 승인하면 홈페이지에 공개됩니다. 주문관리와 같은 관리자 비밀번호를 사용합니다.</p>
@@ -671,6 +722,119 @@ async function saveOrderRow(btn){
   }
 }
 
+
+
+/* ---------- 파트너스 관리 1단계 ---------- */
+function partnerPassword(){
+  return $('partnerAdminPassword').value || $('adminPassword').value || '';
+}
+
+function clearPartnerForm(){
+  $('partnerName').value='';
+  $('partnerLoginId').value='';
+  $('partnerMemo').value='';
+}
+
+async function loadPartners(){
+  try{
+    const password=partnerPassword();
+    if(!password) return showMessage('partnerMessage','관리자 비밀번호를 입력해 주세요.',true);
+
+    showMessage('partnerMessage','파트너 목록을 불러오고 있습니다...');
+    const res=await apiGet({action:'partnerList',password});
+    if(!res.success) throw new Error(res.message||'파트너 조회 실패');
+
+    const rows=Array.isArray(res.partners)?res.partners:[];
+    $('partnerRows').innerHTML=rows.length ? rows.map(p=>`
+      <tr>
+        <td>${esc(p.partnerCode||'')}</td>
+        <td>${esc(p.name||'')}</td>
+        <td>${esc(p.loginId||'')}</td>
+        <td><span class="badge">${esc(p.status||'활성')}</span></td>
+        <td class="left">
+          <input value="${esc(p.partnerUrl||'')}" readonly style="min-width:360px">
+          <button class="secondary" type="button" style="margin-top:6px" onclick="copyPartnerUrl('${esc(p.partnerUrl||'')}')">URL 복사</button>
+        </td>
+        <td>${esc(p.createdAt||'')}</td>
+        <td>
+          <button class="${p.status==='활성'?'danger':'primary'}" type="button"
+            onclick="changePartnerStatus('${esc(p.partnerCode||'')}','${p.status==='활성'?'정지':'활성'}')">
+            ${p.status==='활성'?'정지':'활성'}
+          </button>
+        </td>
+      </tr>`).join('')
+      : '<tr><td colspan="7">등록된 파트너가 없습니다.</td></tr>';
+
+    showMessage('partnerMessage',`${rows.length}명의 파트너를 불러왔습니다.`);
+  }catch(e){
+    showMessage('partnerMessage','파트너 조회 오류: '+e.message,true);
+  }
+}
+
+async function savePartner(){
+  try{
+    const password=partnerPassword();
+    const name=$('partnerName').value.trim();
+    const loginId=$('partnerLoginId').value.trim();
+    const memo=$('partnerMemo').value.trim();
+
+    if(!password) return showMessage('partnerMessage','관리자 비밀번호를 입력해 주세요.',true);
+    if(!name) return showMessage('partnerMessage','파트너 이름을 입력해 주세요.',true);
+    if(!loginId) return showMessage('partnerMessage','로그인 ID를 입력해 주세요.',true);
+
+    const res=await apiPost({
+      action:'partnerSave',
+      password,
+      name,
+      loginId,
+      memo
+    });
+    if(!res.success) throw new Error(res.message||'파트너 등록 실패');
+
+    clearPartnerForm();
+    showMessage('partnerMessage',`파트너가 등록되었습니다. 코드: ${res.partnerCode}`);
+    await loadPartners();
+  }catch(e){
+    showMessage('partnerMessage','파트너 등록 오류: '+e.message,true);
+  }
+}
+
+async function changePartnerStatus(partnerCode,status){
+  try{
+    const password=partnerPassword();
+    if(!password) return showMessage('partnerMessage','관리자 비밀번호를 입력해 주세요.',true);
+    if(!confirm(`이 파트너를 "${status}" 상태로 변경할까요?`)) return;
+
+    const res=await apiPost({
+      action:'partnerStatus',
+      password,
+      partnerCode,
+      status
+    });
+    if(!res.success) throw new Error(res.message||'상태 변경 실패');
+
+    showMessage('partnerMessage',`파트너 상태를 "${status}"(으)로 변경했습니다.`);
+    await loadPartners();
+  }catch(e){
+    showMessage('partnerMessage','파트너 상태 변경 오류: '+e.message,true);
+  }
+}
+
+async function copyPartnerUrl(url){
+  if(!url) return;
+  try{
+    await navigator.clipboard.writeText(url);
+    alert('파트너 전용 URL이 복사되었습니다.\n'+url);
+  }catch(e){
+    const t=document.createElement('textarea');
+    t.value=url;
+    document.body.appendChild(t);
+    t.select();
+    document.execCommand('copy');
+    t.remove();
+    alert('파트너 전용 URL이 복사되었습니다.\n'+url);
+  }
+}
 
 /* ---------- 구매후기 관리 ---------- */
 async function loadReviews(){
