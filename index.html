@@ -141,6 +141,35 @@ footer{background:#203028;color:#dbe4df;text-align:center;padding:30px 20px;font
 
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbz9-pk6kkPk01Lh11agNKxeV1Gjo_kzAPYOXyJ9kXUVY7r8t3ptrLurCjOwdTf31f00ug/exec';
+
+// 파트너 전용 URL 추적
+// 시범 운영 기준: 마지막으로 클릭한 유효 형식의 파트너 ref를 30일간 보관합니다.
+const PARTNER_REF_KEY = 'haenamPartnerRef';
+const PARTNER_REF_TIME_KEY = 'haenamPartnerRefTime';
+const PARTNER_REF_DAYS = 30;
+
+function capturePartnerRef(){
+  const params = new URLSearchParams(location.search);
+  const ref = String(params.get('ref') || '').trim().toUpperCase();
+  if (/^PT-\d{4,}$/.test(ref)) {
+    localStorage.setItem(PARTNER_REF_KEY, ref);
+    localStorage.setItem(PARTNER_REF_TIME_KEY, String(Date.now()));
+  }
+}
+
+function getPartnerRef(){
+  const ref = String(localStorage.getItem(PARTNER_REF_KEY) || '').trim().toUpperCase();
+  const savedAt = Number(localStorage.getItem(PARTNER_REF_TIME_KEY) || 0);
+  if (!ref || !savedAt || (Date.now() - savedAt) > PARTNER_REF_DAYS * 86400000) {
+    localStorage.removeItem(PARTNER_REF_KEY);
+    localStorage.removeItem(PARTNER_REF_TIME_KEY);
+    return '';
+  }
+  return ref;
+}
+
+capturePartnerRef();
+
 let products = [];
 let currentProduct = null;
 let timerHandle = null;
@@ -381,7 +410,8 @@ orderForm.addEventListener('submit',async ev=>{
   phone: String(document.getElementById('phone').value || '').trim(),
   qty: document.getElementById('qty').value || 1,
   address: String(document.getElementById('address').value || '').trim(),
-  memo: String(document.getElementById('memo').value || '').trim()
+  memo: String(document.getElementById('memo').value || '').trim(),
+  partnerCode: getPartnerRef()
 };
   const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
   const data=await r.json(); if(data.success===false)throw new Error(data.message||'주문 접수 실패');
@@ -500,7 +530,8 @@ function showMsg(text,isErr){msg.textContent=text;msg.className='msg '+(isErr?'e
       source: getSource(),
       utmSource: params.get('utm_source') || '',
       utmMedium: params.get('utm_medium') || '',
-      utmCampaign: params.get('utm_campaign') || ''
+      utmCampaign: params.get('utm_campaign') || '',
+      partnerCode: getPartnerRef()
     };
 
     fetch(API_URL, {
