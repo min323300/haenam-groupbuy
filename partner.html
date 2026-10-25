@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>해남공구마켓 파트너센터</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans KR",sans-serif;background:#f4f6f4;color:#222}.wrap{max-width:1080px;margin:auto;padding:24px 16px 60px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}.brand{font-size:25px;font-weight:800;color:#176c46}.sub{font-size:13px;color:#68736c;margin-top:4px}.card{background:#fff;border-radius:16px;padding:22px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,.04)}.login{max-width:460px;margin:60px auto}.field{margin:12px 0}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}.field input{width:100%;padding:12px;border:1px solid #ccd3cc;border-radius:9px;font-size:15px}button{border:0;border-radius:9px;padding:11px 15px;font-weight:700;cursor:pointer}.primary{background:#16875a;color:#fff}.secondary{background:#eef1ee;color:#222}.danger{background:#d9534f;color:#fff}.notice{display:none;margin-top:12px;padding:11px 13px;border-radius:9px;background:#eef8f2;color:#17623f}.notice.error{background:#fdeaea;color:#a32121}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.stat{background:#fff;border-radius:14px;padding:18px;box-shadow:0 2px 10px rgba(0,0,0,.04)}.stat span{display:block;font-size:12px;color:#777}.stat strong{display:block;font-size:25px;margin-top:5px}.linkbox{display:flex;gap:8px;align-items:center}.linkbox input{flex:1;min-width:0;padding:11px;border:1px solid #ccd3cc;border-radius:8px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:720px}th,td{border:1px solid #dde2dd;padding:10px;text-align:center;font-size:13px}th{background:#eef4ef}.muted{color:#6c756f;font-size:13px}.hidden{display:none!important}@media(max-width:700px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.top{align-items:flex-start}.card{padding:16px}.stat strong{font-size:21px}.linkbox{display:block}.linkbox button{margin-top:8px;width:100%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><div><div class="brand">해남공구마켓 파트너센터</div><div class="sub">본인의 홍보 실적과 수당만 확인할 수 있습니다.</div></div><button id="logoutBtn" class="secondary hidden" onclick="logout()">로그아웃</button></div>
+
+  <section id="loginCard" class="card login">
+    <h2>파트너 로그인</h2>
+    <p class="muted">본사에서 발급한 로그인 ID와 비밀번호를 입력하세요.</p>
+    <div class="field"><label>로그인 ID</label><input id="loginId" autocomplete="username"></div>
+    <div class="field"><label>비밀번호</label><input id="loginPassword" type="password" autocomplete="current-password"></div>
+    <button class="primary" style="width:100%" onclick="login()">로그인</button>
+    <div id="loginMessage" class="notice"></div>
+  </section>
+
+  <main id="dashboard" class="hidden">
+    <section class="card">
+      <h2 id="partnerTitle">내 파트너 현황</h2>
+      <p class="muted" id="partnerCode"></p>
+      <label style="font-size:13px;font-weight:700">내 전용 홍보 URL</label>
+      <div class="linkbox" style="margin-top:7px"><input id="partnerUrl" readonly><button class="primary" onclick="copyUrl()">URL 복사</button></div>
+    </section>
+
+    <section class="grid" style="margin-bottom:16px">
+      <div class="stat"><span>방문자</span><strong id="visitors">0명</strong></div>
+      <div class="stat"><span>주문</span><strong id="orders">0건</strong></div>
+      <div class="stat"><span>판매수량</span><strong id="quantity">0개</strong></div>
+      <div class="stat"><span>판매금액</span><strong id="sales">0원</strong></div>
+      <div class="stat"><span>배송완료</span><strong id="shipping">0건</strong></div>
+      <div class="stat"><span>예상수당</span><strong id="expected">0원</strong></div>
+      <div class="stat"><span>확정수당</span><strong id="confirmed">0원</strong></div>
+    </section>
+
+    <section class="card">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><div><h2 style="margin:0">상품별 판매 실적</h2><p class="muted">고객 이름·전화번호·주소는 표시하지 않습니다.</p></div><button class="secondary" onclick="loadDashboard()">새로고침</button></div>
+      <div id="dashMessage" class="notice"></div>
+      <div class="table-wrap"><table><thead><tr><th>상품</th><th>주문</th><th>판매수량</th><th>판매금액</th><th>예상수당</th><th>확정수당</th></tr></thead><tbody id="productRows"><tr><td colspan="6">실적을 불러오는 중입니다.</td></tr></tbody></table></div>
+    </section>
+  </main>
+</div>
+<script>
+const API_URL='https://script.google.com/macros/s/AKfycbz9-pk6kkPk01Lh11agNKxeV1Gjo_kzAPYOXyJ9kXUVY7r8t3ptrLurCjOwdTf31f00ug/exec';
+const TOKEN_KEY='haenamPartnerSession';
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=v=>Number(v||0).toLocaleString('ko-KR')+'원';
+function message(id,text,error=false){const el=$(id);el.textContent=text;el.className='notice'+(error?' error':'');el.style.display='block'}
+async function apiPost(data){const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(data)});return r.json()}
+async function apiGet(params){const u=new URL(API_URL);Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,v??''));const r=await fetch(u);return r.json()}
+async function login(){
+  try{const loginId=$('loginId').value.trim(),loginPassword=$('loginPassword').value;if(!loginId||!loginPassword)return message('loginMessage','로그인 ID와 비밀번호를 입력해 주세요.',true);message('loginMessage','로그인 중입니다...');const res=await apiPost({action:'partnerLogin',loginId,loginPassword});if(!res.success)throw new Error(res.message||'로그인 실패');sessionStorage.setItem(TOKEN_KEY,res.token);$('loginPassword').value='';await loadDashboard()}catch(e){message('loginMessage',e.message,true)}
+}
+async function loadDashboard(){
+  const token=sessionStorage.getItem(TOKEN_KEY);if(!token)return showLogin();
+  try{const res=await apiGet({action:'partnerDashboard',token});if(!res.success)throw new Error(res.message||'실적 조회 실패');$('loginCard').classList.add('hidden');$('dashboard').classList.remove('hidden');$('logoutBtn').classList.remove('hidden');$('partnerTitle').textContent=(res.partner.name||'파트너')+'님 실적';$('partnerCode').textContent='파트너코드 '+(res.partner.partnerCode||'');$('partnerUrl').value=res.partner.partnerUrl||'';$('visitors').textContent=Number(res.visitors||0).toLocaleString('ko-KR')+'명';const s=res.summary||{};$('orders').textContent=Number(s.orders||0).toLocaleString('ko-KR')+'건';$('quantity').textContent=Number(s.quantity||0).toLocaleString('ko-KR')+'개';$('sales').textContent=money(s.salesAmount);$('shipping').textContent=Number(s.shippingCompleted||0).toLocaleString('ko-KR')+'건';$('expected').textContent=money(s.expectedCommission);$('confirmed').textContent=money(s.confirmedCommission);const rows=Array.isArray(res.products)?res.products:[];$('productRows').innerHTML=rows.length?rows.map(x=>`<tr><td>${esc(x.productName||x.productCode)}</td><td>${Number(x.orders||0).toLocaleString('ko-KR')}건</td><td>${Number(x.quantity||0).toLocaleString('ko-KR')}개</td><td>${money(x.salesAmount)}</td><td>${money(x.expectedCommission)}</td><td><b>${money(x.confirmedCommission)}</b></td></tr>`).join(''):'<tr><td colspan="6">아직 파트너 주문 실적이 없습니다.</td></tr>';message('dashMessage','최신 실적을 불러왔습니다.');}catch(e){sessionStorage.removeItem(TOKEN_KEY);showLogin();message('loginMessage',e.message,true)}
+}
+function showLogin(){$('loginCard').classList.remove('hidden');$('dashboard').classList.add('hidden');$('logoutBtn').classList.add('hidden')}
+function logout(){sessionStorage.removeItem(TOKEN_KEY);showLogin()}
+async function copyUrl(){const v=$('partnerUrl').value;try{await navigator.clipboard.writeText(v);alert('전용 홍보 URL이 복사되었습니다.')}catch(e){$('partnerUrl').select();document.execCommand('copy');alert('전용 홍보 URL이 복사되었습니다.')}}
+$('loginPassword').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
+if(sessionStorage.getItem(TOKEN_KEY))loadDashboard();
+</script>
+</body>
+</html>
