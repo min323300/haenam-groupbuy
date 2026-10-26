@@ -47,7 +47,25 @@
     .review-status{font-weight:700}
     @media(max-width:800px){.grid,.grid3{grid-template-columns:1fr}.full{grid-column:auto}}
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
+
+/* ---------- 입점·공급 제휴 관리 ---------- */
+function supplierAdminPassword(){return $('supplierAdminPassword').value || $('adminPassword').value || '';}
+async function loadSupplierApplications(){
+ try{
+  const password=supplierAdminPassword(); if(!password) return showMessage('supplierAdminMessage','관리자 비밀번호를 입력해 주세요.',true);
+  const status=$('supplierStatusFilter').value||'전체'; showMessage('supplierAdminMessage','입점 제휴 신청을 불러오고 있습니다...');
+  const res=await apiGet({action:'supplierApplicationList',password,status}); if(!res.success) throw new Error(res.message||'제휴 신청 조회 실패');
+  const rows=Array.isArray(res.applications)?res.applications:[];
+  $('supplierAdminRows').innerHTML=rows.length?rows.map(x=>{const imgs=(x.imageUrls||[]).map(u=>`<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="상품사진" style="width:64px;height:64px;object-fit:cover;border-radius:8px;margin:2px"></a>`).join('')||'-';return `<tr data-supplier-id="${esc(x.id)}"><td>${esc(x.createdAt||'')}</td><td class="left"><b>${esc(x.companyName||'')}</b><br>${esc(x.managerName||'')}<br><small>${esc(x.id||'')}</small></td><td class="left">${esc(x.phone||'')}<br>${esc(x.region||'')}</td><td class="left"><b>${esc(x.productName||'')}</b><br>${esc(x.category||'')} · ${esc(x.spec||'-')}<br>공급수량: ${esc(x.supplyQuantity||'-')}<br>출고: ${esc(x.shipAvailableAt||'-')}<br><small>${esc(x.proposal||'')}</small></td><td class="left">제안 공급가 ${Number(x.supplyPrice||0).toLocaleString('ko-KR')}원<br>희망 판매가 ${Number(x.desiredSalePrice||0).toLocaleString('ko-KR')}원</td><td class="left">${esc(x.shippingFee||'-')}<br>${esc(x.deliveryMethod||'-')}</td><td>${imgs}</td><td><select class="sp-status"><option ${x.status==='접수'?'selected':''}>접수</option><option ${x.status==='검토중'?'selected':''}>검토중</option><option ${x.status==='승인'?'selected':''}>승인</option><option ${x.status==='반려'?'selected':''}>반려</option></select></td><td class="left" style="min-width:300px"><input class="sp-date" type="date" value="${esc((x.consultationDate||'').slice(0,10))}" title="상담일"><textarea class="sp-memo" placeholder="전화 상담 메모">${esc(x.consultationMemo||'')}</textarea><input class="sp-final-supply" type="number" min="0" value="${x.finalSupplyPrice||''}" placeholder="최종 공급가"><input class="sp-final-sale" type="number" min="0" value="${x.finalSalePrice||''}" placeholder="최종 판매가"><input class="sp-final-shipping" value="${esc(x.finalShipping||'')}" placeholder="최종 택배 조건"><textarea class="sp-settlement" placeholder="정산 조건">${esc(x.settlementTerms||'')}</textarea></td><td><button class="primary" type="button" onclick="saveSupplierApplication(this)">저장</button></td></tr>`;}).join(''):'<tr><td colspan="10">해당 상태의 입점 제휴 신청이 없습니다.</td></tr>';
+  showMessage('supplierAdminMessage',`입점 제휴 신청 ${rows.length}건을 불러왔습니다.`);
+ }catch(e){showMessage('supplierAdminMessage','제휴 신청 조회 오류: '+e.message,true);}
+}
+async function saveSupplierApplication(btn){
+ const tr=btn.closest('tr'); try{const password=supplierAdminPassword();if(!password)throw new Error('관리자 비밀번호를 입력해 주세요.');btn.disabled=true;btn.textContent='저장 중...';const res=await apiPost({action:'supplierApplicationUpdate',password,id:tr.dataset.supplierId,status:tr.querySelector('.sp-status').value,consultationDate:tr.querySelector('.sp-date').value,consultationMemo:tr.querySelector('.sp-memo').value,finalSupplyPrice:tr.querySelector('.sp-final-supply').value,finalSalePrice:tr.querySelector('.sp-final-sale').value,finalShipping:tr.querySelector('.sp-final-shipping').value,settlementTerms:tr.querySelector('.sp-settlement').value});if(!res.success)throw new Error(res.message||'저장 실패');showMessage('supplierAdminMessage','입점 제휴 검토 내용을 저장했습니다.');}
+ catch(e){showMessage('supplierAdminMessage','제휴 신청 저장 오류: '+e.message,true);}finally{btn.disabled=false;btn.textContent='저장';}
+}
+</script>
 </head>
 <body>
 <div class="wrap">
@@ -301,6 +319,15 @@
         <tbody id="reviewRows"></tbody>
       </table>
     </div>
+  </div>
+
+
+  <div class="card" id="supplierAdminCard">
+    <h2>⑤ 입점 제휴 관리</h2>
+    <p class="muted">전국 생산자·제조사·공급업체의 공동구매 제안 내용을 검토합니다. 승인해도 상품관리에는 자동 등록되지 않습니다.</p>
+    <div class="toolbar"><input id="supplierAdminPassword" type="password" placeholder="관리자 비밀번호" style="max-width:220px"><select id="supplierStatusFilter" style="max-width:160px"><option>전체</option><option>접수</option><option>검토중</option><option>승인</option><option>반려</option></select><button class="primary" type="button" onclick="loadSupplierApplications()">제휴 신청 불러오기</button></div>
+    <div id="supplierAdminMessage" class="notice"></div>
+    <div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>신청일</th><th>업체/담당자</th><th>연락처/지역</th><th>상품</th><th>제안가격</th><th>택배/배송</th><th>사진</th><th>상태</th><th>상담·최종협의</th><th>저장</th></tr></thead><tbody id="supplierAdminRows"><tr><td colspan="10">관리자 비밀번호를 입력한 뒤 신청 목록을 불러와 주세요.</td></tr></tbody></table></div>
   </div>
 </div>
 
