@@ -580,8 +580,8 @@ function showMsg(text,isErr){msg.textContent=text;msg.className='msg '+(isErr?'e
 loadProducts();loadPublicReviews();timerHandle=setInterval(tick,1000);
 
 
-function openSupplierModal(){document.getElementById('supplierModal').classList.add('show');}
-function closeSupplierModal(){document.getElementById('supplierModal').classList.remove('show');}
+function openSupplierModal(){document.getElementById('supplierModal').classList.add('open');}
+function closeSupplierModal(){document.getElementById('supplierModal').classList.remove('open');}
 function supplierBackdropClose(e){if(e.target && e.target.id==='supplierModal') closeSupplierModal();}
 function supplierFileToData_(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve({fileName:file.name,mimeType:file.type,base64Data:r.result});r.onerror=()=>reject(new Error('사진을 읽지 못했습니다.'));r.readAsDataURL(file);});}
 document.getElementById('supplierForm').addEventListener('submit',async function(e){
