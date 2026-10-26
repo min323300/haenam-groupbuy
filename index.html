@@ -78,6 +78,8 @@ textarea{min-height:80px;resize:vertical} .privacy{display:flex;gap:8px;align-it
 footer{background:#203028;color:#dbe4df;text-align:center;padding:30px 20px;font-size:13px}
 @media(max-width:850px){.hero-in{grid-template-columns:1fr}.hero h1{font-size:38px}.grid{grid-template-columns:repeat(2,1fr)}.review-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:580px){.hero{padding:38px 15px}.hero h1{font-size:32px}.hero p{font-size:15px}.grid{grid-template-columns:1fr}main{padding:0 12px 50px}.stats{padding:0 12px}.stat{padding:15px 6px}.stat b{font-size:20px}.section-head{display:block}.section-head p{margin-top:8px}.review-head{display:block}.review-write{margin-top:14px;width:100%}.review-grid{grid-template-columns:1fr}}
+
+.supplier-section{max-width:1180px;margin:34px auto 0;padding:0 20px 50px}.supplier-box{background:#f5f8f2;border:1px solid #dce7d7;border-radius:22px;padding:28px}.supplier-box h2{margin:6px 0 8px;font-size:28px}.supplier-box p{color:#5f6b61;line-height:1.7}.supplier-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.supplier-grid .full{grid-column:1/-1}.supplier-modal-card{max-width:760px}.supplier-note{font-size:13px;color:#6c756d;line-height:1.6;background:#f6f7f6;padding:12px;border-radius:10px;margin:12px 0}.supplier-photo-list{font-size:13px;color:#667;margin-top:6px}@media(max-width:700px){.supplier-grid{grid-template-columns:1fr}.supplier-grid .full{grid-column:auto}.supplier-box{padding:20px}.supplier-box h2{font-size:23px}}
 </style>
 </head>
 <body>
@@ -93,6 +95,10 @@ footer{background:#203028;color:#dbe4df;text-align:center;padding:30px 20px;font
   <h3>🛒 최근 공동구매 참여</h3><div class="participation-note">실제 주문 데이터 연결 전 화면 구성 예시입니다. 공개 시 이름은 자동으로 가려집니다.</div>
   <div id="participationList" class="participation-list"><div class="participation-item">주문 데이터 연결 후 <b>김○수님</b>처럼 이름 일부만 표시됩니다.</div></div>
  </div>
+</section>
+
+<section class="supplier-section" id="supplier-partnership">
+ <div class="supplier-box"><div class="eyebrow">SUPPLY PARTNERSHIP</div><h2>공동구매 입점·공급 제휴</h2><p>전국의 생산자·제조사·공급업체가 공동구매 상품을 제안할 수 있습니다. 접수된 내용은 해남 공구마켓이 검토한 뒤 담당자와 전화로 최종 조건을 협의합니다.</p><button class="btn" type="button" onclick="openSupplierModal()">공동구매 입점·공급 제휴 신청</button></div>
 </section>
 </main>
 <footer>해남공구마켓 · 해남 농수산물 공동구매</footer>
@@ -139,6 +145,23 @@ footer{background:#203028;color:#dbe4df;text-align:center;padding:30px 20px;font
  </div>
 </div>
 
+
+<div id="supplierModal" class="modal" onclick="supplierBackdropClose(event)">
+ <div class="modal-card supplier-modal-card"><div class="modal-top"><strong>공동구매 입점·공급 제휴 신청</strong><button class="close" type="button" onclick="closeSupplierModal()">×</button></div>
+ <div class="modal-body"><form id="supplierForm"><div class="supplier-grid">
+  <div><label>업체/생산자명 *</label><input id="spCompany" required></div><div><label>담당자명 *</label><input id="spManager" required></div>
+  <div><label>연락처 *</label><input id="spPhone" required inputmode="tel"></div><div><label>지역 *</label><input id="spRegion" required placeholder="예: 전남 해남군"></div>
+  <div><label>상품 분류 *</label><select id="spCategory" required><option value="">선택</option><option>농산물</option><option>수산물</option><option>축산물</option><option>가공식품</option><option>생활용품</option><option>기타</option></select></div><div><label>상품명 *</label><input id="spProduct" required></div>
+  <div><label>규격·중량</label><input id="spSpec" placeholder="예: 20kg / 1박스"></div><div><label>공급 가능 수량</label><input id="spQty" placeholder="예: 500박스"></div>
+  <div><label>출고 가능 시기</label><input id="spShipAt" placeholder="예: 11월 10일부터"></div><div><label>배송 방법</label><input id="spDelivery" placeholder="예: 공급업체 택배 직발송"></div>
+  <div><label>입점가(제안 공급가)</label><input id="spSupplyPrice" type="number" min="0" inputmode="numeric"></div><div><label>희망 판매가</label><input id="spSalePrice" type="number" min="0" inputmode="numeric"></div>
+  <div class="full"><label>택배비</label><input id="spShipping" placeholder="예: 공급가 포함 / 별도 4,000원"></div>
+  <div class="full"><label>상품 사진 (최대 3장)</label><input id="spPhotos" type="file" accept="image/jpeg,image/png,image/webp" multiple><div class="supplier-photo-list">상품·포장·생산지 사진을 등록할 수 있습니다. 한 장당 4MB 이하 권장.</div></div>
+  <div class="full"><label>기타 제안사항</label><textarea id="spProposal" placeholder="상품 특징, 판매 조건 등을 적어주세요."></textarea></div>
+ </div><div class="supplier-note">입점가와 희망 판매가는 확정 가격이 아닙니다. 상품성과 가격 경쟁력을 검토한 뒤 전화 협의를 통해 최종 공급가·판매가·택배비·정산 조건을 결정합니다.</div>
+ <label style="display:flex;gap:8px;align-items:flex-start;font-weight:500"><input id="spPrivacy" type="checkbox" required style="width:auto;margin-top:3px">제휴 상담을 위해 업체/담당자명, 연락처 등 신청 정보를 수집·이용하는 데 동의합니다.</label>
+ <div id="supplierMessage" class="notice" style="margin-top:12px"></div><button id="supplierSubmitBtn" class="btn" type="submit" style="width:100%;margin-top:12px">제휴 신청하기</button></form></div></div>
+</div>
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbz9-pk6kkPk01Lh11agNKxeV1Gjo_kzAPYOXyJ9kXUVY7r8t3ptrLurCjOwdTf31f00ug/exec';
 
@@ -555,6 +578,27 @@ function showMsg(text,isErr){msg.textContent=text;msg.className='msg '+(isErr?'e
 
 })(); 
 loadProducts();loadPublicReviews();timerHandle=setInterval(tick,1000);
+
+
+function openSupplierModal(){document.getElementById('supplierModal').classList.add('show');}
+function closeSupplierModal(){document.getElementById('supplierModal').classList.remove('show');}
+function supplierBackdropClose(e){if(e.target && e.target.id==='supplierModal') closeSupplierModal();}
+function supplierFileToData_(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve({fileName:file.name,mimeType:file.type,base64Data:r.result});r.onerror=()=>reject(new Error('사진을 읽지 못했습니다.'));r.readAsDataURL(file);});}
+document.getElementById('supplierForm').addEventListener('submit',async function(e){
+ e.preventDefault(); const msg=document.getElementById('supplierMessage'),btn=document.getElementById('supplierSubmitBtn');
+ try{
+  if(!document.getElementById('spPrivacy').checked) throw new Error('개인정보 수집·이용에 동의해 주세요.');
+  const files=Array.from(document.getElementById('spPhotos').files||[]); if(files.length>3) throw new Error('상품 사진은 최대 3장까지 등록할 수 있습니다.');
+  for(const f of files){if(f.size>4*1024*1024) throw new Error('사진 한 장은 4MB 이하로 등록해 주세요.');}
+  btn.disabled=true;btn.textContent='신청 접수 중...';msg.textContent='사진과 신청 내용을 전송하고 있습니다.';msg.className='notice';
+  const images=[]; for(const f of files) images.push(await supplierFileToData_(f));
+  const payload={action:'supplierApplicationAdd',companyName:spCompany.value,managerName:spManager.value,phone:spPhone.value,region:spRegion.value,category:spCategory.value,productName:spProduct.value,spec:spSpec.value,supplyQuantity:spQty.value,shipAvailableAt:spShipAt.value,supplyPrice:spSupplyPrice.value,desiredSalePrice:spSalePrice.value,shippingFee:spShipping.value,deliveryMethod:spDelivery.value,proposal:spProposal.value,images:images,privacyAgreed:true};
+  const res=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}).then(r=>r.json());
+  if(!res.success) throw new Error(res.message||'제휴 신청 접수에 실패했습니다.');
+  msg.textContent=res.message||'제휴 신청이 접수되었습니다.'; this.reset();
+ }catch(err){msg.textContent='신청 오류: '+err.message;msg.className='notice error';}
+ finally{btn.disabled=false;btn.textContent='제휴 신청하기';}
+});
 </script>
 </body>
 </html>
