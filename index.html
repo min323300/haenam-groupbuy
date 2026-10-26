@@ -348,16 +348,19 @@ function renderProducts(){
    const st=stateOf(p),target=Number(p.targetOrders||0),count=Number(p.orderCount||0);
    const percent=target>0?Math.min(100,Math.round(count/target*100)):0;
    const img=imageUrl(p.image);
-   const btn=st==='판매중'?`<button class="btn" onclick="openProduct('${e(p.productCode)}')">공구 참여하기</button>`:
-     st==='준비중'?`<button class="btn closed" disabled>공구 준비중</button>`:
-     `<div class="customer-request-box">
-       <strong>공동구매가 종료되었습니다</strong>
+   const requestBox=`<div class="customer-request-box">
+       <strong>${st==='종료'?'공동구매가 종료되었습니다':'추가 요청·문의'}</strong>
        <div class="customer-request-actions">
         <button class="request-btn" type="button" onclick="openCustomerRequest('${e(p.productCode)}','공동구매를 놓쳤어요')">공동구매를 놓쳤어요</button>
         <button class="request-btn" type="button" onclick="openCustomerRequest('${e(p.productCode)}','재구매하고 싶어요')">재구매하고 싶어요</button>
         <button class="request-btn" type="button" onclick="openCustomerRequest('${e(p.productCode)}','상품 문의하기')">상품 문의하기</button>
        </div>
       </div>`;
+   const btn=st==='판매중'
+     ?`<button class="btn" onclick="openProduct('${e(p.productCode)}')">공구 참여하기</button>${requestBox}`
+     :st==='준비중'
+       ?`<button class="btn closed" disabled>공구 준비중</button>`
+       :requestBox;
    return `<article class="product">
     <div class="imgbox">${img?`<img src="${e(img)}" alt="${e(p.productName)}">`:'<div class="noimg">🌾</div>'}<span class="status ${st==='종료'?'end':st==='준비중'?'ready':''}">${st}</span></div>
     <div class="product-body"><h3>${e(p.productName)}</h3><div class="desc">${e(p.description||'해남에서 준비한 공동구매 상품입니다.')}</div>
