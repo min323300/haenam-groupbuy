@@ -50,6 +50,60 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 
+
+/* ---------- 고객 요청 관리 ---------- */
+function customerRequestAdminPassword(){
+ return $('customerRequestAdminPassword').value || $('adminPassword').value || '';
+}
+async function loadCustomerRequests(){
+ try{
+  const password=customerRequestAdminPassword();
+  if(!password) return showMessage('customerRequestAdminMessage','관리자 비밀번호를 입력해 주세요.',true);
+  const status=$('customerRequestStatusFilter').value||'전체';
+  showMessage('customerRequestAdminMessage','고객 요청을 불러오고 있습니다...');
+  const res=await apiGet({action:'customerRequestList',password,status});
+  if(!res.success) throw new Error(res.message||'고객 요청 조회 실패');
+  const rows=Array.isArray(res.requests)?res.requests:[];
+  $('customerRequestAdminRows').innerHTML=rows.length?rows.map(x=>`
+   <tr data-request-id="${esc(x.id||'')}">
+    <td>${esc(x.createdAt||'')}</td>
+    <td class="left"><b>${esc(x.productName||'')}</b><br><small>${esc(x.productCode||'')}</small></td>
+    <td><b>${esc(x.requestType||'')}</b></td>
+    <td>${esc(x.name||'')}</td>
+    <td>${esc(x.phone||'')}</td>
+    <td>${esc(x.quantity||'-')}</td>
+    <td class="left" style="min-width:260px">${esc(x.message||'-')}</td>
+    <td><select class="cr-status"><option ${x.status==='접수'?'selected':''}>접수</option><option ${x.status==='연락완료'?'selected':''}>연락완료</option><option ${x.status==='처리완료'?'selected':''}>처리완료</option></select></td>
+    <td class="left" style="min-width:260px"><textarea class="cr-admin-memo" placeholder="전화 상담·처리 내용을 적어주세요.">${esc(x.adminMemo||'')}</textarea>${x.processedAt?`<div class="muted">처리: ${esc(x.processedAt)}</div>`:''}</td>
+    <td><button class="primary" type="button" onclick="saveCustomerRequest(this)">저장</button></td>
+   </tr>`).join(''):'<tr><td colspan="10">해당 상태의 고객 요청이 없습니다.</td></tr>';
+  showMessage('customerRequestAdminMessage',`고객 요청 ${rows.length}건을 불러왔습니다.`);
+ }catch(e){
+  showMessage('customerRequestAdminMessage','고객 요청 조회 오류: '+e.message,true);
+ }
+}
+async function saveCustomerRequest(btn){
+ const tr=btn.closest('tr');
+ try{
+  const password=customerRequestAdminPassword();
+  if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+  btn.disabled=true; btn.textContent='저장 중...';
+  const res=await apiPost({
+   action:'customerRequestUpdate',
+   password,
+   id:tr.dataset.requestId,
+   status:tr.querySelector('.cr-status').value,
+   adminMemo:tr.querySelector('.cr-admin-memo').value
+  });
+  if(!res.success) throw new Error(res.message||'저장 실패');
+  showMessage('customerRequestAdminMessage','고객 요청 처리 상태를 저장했습니다.');
+ }catch(e){
+  showMessage('customerRequestAdminMessage','고객 요청 저장 오류: '+e.message,true);
+ }finally{
+  btn.disabled=false; btn.textContent='저장';
+ }
+}
+
 /* ---------- 입점·공급 제휴 관리 ---------- */
 function supplierAdminPassword(){return $('supplierAdminPassword').value || $('adminPassword').value || '';}
 async function loadSupplierApplications(){
@@ -322,6 +376,26 @@ async function saveSupplierApplication(btn){
     </div>
   </div>
 
+
+
+  <div class="card" id="customerRequestAdminCard">
+    <h2>⑥ 고객 요청 관리</h2>
+    <p class="muted">공동구매 종료 후 고객이 남긴 구매 의사·재구매·상품 문의를 확인합니다. 이 목록의 접수는 주문이나 결제 확정이 아닙니다.</p>
+    <div class="toolbar">
+      <input id="customerRequestAdminPassword" type="password" placeholder="관리자 비밀번호" style="max-width:220px">
+      <select id="customerRequestStatusFilter" style="max-width:160px">
+        <option>전체</option><option>접수</option><option>연락완료</option><option>처리완료</option>
+      </select>
+      <button class="primary" type="button" onclick="loadCustomerRequests()">고객 요청 불러오기</button>
+    </div>
+    <div id="customerRequestAdminMessage" class="notice"></div>
+    <div class="table-wrap" style="margin-top:12px">
+      <table>
+        <thead><tr><th>접수일</th><th>상품</th><th>요청유형</th><th>이름</th><th>연락처</th><th>희망수량</th><th>문의/요청내용</th><th>처리상태</th><th>관리자메모</th><th>저장</th></tr></thead>
+        <tbody id="customerRequestAdminRows"><tr><td colspan="10">관리자 비밀번호를 입력한 뒤 고객 요청을 불러와 주세요.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
 
   <div class="card" id="supplierAdminCard">
     <h2>⑤ 입점 제휴 관리</h2>
