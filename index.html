@@ -111,7 +111,10 @@ footer{background:#203028;color:#dbe4df;text-align:center;padding:30px 20px;font
  <div class="supplier-box"><div class="eyebrow">SUPPLY PARTNERSHIP</div><h2>공동구매 입점·공급 제휴</h2><p>전국의 생산자·제조사·공급업체가 공동구매 상품을 제안할 수 있습니다. 접수된 내용은 해남 공구마켓이 검토한 뒤 담당자와 전화로 최종 조건을 협의합니다.</p><button class="btn" type="button" onclick="openSupplierModal()">공동구매 입점·공급 제휴 신청</button></div>
 </section>
 </main>
-<footer>해남공구마켓 · 해남 농수산물 공동구매</footer>
+<footer>
+  <div>해남공구마켓 · 해남 농수산물 공동구매</div>
+  <div id="businessFooter" style="margin-top:10px;line-height:1.8;"></div>
+</footer>
 
 <div id="reviewModal" class="modal" onclick="reviewBackdropClose(event)">
  <div class="modal-card review-modal-card">
@@ -705,6 +708,33 @@ document.getElementById('supplierForm').addEventListener('submit',async function
  }catch(err){msg.textContent='신청 오류: '+err.message;msg.className='notice error';}
  finally{btn.disabled=false;btn.textContent='제휴 신청하기';}
 });
+// ==========================================
+// 푸터 사업자정보 불러오기
+// ==========================================
+async function loadBusinessFooter() {
+  const footer = document.getElementById('businessFooter');
+  if (!footer) return;
+
+  try {
+    const r = await fetch(API_URL + '?action=settings&t=' + Date.now());
+    const data = await r.json();
+
+    const parts = [];
+
+    if (data.businessName) parts.push('상호: ' + e(data.businessName));
+    if (data.representativeName) parts.push('대표자: ' + e(data.representativeName));
+    if (data.businessNumber) parts.push('사업자등록번호: ' + e(data.businessNumber));
+    if (data.mailOrderNumber) parts.push('통신판매업신고번호: ' + e(data.mailOrderNumber));
+    if (data.businessAddress) parts.push('사업장 주소: ' + e(data.businessAddress));
+    if (data.customerServicePhone) parts.push('고객센터: ' + e(data.customerServicePhone));
+
+    footer.innerHTML = parts.join(' · ');
+  } catch (err) {
+    console.error('사업자정보 조회 오류:', err);
+  }
+}
+
+loadBusinessFooter(); 
 </script>
 </body>
 </html>
