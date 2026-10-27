@@ -1029,6 +1029,7 @@ async function loadPartners(){
     if(!res.success) throw new Error(res.message||'파트너 조회 실패');
 
     const rows=Array.isArray(res.partners)?res.partners:[];
+    partnerCache = rows;
     $('partnerRows').innerHTML=rows.length ? rows.map(p=>`
       <tr>
         <td>${esc(p.partnerCode||'')}</td>
