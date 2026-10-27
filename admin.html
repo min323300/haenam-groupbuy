@@ -1149,6 +1149,8 @@ async function setPartnerPassword(partnerCode){
   }catch(e){ showMessage('partnerMessage','파트너 비밀번호 설정 오류: '+e.message,true); }
 }
 
+let partnerCache = [];
+  
 /* ---------- 본사 전체 파트너 실적 ---------- */
 let partnerPerformanceData = null;
 async function loadPartnerPerformance(){
