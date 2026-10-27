@@ -262,7 +262,14 @@ th{
       >
         회계자료 조회
       </button>
-
+      <button
+        class="secondary"
+        id="excelDownloadBtn"
+        type="button"
+        onclick="downloadAccountingExcel()"
+      >
+        엑셀 다운로드
+      </button>
     </div>
 
     <div id="message" class="notice"></div>
@@ -619,7 +626,7 @@ async function loadAccounting(){
       );
     }
 
-
+    accountingExcelData = res;
     renderAccounting(res);
 
     $('resultArea')
@@ -944,7 +951,156 @@ $('password')
 
     }
   );
+/* =========================================
+ * 기장사무실 엑셀 다운로드
+ * ========================================= */
 
+let accountingExcelData = null;
+
+function downloadAccountingExcel(){
+
+  if(!accountingExcelData){
+    alert('먼저 회계자료 조회 버튼을 눌러 주세요.');
+    return;
+  }
+
+  const res = accountingExcelData;
+  const sales = res.sales || {};
+  const commissions = res.commissions || {};
+  const settlements = res.settlements || {};
+  const products = Array.isArray(res.products) ? res.products : [];
+
+  const rows = [];
+
+  rows.push(['해남공구마켓 회계자료']);
+  rows.push([
+    '조회기간',
+    $('startDate').value + ' ~ ' + $('endDate').value
+  ]);
+
+  rows.push([]);
+
+  rows.push(['매출 요약']);
+  rows.push(['항목','금액/수량']);
+  rows.push(['전체 주문', Number(sales.totalOrders || 0)]);
+  rows.push(['전체 판매수량', Number(sales.totalQuantity || 0)]);
+  rows.push(['전체 주문금액', Number(sales.totalOrderAmount || 0)]);
+  rows.push(['입금확인 주문', Number(sales.paidOrders || 0)]);
+  rows.push(['입금확인 판매수량', Number(sales.paidQuantity || 0)]);
+  rows.push(['입금확인 매출', Number(sales.paidSalesAmount || 0)]);
+  rows.push(['파트너 예상수당', Number(commissions.expectedCommission || 0)]);
+  rows.push(['파트너 확정수당', Number(commissions.confirmedCommission || 0)]);
+
+  rows.push([]);
+
+  rows.push(['상품별 매출']);
+  rows.push([
+    '상품코드',
+    '상품명',
+    '전체 주문',
+    '전체 수량',
+    '전체 주문금액',
+    '입금확인 주문',
+    '입금확인 수량',
+    '입금확인 매출'
+  ]);
+
+  products.forEach(function(product){
+    rows.push([
+      product.productCode || '',
+      product.productName || '',
+      Number(product.orders || 0),
+      Number(product.quantity || 0),
+      Number(product.orderAmount || 0),
+      Number(product.paidOrders || 0),
+      Number(product.paidQuantity || 0),
+      Number(product.paidSalesAmount || 0)
+    ]);
+  });
+
+  rows.push([]);
+
+  rows.push(['파트너 지급 정산내역']);
+
+  rows.push([
+    '정산번호',
+    '정산시작일',
+    '정산종료일',
+    '파트너코드',
+    '파트너명',
+    '정산유형',
+    '정산건수',
+    '총수당',
+    '공제금액',
+    '실제지급액',
+    '지급일',
+    '상태'
+  ]);
+
+  const settlementRows =
+    Array.isArray(settlements.rows)
+      ? settlements.rows
+      : [];
+
+  settlementRows.forEach(function(row){
+    rows.push([
+      row.settlementId || '',
+      row.startDate || '',
+      row.endDate || '',
+      row.partnerCode || '',
+      row.partnerName || '',
+      row.settlementType || '',
+      Number(row.orderCount || 0),
+      Number(row.totalCommission || 0),
+      Number(row.deductionAmount || 0),
+      Number(row.actualPayment || 0),
+      row.paymentDate || '',
+      row.status || ''
+    ]);
+  });
+
+  const csv = rows.map(function(row){
+
+    return row.map(function(value){
+
+      const text = String(value ?? '');
+
+      return '"' +
+        text.replace(/"/g,'""') +
+        '"';
+
+    }).join(',');
+
+  }).join('\r\n');
+
+  const blob = new Blob(
+    ['\uFEFF' + csv],
+    {
+      type:'text/csv;charset=utf-8;'
+    }
+  );
+
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement('a');
+
+  link.href = url;
+
+  link.download =
+    '해남공구마켓_회계자료_' +
+    ($('startDate').value || '') +
+    '_' +
+    ($('endDate').value || '') +
+    '.csv';
+
+  document.body.appendChild(link);
+
+  link.click();
+
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(url);
+}
 </script>
 
 </body>
