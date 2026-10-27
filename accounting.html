@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+<title>해남공구마켓 기장사무실</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  font-family:Arial,"Noto Sans KR",sans-serif;
+  background:#f4f6f4;
+  color:#222;
+}
+
+.wrap{
+  max-width:1180px;
+  margin:auto;
+  padding:24px 16px 60px;
+}
+
+.top{
+  margin-bottom:20px;
+}
+
+.brand{
+  font-size:25px;
+  font-weight:800;
+  color:#176c46;
+}
+
+.sub{
+  font-size:13px;
+  color:#68736c;
+  margin-top:5px;
+}
+
+.card{
+  background:#fff;
+  border-radius:16px;
+  padding:22px;
+  margin-bottom:16px;
+  box-shadow:0 2px 10px rgba(0,0,0,.04);
+}
+
+h2{
+  margin:0 0 16px;
+  font-size:20px;
+}
+
+.field label{
+  display:block;
+  font-size:13px;
+  font-weight:700;
+  margin-bottom:6px;
+}
+
+input{
+  width:100%;
+  padding:11px;
+  border:1px solid #ccd3cc;
+  border-radius:9px;
+  font-size:14px;
+  background:#fff;
+}
+
+button{
+  border:0;
+  border-radius:9px;
+  padding:11px 16px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.primary{
+  background:#16875a;
+  color:#fff;
+}
+
+.secondary{
+  background:#eef1ee;
+  color:#222;
+}
+
+.search-grid{
+  display:grid;
+  grid-template-columns:1.3fr 1fr 1fr auto;
+  gap:10px;
+  align-items:end;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+}
+
+.stat{
+  background:#fff;
+  border-radius:14px;
+  padding:18px;
+  box-shadow:0 2px 10px rgba(0,0,0,.04);
+}
+
+.stat span{
+  display:block;
+  font-size:12px;
+  color:#777;
+}
+
+.stat strong{
+  display:block;
+  font-size:23px;
+  margin-top:6px;
+}
+
+.business-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px 24px;
+}
+
+.business-item{
+  border-bottom:1px solid #edf0ed;
+  padding:10px 0;
+}
+
+.business-item span{
+  display:block;
+  font-size:12px;
+  color:#777;
+}
+
+.business-item strong{
+  display:block;
+  margin-top:4px;
+  font-size:14px;
+}
+
+.notice{
+  display:none;
+  margin-top:12px;
+  padding:11px 13px;
+  border-radius:9px;
+  background:#eef8f2;
+  color:#17623f;
+}
+
+.notice.error{
+  background:#fdeaea;
+  color:#a32121;
+}
+
+.table-wrap{
+  overflow-x:auto;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:800px;
+}
+
+th,td{
+  border:1px solid #dde2dd;
+  padding:10px;
+  text-align:center;
+  font-size:13px;
+}
+
+th{
+  background:#eef4ef;
+}
+
+.muted{
+  color:#6c756f;
+  font-size:13px;
+}
+
+.hidden{
+  display:none!important;
+}
+
+.toolbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:14px;
+}
+
+@media(max-width:800px){
+
+  .search-grid{
+    grid-template-columns:1fr;
+  }
+
+  .grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .business-grid{
+    grid-template-columns:1fr;
+  }
+
+  .card{
+    padding:16px;
+  }
+
+  .stat strong{
+    font-size:20px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrap">
+
+  <div class="top">
+    <div class="brand">해남공구마켓 기장사무실</div>
+    <div class="sub">
+      매출 및 파트너 정산자료를 조회하는 읽기 전용 화면입니다.
+    </div>
+  </div>
+
+
+  <!-- 조회 조건 -->
+  <section class="card">
+
+    <h2>회계자료 조회</h2>
+
+    <div class="search-grid">
+
+      <div class="field">
+        <label>관리자 비밀번호</label>
+        <input
+          id="password"
+          type="password"
+          placeholder="관리자 비밀번호"
+          autocomplete="current-password"
+        >
+      </div>
+
+      <div class="field">
+        <label>조회 시작일</label>
+        <input id="startDate" type="date">
+      </div>
+
+      <div class="field">
+        <label>조회 종료일</label>
+        <input id="endDate" type="date">
+      </div>
+
+      <button
+        class="primary"
+        onclick="loadAccounting()"
+      >
+        회계자료 조회
+      </button>
+
+    </div>
+
+    <div id="message" class="notice"></div>
+
+  </section>
+
+
+  <main id="resultArea" class="hidden">
+
+
+    <!-- 사업자 정보 -->
+    <section class="card">
+
+      <h2>사업자 정보</h2>
+
+      <div class="business-grid">
+
+        <div class="business-item">
+          <span>사업자 상호</span>
+          <strong id="businessName">-</strong>
+        </div>
+
+        <div class="business-item">
+          <span>대표자명</span>
+          <strong id="representativeName">-</strong>
+        </div>
+
+        <div class="business-item">
+          <span>사업자등록번호</span>
+          <strong id="businessNumber">-</strong>
+        </div>
+
+        <div class="business-item">
+          <span>통신판매업 신고번호</span>
+          <strong id="mailOrderNumber">-</strong>
+        </div>
+
+        <div class="business-item">
+          <span>사업장 주소</span>
+          <strong id="businessAddress">-</strong>
+        </div>
+
+        <div class="business-item">
+          <span>고객센터 전화번호</span>
+          <strong id="customerServicePhone">-</strong>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- 매출 요약 -->
+    <section>
+
+      <h2>매출 요약</h2>
+
+      <div class="grid" style="margin-bottom:16px">
+
+        <div class="stat">
+          <span>전체 주문</span>
+          <strong id="totalOrders">0건</strong>
+        </div>
+
+        <div class="stat">
+          <span>전체 판매수량</span>
+          <strong id="totalQuantity">0개</strong>
+        </div>
+
+        <div class="stat">
+          <span>전체 주문금액</span>
+          <strong id="totalOrderAmount">0원</strong>
+        </div>
+
+        <div class="stat">
+          <span>입금확인 주문</span>
+          <strong id="paidOrders">0건</strong>
+        </div>
+
+        <div class="stat">
+          <span>입금확인 판매수량</span>
+          <strong id="paidQuantity">0개</strong>
+        </div>
+
+        <div class="stat">
+          <span>입금확인 매출</span>
+          <strong id="paidSalesAmount">0원</strong>
+        </div>
+
+        <div class="stat">
+          <span>파트너 예상수당</span>
+          <strong id="expectedCommission">0원</strong>
+        </div>
+
+        <div class="stat">
+          <span>파트너 확정수당</span>
+          <strong id="confirmedCommission">0원</strong>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- 상품별 매출 -->
+    <section class="card">
+
+      <div class="toolbar">
+
+        <div>
+          <h2 style="margin:0">상품별 매출</h2>
+          <p class="muted">
+            고객 개인정보는 표시하지 않습니다.
+          </p>
+        </div>
+
+      </div>
+
+      <div class="table-wrap">
+
+        <table>
+
+          <thead>
+            <tr>
+              <th>상품코드</th>
+              <th>상품명</th>
+              <th>전체 주문</th>
+              <th>전체 수량</th>
+              <th>전체 주문금액</th>
+              <th>입금확인 주문</th>
+              <th>입금확인 수량</th>
+              <th>입금확인 매출</th>
+            </tr>
+          </thead>
+
+          <tbody id="productRows">
+
+            <tr>
+              <td colspan="8">
+                조회된 자료가 없습니다.
+              </td>
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </section>
+
+
+    <!-- 파트너 정산 요약 -->
+    <section>
+
+      <h2>파트너 정산 요약</h2>
+
+      <div class="grid" style="margin-bottom:16px">
+
+        <div class="stat">
+          <span>정산완료 건수</span>
+          <strong id="settlementCount">0건</strong>
+        </div>
+
+        <div class="stat">
+          <span>총 수당</span>
+          <strong id="settlementGross">0원</strong>
+        </div>
+
+        <div class="stat">
+          <span>총 공제금액</span>
+          <strong id="settlementDeduction">0원</strong>
+        </div>
+
+        <div class="stat">
+          <span>실제 지급액</span>
+          <strong id="settlementPaid">0원</strong>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- 정산내역 -->
+    <section class="card">
+
+      <h2>파트너 지급 정산내역</h2>
+
+      <p class="muted">
+        본사에서 정산완료 처리한 지급자료입니다.
+      </p>
+
+      <div class="table-wrap">
+
+        <table>
+
+          <thead>
+            <tr>
+              <th>정산번호</th>
+              <th>정산기간</th>
+              <th>파트너</th>
+              <th>정산유형</th>
+              <th>정산건수</th>
+              <th>총수당</th>
+              <th>공제금액</th>
+              <th>실제지급액</th>
+              <th>지급일</th>
+              <th>상태</th>
+            </tr>
+          </thead>
+
+          <tbody id="settlementRows">
+
+            <tr>
+              <td colspan="10">
+                정산내역이 없습니다.
+              </td>
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </section>
+
+
+  </main>
+
+</div>
+
+
+<script>
+
+const API_URL =
+'https://script.google.com/macros/s/AKfycbz9-pk6kkPk01Lh11agNKxeV1Gjo_kzAPYOXyJ9kXUVY7r8t3ptrLurCjOwdTf31f00ug/exec';
+
+
+const $ = id =>
+  document.getElementById(id);
+
+
+const esc = value =>
+  String(value ?? '')
+    .replace(
+      /[&<>"']/g,
+      c => ({
+        '&':'&amp;',
+        '<':'&lt;',
+        '>':'&gt;',
+        '"':'&quot;',
+        "'":'&#39;'
+      }[c])
+    );
+
+
+const money = value =>
+  Number(value || 0)
+    .toLocaleString('ko-KR') + '원';
+
+
+function showMessage(text,error=false){
+
+  const el = $('message');
+
+  el.textContent = text;
+
+  el.className =
+    'notice' + (error ? ' error' : '');
+
+  el.style.display = 'block';
+}
+
+
+async function apiGet(params){
+
+  const url = new URL(API_URL);
+
+  Object.entries(params)
+    .forEach(([key,value])=>{
+      url.searchParams.set(
+        key,
+        value ?? ''
+      );
+    });
+
+  const response = await fetch(url);
+
+  return response.json();
+}
+
+
+async function loadAccounting(){
+
+  try{
+
+    const password =
+      $('password').value;
+
+    const startDate =
+      $('startDate').value;
+
+    const endDate =
+      $('endDate').value;
+
+
+    if(!password){
+
+      return showMessage(
+        '관리자 비밀번호를 입력해 주세요.',
+        true
+      );
+    }
+
+
+    if(
+      startDate &&
+      endDate &&
+      startDate > endDate
+    ){
+
+      return showMessage(
+        '조회 시작일이 종료일보다 늦습니다.',
+        true
+      );
+    }
+
+
+    showMessage(
+      '회계자료를 불러오는 중입니다.'
+    );
+
+
+    const res = await apiGet({
+
+      action:'accountingSummary',
+
+      password:password,
+
+      startDate:startDate,
+
+      endDate:endDate
+
+    });
+
+
+    if(!res.success){
+
+      throw new Error(
+        res.message ||
+        '회계자료 조회에 실패했습니다.'
+      );
+    }
+
+
+    renderAccounting(res);
+
+    $('resultArea')
+      .classList
+      .remove('hidden');
+
+
+    showMessage(
+      '회계자료를 불러왔습니다.'
+    );
+
+
+  }catch(error){
+
+    $('resultArea')
+      .classList
+      .add('hidden');
+
+    showMessage(
+      error.message ||
+      String(error),
+      true
+    );
+  }
+}
+
+
+function renderAccounting(res){
+
+  const business =
+    res.business || {};
+
+
+  $('businessName').textContent =
+    business.businessName || '-';
+
+  $('representativeName').textContent =
+    business.representativeName || '-';
+
+  $('businessNumber').textContent =
+    business.businessNumber || '-';
+
+  $('mailOrderNumber').textContent =
+    business.mailOrderNumber || '-';
+
+  $('businessAddress').textContent =
+    business.businessAddress || '-';
+
+  $('customerServicePhone').textContent =
+    business.customerServicePhone || '-';
+
+
+  const sales =
+    res.sales || {};
+
+
+  $('totalOrders').textContent =
+    Number(sales.totalOrders || 0)
+      .toLocaleString('ko-KR') +
+    '건';
+
+
+  $('totalQuantity').textContent =
+    Number(sales.totalQuantity || 0)
+      .toLocaleString('ko-KR') +
+    '개';
+
+
+  $('totalOrderAmount').textContent =
+    money(
+      sales.totalOrderAmount
+    );
+
+
+  $('paidOrders').textContent =
+    Number(sales.paidOrders || 0)
+      .toLocaleString('ko-KR') +
+    '건';
+
+
+  $('paidQuantity').textContent =
+    Number(sales.paidQuantity || 0)
+      .toLocaleString('ko-KR') +
+    '개';
+
+
+  $('paidSalesAmount').textContent =
+    money(
+      sales.paidSalesAmount
+    );
+
+
+  const commissions =
+    res.commissions || {};
+
+
+  $('expectedCommission').textContent =
+    money(
+      commissions.expectedCommission
+    );
+
+
+  $('confirmedCommission').textContent =
+    money(
+      commissions.confirmedCommission
+    );
+
+
+  const products =
+    Array.isArray(res.products)
+      ? res.products
+      : [];
+
+
+  $('productRows').innerHTML =
+    products.length
+
+    ? products.map(product => `
+
+      <tr>
+
+        <td>
+          ${esc(product.productCode || '')}
+        </td>
+
+        <td>
+          ${esc(product.productName || '')}
+        </td>
+
+        <td>
+          ${Number(product.orders || 0)
+            .toLocaleString('ko-KR')}건
+        </td>
+
+        <td>
+          ${Number(product.quantity || 0)
+            .toLocaleString('ko-KR')}개
+        </td>
+
+        <td>
+          ${money(product.orderAmount)}
+        </td>
+
+        <td>
+          ${Number(product.paidOrders || 0)
+            .toLocaleString('ko-KR')}건
+        </td>
+
+        <td>
+          ${Number(product.paidQuantity || 0)
+            .toLocaleString('ko-KR')}개
+        </td>
+
+        <td>
+          <strong>
+            ${money(product.paidSalesAmount)}
+          </strong>
+        </td>
+
+      </tr>
+
+    `).join('')
+
+    :
+
+    `<tr>
+      <td colspan="8">
+        조회된 상품 매출이 없습니다.
+      </td>
+    </tr>`;
+
+
+  const settlements =
+    res.settlements || {};
+
+
+  $('settlementCount').textContent =
+    Number(settlements.count || 0)
+      .toLocaleString('ko-KR') +
+    '건';
+
+
+  $('settlementGross').textContent =
+    money(
+      settlements.grossAmount
+    );
+
+
+  $('settlementDeduction').textContent =
+    money(
+      settlements.deductionAmount
+    );
+
+
+  $('settlementPaid').textContent =
+    money(
+      settlements.paidAmount
+    );
+
+
+  const settlementRows =
+    Array.isArray(settlements.rows)
+      ? settlements.rows
+      : [];
+
+
+  $('settlementRows').innerHTML =
+    settlementRows.length
+
+    ? settlementRows.map(row => `
+
+      <tr>
+
+        <td>
+          ${esc(row.settlementId || '')}
+        </td>
+
+        <td>
+          ${esc(row.startDate || '')}
+          ~
+          ${esc(row.endDate || '')}
+        </td>
+
+        <td>
+          ${esc(row.partnerName || '')}
+          <br>
+          <span class="muted">
+            ${esc(row.partnerCode || '')}
+          </span>
+        </td>
+
+        <td>
+          ${esc(row.settlementType || '')}
+        </td>
+
+        <td>
+          ${Number(row.orderCount || 0)
+            .toLocaleString('ko-KR')}건
+        </td>
+
+        <td>
+          ${money(row.totalCommission)}
+        </td>
+
+        <td>
+          ${money(row.deductionAmount)}
+        </td>
+
+        <td>
+          <strong>
+            ${money(row.actualPayment)}
+          </strong>
+        </td>
+
+        <td>
+          ${esc(row.paymentDate || '')}
+        </td>
+
+        <td>
+          ${esc(row.status || '')}
+        </td>
+
+      </tr>
+
+    `).join('')
+
+    :
+
+    `<tr>
+      <td colspan="10">
+        해당 기간에 지급 완료된
+        파트너 정산내역이 없습니다.
+      </td>
+    </tr>`;
+}
+
+
+/*
+ * 기본 조회기간:
+ * 현재 월 1일 ~ 오늘
+ */
+(function setDefaultDates(){
+
+  const today =
+    new Date();
+
+  const year =
+    today.getFullYear();
+
+  const month =
+    String(
+      today.getMonth() + 1
+    ).padStart(2,'0');
+
+  const day =
+    String(
+      today.getDate()
+    ).padStart(2,'0');
+
+
+  $('startDate').value =
+    year + '-' +
+    month + '-01';
+
+
+  $('endDate').value =
+    year + '-' +
+    month + '-' +
+    day;
+
+})();
+
+
+$('password')
+  .addEventListener(
+    'keydown',
+    event => {
+
+      if(event.key === 'Enter'){
+        loadAccounting();
+      }
+
+    }
+  );
+
+</script>
+
+</body>
+</html>
