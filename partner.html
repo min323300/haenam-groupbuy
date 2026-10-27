@@ -44,6 +44,46 @@
       <div id="dashMessage" class="notice"></div>
       <div class="table-wrap"><table><thead><tr><th>상품</th><th>주문</th><th>판매수량</th><th>판매금액</th><th>예상수당</th><th>확정수당</th></tr></thead><tbody id="productRows"><tr><td colspan="6">실적을 불러오는 중입니다.</td></tr></tbody></table></div>
     </section>
+        <!-- 내 정산내역 -->
+    <section class="card">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+        <div>
+          <h2 style="margin:0">내 정산내역</h2>
+          <p class="muted">
+            본사에서 지급 완료한 수당 정산내역입니다.
+          </p>
+        </div>
+        <button class="secondary" onclick="loadSettlements()">
+          새로고침
+        </button>
+      </div>
+
+      <div id="settlementMessage" class="notice"></div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>정산기간</th>
+              <th>정산건수</th>
+              <th>총수당</th>
+              <th>공제금액</th>
+              <th>실제 지급액</th>
+              <th>지급일</th>
+              <th>상태</th>
+            </tr>
+          </thead>
+
+          <tbody id="settlementRows">
+            <tr>
+              <td colspan="7">
+                정산내역을 불러오는 중입니다.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </main>
 </div>
 <script>
