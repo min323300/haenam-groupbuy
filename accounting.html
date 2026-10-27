@@ -1102,6 +1102,170 @@ function downloadAccountingExcel(){
 
   URL.revokeObjectURL(url);
 }
+/* =========================================
+ * 기장사무실 XLSX 엑셀 다운로드
+ * ========================================= */
+
+let accountingExcelData = null;
+
+function downloadAccountingExcel(){
+
+  if(!accountingExcelData){
+    alert('먼저 회계자료 조회 버튼을 눌러 주세요.');
+    return;
+  }
+
+  if(typeof XLSX === 'undefined'){
+    alert('엑셀 기능을 불러오지 못했습니다. 페이지를 새로고침해 주세요.');
+    return;
+  }
+
+  const res = accountingExcelData;
+  const business = res.business || {};
+  const sales = res.sales || {};
+  const commissions = res.commissions || {};
+  const settlements = res.settlements || {};
+  const products = Array.isArray(res.products) ? res.products : [];
+  const settlementRows = Array.isArray(settlements.rows) ? settlements.rows : [];
+
+  const wb = XLSX.utils.book_new();
+
+  /* 1. 회계 요약 */
+  const summaryData = [
+    ['해남공구마켓 회계자료'],
+    ['조회 시작일', $('startDate').value],
+    ['조회 종료일', $('endDate').value],
+    [],
+    ['사업자 정보'],
+    ['사업자 상호', business.businessName || ''],
+    ['대표자명', business.representativeName || ''],
+    ['사업자등록번호', business.businessNumber || ''],
+    ['통신판매업 신고번호', business.mailOrderNumber || ''],
+    ['사업장 주소', business.businessAddress || ''],
+    ['고객센터 전화번호', business.customerServicePhone || ''],
+    [],
+    ['매출 요약'],
+    ['전체 주문', Number(sales.totalOrders || 0)],
+    ['전체 판매수량', Number(sales.totalQuantity || 0)],
+    ['전체 주문금액', Number(sales.totalOrderAmount || 0)],
+    ['입금확인 주문', Number(sales.paidOrders || 0)],
+    ['입금확인 판매수량', Number(sales.paidQuantity || 0)],
+    ['입금확인 매출', Number(sales.paidSalesAmount || 0)],
+    ['파트너 예상수당', Number(commissions.expectedCommission || 0)],
+    ['파트너 확정수당', Number(commissions.confirmedCommission || 0)],
+    [],
+    ['정산완료 건수', Number(settlements.count || 0)],
+    ['총 수당', Number(settlements.grossAmount || 0)],
+    ['총 공제금액', Number(settlements.deductionAmount || 0)],
+    ['실제 지급액', Number(settlements.paidAmount || 0)]
+  ];
+
+  const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+  summarySheet['!cols'] = [{wch:24},{wch:45}];
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    summarySheet,
+    '회계요약'
+  );
+
+  /* 2. 상품별 매출 */
+  const productData = [[
+    '상품코드',
+    '상품명',
+    '전체 주문',
+    '전체 수량',
+    '전체 주문금액',
+    '입금확인 주문',
+    '입금확인 수량',
+    '입금확인 매출'
+  ]];
+
+  products.forEach(function(p){
+    productData.push([
+      p.productCode || '',
+      p.productName || '',
+      Number(p.orders || 0),
+      Number(p.quantity || 0),
+      Number(p.orderAmount || 0),
+      Number(p.paidOrders || 0),
+      Number(p.paidQuantity || 0),
+      Number(p.paidSalesAmount || 0)
+    ]);
+  });
+
+  const productSheet =
+    XLSX.utils.aoa_to_sheet(productData);
+
+  productSheet['!cols'] = [
+    {wch:24},{wch:25},{wch:12},{wch:12},
+    {wch:18},{wch:15},{wch:15},{wch:18}
+  ];
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    productSheet,
+    '상품별매출'
+  );
+
+  /* 3. 파트너 정산내역 */
+  const settlementData = [[
+    '정산번호',
+    '정산시작일',
+    '정산종료일',
+    '파트너코드',
+    '파트너명',
+    '정산유형',
+    '정산건수',
+    '총수당',
+    '공제금액',
+    '실제지급액',
+    '지급일',
+    '상태'
+  ]];
+
+  settlementRows.forEach(function(r){
+    settlementData.push([
+      r.settlementId || '',
+      r.startDate || '',
+      r.endDate || '',
+      r.partnerCode || '',
+      r.partnerName || '',
+      r.settlementType || '',
+      Number(r.orderCount || 0),
+      Number(r.totalCommission || 0),
+      Number(r.deductionAmount || 0),
+      Number(r.actualPayment || 0),
+      r.paymentDate || '',
+      r.status || ''
+    ]);
+  });
+
+  const settlementSheet =
+    XLSX.utils.aoa_to_sheet(settlementData);
+
+  settlementSheet['!cols'] = [
+    {wch:22},{wch:14},{wch:14},{wch:15},
+    {wch:15},{wch:15},{wch:12},{wch:15},
+    {wch:15},{wch:15},{wch:14},{wch:14}
+  ];
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    settlementSheet,
+    '파트너정산'
+  );
+
+  /* 파일 저장 */
+  const fileName =
+    '해남공구마켓_회계자료_' +
+    ($('startDate').value || '') +
+    '_' +
+    ($('endDate').value || '') +
+    '.xlsx';
+
+  XLSX.writeFile(wb, fileName);
+}  
 </script>
 
 </body>
