@@ -102,6 +102,87 @@ async function loadDashboard(){
   const token=sessionStorage.getItem(TOKEN_KEY);if(!token)return showLogin();
   try{const res=await apiGet({action:'partnerDashboard',token});if(!res.success)throw new Error(res.message||'실적 조회 실패');$('loginCard').classList.add('hidden');$('dashboard').classList.remove('hidden');$('logoutBtn').classList.remove('hidden');$('partnerTitle').textContent=(res.partner.name||'파트너')+'님 실적';$('partnerCode').textContent='파트너코드 '+(res.partner.partnerCode||'');$('partnerUrl').value=res.partner.partnerUrl||'';$('visitors').textContent=Number(res.visitors||0).toLocaleString('ko-KR')+'명';const s=res.summary||{};$('orders').textContent=Number(s.orders||0).toLocaleString('ko-KR')+'건';$('quantity').textContent=Number(s.quantity||0).toLocaleString('ko-KR')+'개';$('sales').textContent=money(s.salesAmount);$('shipping').textContent=Number(s.shippingCompleted||0).toLocaleString('ko-KR')+'건';$('expected').textContent=money(s.expectedCommission);$('confirmed').textContent=money(s.confirmedCommission);const rows=Array.isArray(res.products)?res.products:[];$('productRows').innerHTML=rows.length?rows.map(x=>`<tr><td>${esc(x.productName||x.productCode)}</td><td>${Number(x.orders||0).toLocaleString('ko-KR')}건</td><td>${Number(x.quantity||0).toLocaleString('ko-KR')}개</td><td>${money(x.salesAmount)}</td><td>${money(x.expectedCommission)}</td><td><b>${money(x.confirmedCommission)}</b></td></tr>`).join(''):'<tr><td colspan="6">아직 파트너 주문 실적이 없습니다.</td></tr>';message('dashMessage','최신 실적을 불러왔습니다.');}catch(e){sessionStorage.removeItem(TOKEN_KEY);showLogin();message('loginMessage',e.message,true)}
 }
+/* ---------- 내 정산내역 ---------- */
+async function loadSettlements() {
+  const token = sessionStorage.getItem(TOKEN_KEY);
+
+  if (!token) {
+    return showLogin();
+  }
+
+  try {
+    const res = await apiGet({
+      action: 'partnerSettlementList',
+      token: token
+    });
+
+    if (!res.success) {
+      throw new Error(
+        res.message || '정산내역 조회에 실패했습니다.'
+      );
+    }
+
+    const rows = Array.isArray(res.settlements)
+      ? res.settlements
+      : [];
+
+    $('settlementRows').innerHTML = rows.length
+      ? rows.map(x => `
+        <tr>
+          <td>
+            ${esc(x.startDate || '')}
+            ~
+            ${esc(x.endDate || '')}
+          </td>
+
+          <td>
+            ${Number(x.orderCount || 0).toLocaleString('ko-KR')}건
+          </td>
+
+          <td>
+            ${money(x.totalCommission)}
+          </td>
+
+          <td>
+            ${money(x.deductionAmount)}
+          </td>
+
+          <td>
+            <b>${money(x.actualPayment)}</b>
+          </td>
+
+          <td>
+            ${esc(x.paymentDate || '-')}
+          </td>
+
+          <td>
+            ${esc(x.status || '')}
+          </td>
+        </tr>
+      `).join('')
+      : `
+        <tr>
+          <td colspan="7">
+            아직 지급 완료된 정산내역이 없습니다.
+          </td>
+        </tr>
+      `;
+
+    message(
+      'settlementMessage',
+      rows.length
+        ? '정산내역을 불러왔습니다.'
+        : '아직 지급 완료된 정산내역이 없습니다.'
+    );
+
+  } catch (e) {
+    message(
+      'settlementMessage',
+      e.message || '정산내역 조회 중 오류가 발생했습니다.',
+      true
+    );
+  }
+}
 function showLogin(){$('loginCard').classList.remove('hidden');$('dashboard').classList.add('hidden');$('logoutBtn').classList.add('hidden')}
 function logout(){sessionStorage.removeItem(TOKEN_KEY);showLogin()}
 async function copyUrl(){const v=$('partnerUrl').value;try{await navigator.clipboard.writeText(v);alert('전용 홍보 URL이 복사되었습니다.')}catch(e){$('partnerUrl').select();document.execCommand('copy');alert('전용 홍보 URL이 복사되었습니다.')}}
