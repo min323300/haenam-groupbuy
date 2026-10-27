@@ -360,6 +360,142 @@ async function saveSupplierApplication(btn){
     </div>
   </div>
 
+<!-- 파트너 정산관리 -->
+<section class="card" style="margin-top:18px;">
+  <h2>파트너 정산관리</h2>
+  <p class="muted">
+    배송완료 후 확정된 파트너 수당을 기간별로 조회하고 지급처리합니다.
+  </p>
+
+  <div style="
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:12px;
+    margin-top:16px;
+  ">
+
+    <div class="field">
+      <label>파트너</label>
+      <select id="settlementPartner" style="width:100%;padding:11px;border:1px solid #ccd3cc;border-radius:8px;">
+        <option value="">파트너 선택</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>정산 시작일</label>
+      <input id="settlementStartDate" type="date">
+    </div>
+
+    <div class="field">
+      <label>정산 종료일</label>
+      <input id="settlementEndDate" type="date">
+    </div>
+
+    <div class="field" style="display:flex;align-items:flex-end;">
+      <button
+        type="button"
+        class="secondary"
+        style="width:100%;"
+        onclick="previewPartnerSettlement()">
+        정산대상 조회
+      </button>
+    </div>
+  </div>
+
+  <div id="settlementPreviewBox"
+       style="
+         margin-top:16px;
+         padding:16px;
+         background:#f5f8f5;
+         border-radius:10px;
+       ">
+
+    <strong>정산대상을 먼저 조회해 주세요.</strong>
+
+    <div style="
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+      gap:10px;
+      margin-top:12px;
+    ">
+      <div>
+        <span class="muted">정산대상 주문</span>
+        <div><b id="settlementOrderCount">0건</b></div>
+      </div>
+
+      <div>
+        <span class="muted">판매수량</span>
+        <div><b id="settlementQuantity">0개</b></div>
+      </div>
+
+      <div>
+        <span class="muted">총 확정수당</span>
+        <div><b id="settlementTotalCommission">0원</b></div>
+      </div>
+    </div>
+  </div>
+
+  <hr style="border:0;border-top:1px solid #e1e5e1;margin:22px 0;">
+
+  <div style="
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:12px;
+  ">
+
+    <div class="field">
+      <label>정산유형</label>
+      <select id="settlementType" style="width:100%;padding:11px;border:1px solid #ccd3cc;border-radius:8px;">
+        <option value="">선택</option>
+        <option value="개인">개인</option>
+        <option value="개인사업자">개인사업자</option>
+        <option value="법인사업자">법인사업자</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>공제금액</label>
+      <input id="settlementDeduction" type="number" min="0" value="0">
+    </div>
+
+    <div class="field">
+      <label>실제 지급액</label>
+      <input id="settlementActualPayment" readonly value="0">
+    </div>
+
+    <div class="field">
+      <label>지급은행</label>
+      <input id="settlementBank" placeholder="예: 농협">
+    </div>
+
+    <div class="field">
+      <label>지급계좌</label>
+      <input id="settlementAccount" placeholder="지급한 계좌">
+    </div>
+
+    <div class="field">
+      <label>예금주</label>
+      <input id="settlementAccountHolder" placeholder="예금주">
+    </div>
+  </div>
+
+  <div class="field">
+    <label>관리자 메모</label>
+    <input id="settlementMemo"
+           placeholder="예: 10월 1차 파트너 정산">
+  </div>
+
+  <div id="settlementMessage" class="notice"></div>
+
+  <button
+    type="button"
+    class="primary"
+    style="width:100%;margin-top:12px;"
+    onclick="savePartnerSettlement()">
+    정산완료 처리
+  </button>
+</section>
+  
   <div class="card">
     <h2>③ 구매후기 관리</h2>
     <p class="muted">고객이 등록한 후기를 확인한 뒤 승인하면 홈페이지에 공개됩니다. 주문관리와 같은 관리자 비밀번호를 사용합니다.</p>
@@ -923,6 +1059,8 @@ async function loadPartners(){
       if(rows.some(p=>String(p.partnerCode)===String(current))) sel.value=current;
     }
 
+    fillSettlementPartners();
+    
     showMessage('partnerMessage',`${rows.length}명의 파트너를 불러왔습니다.`);
   }catch(e){
     showMessage('partnerMessage','파트너 조회 오류: '+e.message,true);
@@ -1145,6 +1283,338 @@ async function savePartnerCommission(btn){
   }
 }
 
+/* ---------- 파트너 정산관리 ---------- */
+
+let currentSettlementPreview = null;
+
+
+/* 파트너정산 선택창에 파트너 목록 넣기 */
+function fillSettlementPartners() {
+  const select = document.getElementById('settlementPartner');
+  if (!select) return;
+
+  const currentValue = select.value;
+
+  select.innerHTML = '<option value="">파트너 선택</option>';
+
+  (partnerCache || []).forEach(function(partner) {
+    const option = document.createElement('option');
+
+    option.value = partner.partnerCode || '';
+    option.textContent =
+      (partner.name || '파트너') +
+      ' (' +
+      (partner.partnerCode || '') +
+      ')';
+
+    select.appendChild(option);
+  });
+
+  if (currentValue) {
+    select.value = currentValue;
+  }
+}
+
+
+/* 정산대상 조회 */
+async function previewPartnerSettlement() {
+
+  const partnerCode =
+    document.getElementById('settlementPartner').value;
+
+  const startDate =
+    document.getElementById('settlementStartDate').value;
+
+  const endDate =
+    document.getElementById('settlementEndDate').value;
+
+  if (!partnerCode) {
+    alert('파트너를 선택해 주세요.');
+    return;
+  }
+
+  if (!startDate || !endDate) {
+    alert('정산 시작일과 종료일을 선택해 주세요.');
+    return;
+  }
+
+  if (startDate > endDate) {
+    alert('정산 시작일이 종료일보다 늦습니다.');
+    return;
+  }
+
+  try {
+
+    const url =
+      API_URL +
+      '?action=adminPartnerSettlementPreview' +
+      '&partnerCode=' + encodeURIComponent(partnerCode) +
+      '&startDate=' + encodeURIComponent(startDate) +
+      '&endDate=' + encodeURIComponent(endDate) +
+      '&t=' + Date.now();
+
+    const response = await fetch(url);
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(
+        result.message || '정산대상을 조회하지 못했습니다.'
+      );
+    }
+
+    currentSettlementPreview = result;
+
+    document.getElementById('settlementOrderCount')
+      .textContent =
+      Number(result.orderCount || 0).toLocaleString('ko-KR') +
+      '건';
+
+    document.getElementById('settlementQuantity')
+      .textContent =
+      Number(result.quantity || 0).toLocaleString('ko-KR') +
+      '개';
+
+    document.getElementById('settlementTotalCommission')
+      .textContent =
+      Number(result.totalCommission || 0)
+        .toLocaleString('ko-KR') +
+      '원';
+
+    updateSettlementActualPayment();
+
+    const msg =
+      document.getElementById('settlementMessage');
+
+    if (result.orderCount > 0) {
+      msg.textContent =
+        result.partnerName +
+        ' 파트너의 정산대상 ' +
+        result.orderCount +
+        '건을 확인했습니다.';
+
+      msg.className = 'notice';
+      msg.style.display = 'block';
+
+    } else {
+
+      msg.textContent =
+        '선택한 기간에 정산할 확정수당이 없습니다.';
+
+      msg.className = 'notice error';
+      msg.style.display = 'block';
+    }
+
+  } catch (err) {
+
+    currentSettlementPreview = null;
+
+    alert(
+      '정산대상 조회 오류: ' +
+      (err.message || err)
+    );
+  }
+}
+
+
+/* 공제금액 입력 시 실제 지급액 자동계산 */
+function updateSettlementActualPayment() {
+
+  const total =
+    currentSettlementPreview
+      ? Number(
+          currentSettlementPreview.totalCommission || 0
+        )
+      : 0;
+
+  const deduction =
+    Math.max(
+      0,
+      Number(
+        document.getElementById('settlementDeduction').value || 0
+      )
+    );
+
+  const actual =
+    Math.max(0, total - deduction);
+
+  document.getElementById('settlementActualPayment').value =
+    actual.toLocaleString('ko-KR') + '원';
+}
+
+
+/* 정산완료 저장 */
+async function savePartnerSettlement() {
+
+  if (!currentSettlementPreview) {
+    alert('먼저 정산대상 조회를 해주세요.');
+    return;
+  }
+
+  if (
+    Number(currentSettlementPreview.orderCount || 0) < 1
+  ) {
+    alert('정산할 확정수당이 없습니다.');
+    return;
+  }
+
+  const settlementType =
+    document.getElementById('settlementType').value;
+
+  if (!settlementType) {
+    alert('정산유형을 선택해 주세요.');
+    return;
+  }
+
+  const deduction =
+    Math.max(
+      0,
+      Number(
+        document.getElementById('settlementDeduction').value || 0
+      )
+    );
+
+  const total =
+    Number(
+      currentSettlementPreview.totalCommission || 0
+    );
+
+  if (deduction > total) {
+    alert('공제금액이 총수당보다 클 수 없습니다.');
+    return;
+  }
+
+  const bankName =
+    document.getElementById('settlementBank').value.trim();
+
+  const bankAccount =
+    document.getElementById('settlementAccount').value.trim();
+
+  const accountHolder =
+    document.getElementById('settlementAccountHolder').value.trim();
+
+  if (!bankName || !bankAccount || !accountHolder) {
+    alert('지급은행, 지급계좌, 예금주를 입력해 주세요.');
+    return;
+  }
+
+  const actualPayment = total - deduction;
+
+  const confirmText =
+    currentSettlementPreview.partnerName +
+    ' 파트너\n\n' +
+    '정산기간: ' +
+    currentSettlementPreview.startDate +
+    ' ~ ' +
+    currentSettlementPreview.endDate +
+    '\n정산대상: ' +
+    currentSettlementPreview.orderCount +
+    '건\n총수당: ' +
+    total.toLocaleString('ko-KR') +
+    '원\n공제금액: ' +
+    deduction.toLocaleString('ko-KR') +
+    '원\n실제 지급액: ' +
+    actualPayment.toLocaleString('ko-KR') +
+    '원\n\n정산완료 처리하시겠습니까?';
+
+  if (!confirm(confirmText)) {
+    return;
+  }
+
+  try {
+
+    const result = await apiPost({
+      action: 'adminSavePartnerSettlement',
+
+      partnerCode:
+        currentSettlementPreview.partnerCode,
+
+      partnerName:
+        currentSettlementPreview.partnerName,
+
+      startDate:
+        currentSettlementPreview.startDate,
+
+      endDate:
+        currentSettlementPreview.endDate,
+
+      settlementType: settlementType,
+
+      deductionAmount: deduction,
+
+      bankName: bankName,
+
+      bankAccount: bankAccount,
+
+      accountHolder: accountHolder,
+
+      memo:
+        document.getElementById('settlementMemo')
+          .value.trim()
+    });
+
+    if (!result.success) {
+      throw new Error(
+        result.message || '정산완료 처리에 실패했습니다.'
+      );
+    }
+
+    alert(
+      '정산완료 처리되었습니다.\n\n' +
+      '정산번호: ' +
+      result.settlementId +
+      '\n실제 지급액: ' +
+      Number(result.actualPayment || 0)
+        .toLocaleString('ko-KR') +
+      '원'
+    );
+
+    currentSettlementPreview = null;
+
+    document.getElementById('settlementOrderCount')
+      .textContent = '0건';
+
+    document.getElementById('settlementQuantity')
+      .textContent = '0개';
+
+    document.getElementById('settlementTotalCommission')
+      .textContent = '0원';
+
+    document.getElementById('settlementDeduction')
+      .value = '0';
+
+    document.getElementById('settlementActualPayment')
+      .value = '0원';
+
+    document.getElementById('settlementMemo')
+      .value = '';
+
+    const msg =
+      document.getElementById('settlementMessage');
+
+    msg.textContent =
+      '정산완료 기록이 파트너정산 시트에 저장되었습니다.';
+
+    msg.className = 'notice';
+    msg.style.display = 'block';
+
+  } catch (err) {
+
+    alert(
+      '정산 저장 오류: ' +
+      (err.message || err)
+    );
+  }
+}
+
+
+/* 공제금액 변경 시 실제 지급액 다시 계산 */
+document
+  .getElementById('settlementDeduction')
+  ?.addEventListener(
+    'input',
+    updateSettlementActualPayment
+  );
+  
 /* ---------- 구매후기 관리 ---------- */
 async function loadReviews(){
   try{
