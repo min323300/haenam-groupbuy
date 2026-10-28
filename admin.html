@@ -341,25 +341,52 @@ async function saveSupplierApplication(btn){
       </table>
     </div>
 
-    <hr style="border:0;border-top:1px solid #e3e7e3;margin:24px 0">
-    <h3>파트너별 상품 수당 설정</h3>
-    <p class="muted">파트너를 선택하면 현재 등록된 상품별 건당 수당을 설정할 수 있습니다. 수당은 주문 추적 2단계에서 주문 당시 금액으로 별도 저장됩니다.</p>
-    <div class="toolbar">
-      <select id="partnerCommissionPartner" style="max-width:320px">
-        <option value="">파트너를 먼저 선택해 주세요</option>
-      </select>
-      <button class="primary" type="button" onclick="loadPartnerCommissions()">상품 수당 불러오기</button>
-      <button class="secondary" type="button" onclick="downloadPartnerCommissionsExcel()">엑셀 다운로드</button>
-    </div>
-    <div id="partnerCommissionMessage" class="notice"></div>
-    <div class="table-wrap" style="margin-top:12px">
-      <table>
-        <thead><tr><th>상품코드</th><th>상품명</th><th>판매가</th><th>건당 수당</th><th>상태</th><th>저장</th></tr></thead>
-        <tbody id="partnerCommissionRows"><tr><td colspan="6">파트너를 선택한 뒤 상품 수당을 불러와 주세요.</td></tr></tbody>
-      </table>
-    </div>
-  </div>
+<hr style="border:0;border-top:1px solid #e3e7e3;margin:24px 0">
 
+<h3>상품별 공통 수당 설정</h3>
+
+<p class="muted">
+  상품별 건당 수당을 한 번 설정하면 모든 파트너에게 동일하게 적용됩니다.
+  주문이 접수될 때 당시 수당 금액이 주문정보에 별도로 저장됩니다.
+</p>
+
+<div class="toolbar">
+  <button
+    class="primary"
+    type="button"
+    onclick="loadProductCommissions()"
+  >
+    상품 수당 불러오기
+  </button>
+</div>
+
+<div
+  id="productCommissionMessage"
+  class="notice"
+></div>
+
+<div class="table-wrap" style="margin-top:12px">
+  <table>
+    <thead>
+      <tr>
+        <th>상품코드</th>
+        <th>상품명</th>
+        <th>판매가</th>
+        <th>건당 수당</th>
+        <th>상태</th>
+        <th>저장</th>
+      </tr>
+    </thead>
+
+    <tbody id="productCommissionRows">
+      <tr>
+        <td colspan="6">
+          상품 수당 불러오기를 눌러 주세요.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 <!-- 파트너 정산관리 -->
 <section class="card" style="margin-top:18px;">
   <h2>파트너 정산관리</h2>
