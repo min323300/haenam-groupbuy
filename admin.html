@@ -621,7 +621,7 @@ function renderProductDetailBuilder(){
     const label=b.type==='image'?'이미지':b.type==='price'?'강조문구':'글';
     let body='';
     if(b.type==='image'){
-      const imageSrc=b.imageUrl||b.value||'';
+      const imageSrc=normalizeDriveImageUrl(b.imageUrl||b.value||'');
       body=`
         <div style="background:#f5f7f5;border:1px solid #e0e5e0;border-radius:12px;padding:12px">
           ${imageSrc
