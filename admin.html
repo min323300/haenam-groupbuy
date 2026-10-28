@@ -554,7 +554,29 @@ const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money = v => Number(v || 0).toLocaleString('ko-KR') + '원';
 const blockId = () => 'b_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+function normalizeDriveImageUrl(url){
+  const u = String(url || '').trim();
+  if(!u) return '';
 
+  // Google Drive /uc?id=파일ID 형식
+  let match = u.match(/[?&]id=([^&]+)/);
+  if(match && match[1]){
+    return 'https://drive.google.com/thumbnail?id=' +
+      encodeURIComponent(match[1]) +
+      '&sz=w1600';
+  }
+
+  // Google Drive /file/d/파일ID/view 형식
+  match = u.match(/\/file\/d\/([^/]+)/);
+  if(match && match[1]){
+    return 'https://drive.google.com/thumbnail?id=' +
+      encodeURIComponent(match[1]) +
+      '&sz=w1600';
+  }
+
+  return u;
+}
+  
 function showMessage(id, text, error=false){
   const el=$(id); el.textContent=text; el.className='notice'+(error?' error':''); el.style.display='block';
 }
