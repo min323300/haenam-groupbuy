@@ -894,7 +894,7 @@ async function loadOrders(){
       <tr data-order="${esc(o.orderNo||o.orderNumber||'')}">
         <td>${esc(o.orderNo||o.orderNumber||'')}</td><td>${esc(o.createdAt||o.date||'')}</td>
         <td>${esc(o.productName||'')}</td><td>${esc(o.name||'')}</td><td>${esc(o.phone||'')}</td>
-        <td>${esc(o.quantity||'')}</td><td class="left">${esc(o.address||'')}</td>
+        <td>${esc(o.qty || o.quantity || '')}</td><td class="left">${esc(o.address||'')}</td>
         <td><input type="checkbox" class="tel" ${o.phoneConfirmed?'checked':''}></td>
         <td><input type="checkbox" class="pay" ${o.paymentConfirmed?'checked':''}></td>
         <td><input type="checkbox" class="guide" ${o.guideCompleted?'checked':''}></td>
