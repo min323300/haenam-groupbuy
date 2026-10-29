@@ -911,7 +911,10 @@ productFilter.innerHTML =
   ).join('');
 
 productFilter.value = currentFilter;
-    $('orderRows').innerHTML=rows.map((o,i)=>`
+    const filteredRows = currentFilter
+  ? rows.filter(o => String(o.productName || '').trim() === currentFilter)
+  : rows;
+    $('orderRows').innerHTML=filteredRows.map((o,i)=>`
       <tr data-order="${esc(o.orderNo||o.orderNumber||'')}">
         <td>${esc(o.orderNo||o.orderNumber||'')}</td><td>${esc(o.createdAt||o.date||'')}</td>
         <td>${esc(o.productName||'')}</td><td>${esc(o.name||'')}</td><td>${esc(o.phone||'')}</td>
@@ -925,7 +928,7 @@ productFilter.value = currentFilter;
         <td><input class="memo" value="${esc(o.adminMemo||'')}"></td>
         <td><button class="primary" onclick="saveOrderRow(this)">저장</button></td>
       </tr>`).join('');
-    showMessage('orderMessage',`${rows.length}건의 주문을 불러왔습니다.`);
+    showMessage('orderMessage',`${filteredRows.length}건의 주문을 불러왔습니다.`);
   }catch(e){showMessage('orderMessage','주문 조회 오류: '+e.message,true)}
 }
 async function downloadOrdersExcel(){
