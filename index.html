@@ -149,6 +149,13 @@ footer{background:#203028;color:#dbe4df;text-align:center;padding:30px 20px;font
     <label>연락처</label><input id="phone" type="tel" required placeholder="010-0000-0000" autocomplete="tel">
     <label>주문 수량</label><select id="qty"><option value="1">1개</option><option value="2">2개</option><option value="3">3개</option><option value="4">4개</option><option value="5">5개</option><option value="6">6개</option><option value="7">7개</option><option value="8">8개</option><option value="9">9개</option><option value="10">10개</option></select>
     <label>배송 주소</label><input id="address" required autocomplete="street-address">
+    <div id="deliveryDateBox" style="display:none;">
+      <label>희망 도착일</label>
+      <select id="deliveryDate">
+        <option value="">희망 도착일을 선택해 주세요</option>
+      </select>
+      <div class="muted">관리자가 지정한 날짜 중에서 선택해 주세요.</div>
+    </div>
     <label>요청사항</label><textarea id="memo" placeholder="배송 시 요청사항을 적어주세요."></textarea>
     <label class="privacy"><input id="privacy" type="checkbox" required><span>주문 접수와 배송을 위한 개인정보 수집·이용에 동의합니다.</span></label>
     <button id="orderButton" class="btn" type="submit">공동구매 주문하기</button>
