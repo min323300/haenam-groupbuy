@@ -827,6 +827,8 @@ async function saveDetailPage(){
       paymentGuide:$('paymentGuide').value.trim(),
       productLink:$('productLink').value.trim(),
       saleStatus:$('saleStatus').value,
+      deliveryDateEnabled:$('deliveryDateEnabled').value,
+      deliveryDates:$('deliveryDates').value.split(',').map(v=>v.trim()).filter(Boolean),
       detailBlocks:productDetailBlocks.map(b=>({
         type:b.type,
         value:b.value||'',
@@ -865,6 +867,8 @@ async function saveProduct(){
       paymentGuide:$('paymentGuide').value.trim(),
       productLink:$('productLink').value.trim(),
       saleStatus:$('saleStatus').value,
+      deliveryDateEnabled:$('deliveryDateEnabled').value,
+      deliveryDates:$('deliveryDates').value.split(',').map(v=>v.trim()).filter(Boolean),
       detailBlocks:productDetailBlocks.map(b=>({type:b.type,value:b.value||'',imageUrl:b.imageUrl||''}))
     };
     showMessage('productMessage','상품과 상세페이지를 저장하고 있습니다...');
