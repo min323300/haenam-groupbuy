@@ -521,6 +521,7 @@ orderForm.addEventListener('submit',async ev=>{
   phone: String(document.getElementById('phone').value || '').trim(),
   qty: document.getElementById('qty').value || 1,
   address: String(document.getElementById('address').value || '').trim(),
+  deliveryDate: String(document.getElementById('deliveryDate').value || '').trim(),
   memo: String(document.getElementById('memo').value || '').trim(),
   partnerCode: getPartnerRef()
 };
