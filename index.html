@@ -463,6 +463,29 @@ function openProduct(code){
  if(p.accountHolder)pay+='예금주: '+e(p.accountHolder)+'<br>';
  if(p.paymentMessage)pay+='<div style="margin-top:6px">'+e(p.paymentMessage)+'</div>';
  paymentBox.innerHTML=pay;
+ const deliveryDateBox = document.getElementById('deliveryDateBox');
+const deliveryDate = document.getElementById('deliveryDate');
+
+deliveryDate.innerHTML = '<option value="">희망 도착일을 선택해 주세요</option>';
+
+if (
+  p.deliveryDateEnabled === '사용' &&
+  Array.isArray(p.deliveryDates) &&
+  p.deliveryDates.length > 0
+) {
+  p.deliveryDates.forEach(function(date) {
+    const option = document.createElement('option');
+    option.value = date;
+    option.textContent = date;
+    deliveryDate.appendChild(option);
+  });
+
+  deliveryDateBox.style.display = 'block';
+  deliveryDate.required = true;
+} else {
+  deliveryDateBox.style.display = 'none';
+  deliveryDate.required = false;
+}
  orderModal.classList.add('open');document.body.style.overflow='hidden';
 }
 async function copyAccountNumber(account){
