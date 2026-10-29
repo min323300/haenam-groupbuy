@@ -872,6 +872,7 @@ async function saveProduct(){
       detailBlocks:productDetailBlocks.map(b=>({type:b.type,value:b.value||'',imageUrl:b.imageUrl||''}))
     };
     showMessage('productMessage','상품과 상세페이지를 저장하고 있습니다...');
+    console.log('상품저장 payload=', payload);
     const res=await apiPost(payload);
     if(!res.success) throw new Error(res.message||'지원하지 않는 작업입니다.');
     if(res.productCode) $('productCode').value=res.productCode;
