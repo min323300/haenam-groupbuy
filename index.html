@@ -357,8 +357,17 @@ function renderProducts(){
         <button class="request-btn" type="button" onclick="openCustomerRequest('${e(p.productCode)}','공동구매를 놓쳤어요')">공동구매를 놓쳤어요</button>
         <button class="request-btn" type="button" onclick="openCustomerRequest('${e(p.productCode)}','재구매하고 싶어요')">재구매하고 싶어요</button>
         <button class="request-btn" type="button" onclick="openCustomerRequest('${e(p.productCode)}','상품 문의하기')">상품 문의하기</button>
-       </div>
-      </div>`;
+        <button class="request-btn order-status-btn" type="button"
+          onclick="togglePublicOrderStatus('${e(p.productCode)}', this)">
+          주문현황 보기
+        </button>
+
+        <div class="public-order-status"
+          id="publicOrderStatus-${e(p.productCode)}"
+          style="display:none;">
+        </div> 
+        
+       </div>`;
    const btn=st==='판매중'
      ?`<button class="btn" onclick="openProduct('${e(p.productCode)}')">공구 참여하기</button>${requestBox}`
      :st==='준비중'
