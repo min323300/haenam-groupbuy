@@ -269,11 +269,16 @@ async function saveSupplierApplication(btn){
   </div>
   <div class="card">
     <h2>② 주문관리</h2>
-    <div class="toolbar">
-      <input id="adminPassword" type="password" placeholder="관리자 비밀번호" style="max-width:220px">
-      <button class="primary" onclick="loadOrders()">주문 불러오기</button>
-      <button class="secondary" type="button" onclick="downloadOrdersExcel()">엑셀 다운로드</button>
-    </div>
+   <div class="toolbar">
+  <input id="adminPassword" type="password" placeholder="관리자 비밀번호" style="max-width:220px">
+
+  <select id="orderProductFilter" style="max-width:240px">
+    <option value="">전체 상품</option>
+  </select>
+
+  <button class="primary" onclick="loadOrders()">주문 불러오기</button>
+  <button class="secondary" type="button" onclick="downloadOrdersExcel()">엑셀 다운로드</button>
+</div>
     <div id="orderMessage" class="notice"></div>
     <div class="table-wrap" style="margin-top:12px">
       <table>
