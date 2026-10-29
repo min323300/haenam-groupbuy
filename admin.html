@@ -895,6 +895,22 @@ async function loadOrders(){
     const rows=(res.orders||res.data||[]).filter(o =>
       String(o.orderNo || o.orderNumber || '').trim() !== ''
     );
+    const productFilter = $('orderProductFilter');
+const currentFilter = productFilter.value;
+
+const productNames = [...new Set(
+  rows
+    .map(o => String(o.productName || '').trim())
+    .filter(Boolean)
+)].sort();
+
+productFilter.innerHTML =
+  '<option value="">전체 상품</option>' +
+  productNames.map(name =>
+    `<option value="${esc(name)}">${esc(name)}</option>`
+  ).join('');
+
+productFilter.value = currentFilter;
     $('orderRows').innerHTML=rows.map((o,i)=>`
       <tr data-order="${esc(o.orderNo||o.orderNumber||'')}">
         <td>${esc(o.orderNo||o.orderNumber||'')}</td><td>${esc(o.createdAt||o.date||'')}</td>
