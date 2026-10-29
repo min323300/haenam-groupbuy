@@ -641,6 +641,16 @@ loadProducts();loadPublicReviews();timerHandle=setInterval(tick,1000);
 
 let customerRequestProduct = null;
 let customerRequestType = '';
+
+function esc(value){
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+} 
+ 
 /* ---------- 상품별 공개 주문현황 ---------- */
 
 async function togglePublicOrderStatus(productCode, button){
