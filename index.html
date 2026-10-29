@@ -641,7 +641,116 @@ loadProducts();loadPublicReviews();timerHandle=setInterval(tick,1000);
 
 let customerRequestProduct = null;
 let customerRequestType = '';
+/* ---------- 상품별 공개 주문현황 ---------- */
 
+async function togglePublicOrderStatus(productCode, button){
+
+  const box = document.getElementById(
+    'publicOrderStatus-' + productCode
+  );
+
+  if(!box) return;
+
+  // 이미 열려 있으면 닫기
+  if(box.style.display !== 'none'){
+    box.style.display = 'none';
+    button.textContent = '주문현황 보기';
+    return;
+  }
+
+  // 열기
+  box.style.display = 'block';
+  button.textContent = '주문현황 닫기';
+
+  // 이미 조회한 내용이 있으면 다시 호출하지 않음
+  if(box.dataset.loaded === '1'){
+    return;
+  }
+
+  box.innerHTML = `
+    <div style="padding:14px;text-align:center;">
+      주문현황을 불러오고 있습니다...
+    </div>
+  `;
+
+  try{
+
+    const res = await fetch(
+      API_URL +
+      '?action=publicProductOrders' +
+      '&productCode=' +
+      encodeURIComponent(productCode)
+    ).then(function(r){
+      return r.json();
+    });
+
+    if(!res.success){
+      throw new Error(
+        res.message || '주문현황을 불러오지 못했습니다.'
+      );
+    }
+
+    const rows = Array.isArray(res.orders)
+      ? res.orders
+      : [];
+
+    if(rows.length === 0){
+
+      box.innerHTML = `
+        <div style="padding:14px;text-align:center;">
+          아직 접수된 주문이 없습니다.
+        </div>
+      `;
+
+      box.dataset.loaded = '1';
+      return;
+    }
+
+    box.innerHTML = `
+      <div style="padding:12px 0;font-weight:700;">
+        현재 주문현황
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th>주문자</th>
+              <th>전화번호</th>
+              <th>수량</th>
+              <th>상태</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            ${rows.map(function(row){
+              return `
+                <tr>
+                  <td>${esc(row.name || '')}</td>
+                  <td>${esc(row.phone || '')}</td>
+                  <td>${Number(row.quantity || 0)}개</td>
+                  <td>${esc(row.status || '주문접수')}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    box.dataset.loaded = '1';
+
+  }catch(err){
+
+    box.innerHTML = `
+      <div style="padding:14px;text-align:center;">
+        주문현황을 불러오지 못했습니다.
+      </div>
+    `;
+
+    console.error(err);
+  }
+}
 function openCustomerRequest(productCode, requestType){
  const p=products.find(x=>s(x.productCode)===s(productCode));
  if(!p) return;
