@@ -141,6 +141,25 @@ async function saveSupplierApplication(btn){
       <div class="field"><label>정상가격</label><input id="normalPrice" type="number" min="0"></div>
       <div class="field"><label>공구 시작일</label><input id="startDate" type="datetime-local"></div>
       <div class="field"><label>공구 마감일</label><input id="endDate" type="datetime-local"></div>
+      <div class="field">
+  <label>배송 희망일 선택 사용</label>
+  <select id="deliveryDateEnabled">
+    <option value="사용안함">사용 안 함</option>
+    <option value="사용">사용함</option>
+  </select>
+</div>
+
+<div class="field">
+  <label>선택 가능한 도착일</label>
+  <input
+    id="deliveryDates"
+    type="text"
+    placeholder="예: 2026-11-10, 2026-11-12, 2026-11-14"
+  >
+  <span class="muted">
+    여러 날짜는 쉼표(,)로 구분해 주세요.
+  </span>
+</div>
       <div class="field"><label>목표 주문건수</label><input id="targetCount" type="number" min="0"></div>
       <div class="field"><label>결제방식</label><select id="paymentMethod"><option>계좌이체</option><option>현장결제</option><option>기타</option></select></div>
       <div class="field full"><label>대표이미지 주소</label><input id="productImage" placeholder="대표 이미지 URL"></div>
@@ -723,6 +742,10 @@ $('productImageFile').addEventListener('change', async e=>{
 /* ---------- 상품 ---------- */
 function newProduct(){
   ['productCode','productName','salePrice','normalPrice','startDate','endDate','targetCount','productImage','productDescription','productLink','bankName','accountNumber','accountHolder','paymentGuide'].forEach(id=>$(id).value='');
+
+  $('deliveryDateEnabled').value='사용안함';
+  $('deliveryDates').value='';
+  
   $('saleStatus').value='판매중'; $('paymentMethod').value='계좌이체';
   productDetailBlocks=[]; renderProductDetailBuilder();
   window.scrollTo({top:0,behavior:'smooth'});
@@ -771,6 +794,8 @@ async function editProduct(code){
     $('accountHolder').value=p.accountHolder||'';
     $('paymentGuide').value=p.paymentGuide||'';
     $('saleStatus').value=p.saleStatus||p.status||'판매중';
+    $('deliveryDateEnabled').value=p.deliveryDateEnabled||'사용안함';
+    $('deliveryDates').value=Array.isArray(p.deliveryDates) ? p.deliveryDates.join(', ') : (p.deliveryDates||'');
     productDetailBlocks=Array.isArray(p.detailBlocks)?JSON.parse(JSON.stringify(p.detailBlocks)):[];
     productDetailBlocks.forEach(b=>{if(!b.id)b.id=blockId()});
     renderProductDetailBuilder();
