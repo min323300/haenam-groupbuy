@@ -562,6 +562,9 @@ async function copyOrderAmount(){
     alert('주문금액이 복사되었습니다.\n' + total.toLocaleString('ko-KR') + '원');
   }
 }
+document.getElementById('qty').addEventListener('change', function(){
+  updateOrderAmount();
+}); 
 function closeModal(){
   orderModal.classList.remove('open');
   document.body.style.overflow='';
