@@ -459,7 +459,7 @@ function openProduct(code){
  const p=products.find(x=>s(x.productCode)===s(code)); if(!p)return;
  if(p.linkUrl){window.location.href=p.linkUrl;return}
  currentProduct=p;
- try{window.trackProductView(p);}catch(err){console.log('상품조회 기록 오류:',err);}
+ try{trackProductView(p);}catch(err){console.log('상품조회 기록 오류:',err);}
  modalTitle.textContent='공동구매 주문';
  modalProductName.textContent=p.productName||'상품';
  modalDescription.textContent=p.description||'';
