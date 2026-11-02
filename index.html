@@ -813,6 +813,8 @@ function openCustomerRequest(productCode, requestType){
  document.getElementById('crMessage').placeholder=isInquiry?'상품·가격·배송 등에 대해 궁금한 내용을 적어주세요.':'운영자에게 남길 내용이 있으면 적어주세요.';
  document.getElementById('customerRequestMsg').textContent='';
  document.getElementById('customerRequestMsg').className='msg';
+ // 팝업을 먼저 연다
+ document.getElementById('customerRequestModal').classList.add('open');
  const historyBox = document.getElementById('productQuestionHistory');
 const questionList = document.getElementById('productQuestionList');
 
@@ -858,7 +860,7 @@ if (isInquiry) {
   historyBox.style.display = 'none';
   questionList.innerHTML = '';
 }
- document.getElementById('customerRequestModal').classList.add('open');
+ 
 }
 function closeCustomerRequestModal(){
  document.getElementById('customerRequestModal').classList.remove('open');
