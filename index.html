@@ -141,6 +141,17 @@ footer{background:#203028;color:#dbe4df;text-align:center;padding:30px 20px;font
    <h2 id="modalProductName"></h2><div id="modalDescription" class="desc"></div>
    <div class="price" id="modalPrice"></div><div id="modalTimer" class="timer"></div>
    <div id="paymentBox" class="payment"></div>
+   <div id="orderAmountBox" class="payment" style="display:none; margin-top:8px;">
+  <strong>주문금액</strong><br>
+  <span id="orderAmountDetail"></span><br>
+  <strong id="orderAmount" style="font-size:20px;"></strong>
+  <button
+    type="button"
+    onclick="copyOrderAmount()"
+    style="margin-left:8px;padding:5px 10px;border:0;border-radius:6px;background:#18794e;color:white;cursor:pointer;font-size:12px;">
+    주문금액 복사
+  </button>
+</div>
    <form id="orderForm">
     <label>성함</label><input id="name" required autocomplete="name">
     <label>연락처</label><input id="phone" type="tel" required placeholder="010-0000-0000" autocomplete="tel">
