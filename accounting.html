@@ -1299,7 +1299,9 @@ function downloadAccountingExcel(){
         r.evidenceType || '',
         r.evidenceConfirmed || '',
         r.paymentStatus || '',
-        r.paymentDate || '',
+        r.paymentDate
+          ? new Date(r.paymentDate).toLocaleDateString('sv-SE')
+          : '',
         r.memo || ''
       ]);
     });
