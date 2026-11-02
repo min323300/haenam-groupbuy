@@ -393,7 +393,7 @@ function renderProducts(){
         
        </div>`;
    const btn=st==='판매중'
-     ?`<button class="btn" onclick="openProduct('${e(p.productCode)}')">공구 참여하기</button>${requestBox}`
+     ?`<button class="btn" onclick="openProduct('${e(p.productCode)}'); try{window.trackGroupBuyClick(p)}catch(err){}">공구 참여하기</button>${requestBox}`
      :st==='준비중'
        ?`<button class="btn closed" disabled>공구 준비중</button>`
        :requestBox;
@@ -757,7 +757,16 @@ function trackProductView(product) {
   setInterval(function () {
     sendVisit('heartbeat');
   }, 60000);
-
+ 
+// 공구 참여 클릭 통계용 전역 함수
+window.trackGroupBuyClick = function(product) {
+  try {
+    sendVisit('groupbuy_click', product);
+  } catch (err) {
+    console.log('공구 클릭 통계 기록 오류:', err);
+  }
+};
+ 
 })(); 
 loadProducts();loadPublicReviews();timerHandle=setInterval(tick,1000);
 
