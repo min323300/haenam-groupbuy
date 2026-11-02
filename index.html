@@ -519,7 +519,49 @@ async function copyAccountNumber(account){
     alert('계좌번호가 복사되었습니다.\n' + account);
   }
 }
+function updateOrderAmount(){
+  if(!currentProduct) return;
 
+  const qtyEl = document.getElementById('qty');
+  const box = document.getElementById('orderAmountBox');
+  const detail = document.getElementById('orderAmountDetail');
+  const amountEl = document.getElementById('orderAmount');
+
+  const qty = Number(qtyEl.value || 1);
+  const price = Number(currentProduct.salePrice || 0);
+  const total = price * qty;
+
+  detail.textContent =
+    price.toLocaleString('ko-KR') + '원 × ' + qty + '개';
+
+  amountEl.textContent =
+    '합계 ' + total.toLocaleString('ko-KR') + '원';
+
+  box.style.display = 'block';
+}
+
+async function copyOrderAmount(){
+  if(!currentProduct) return;
+
+  const qty = Number(document.getElementById('qty').value || 1);
+  const price = Number(currentProduct.salePrice || 0);
+  const total = price * qty;
+  const text = String(total);
+
+  try{
+    await navigator.clipboard.writeText(text);
+    alert('주문금액이 복사되었습니다.\n' + total.toLocaleString('ko-KR') + '원');
+  }catch(err){
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
+
+    alert('주문금액이 복사되었습니다.\n' + total.toLocaleString('ko-KR') + '원');
+  }
+}
 function closeModal(){
   orderModal.classList.remove('open');
   document.body.style.overflow='';
