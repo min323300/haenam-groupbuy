@@ -822,11 +822,16 @@ if (isInquiry) {
   historyBox.style.display = 'block';
   questionList.innerHTML = '<div class="muted">상품 문의·답변을 불러오는 중입니다...</div>';
 
-  apiGet({
-    action: 'publicProductQuestions',
-    productCode: p.productCode
-  })
-  .then(function(res) {
+fetch(
+  API_URL +
+  '?action=publicProductQuestions' +
+  '&productCode=' + encodeURIComponent(p.productCode) +
+  '&t=' + Date.now()
+)
+.then(function(r) {
+  return r.json();
+})
+.then(function(res) {
     const questions = res.questions || [];
 
     if (!questions.length) {
