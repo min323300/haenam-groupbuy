@@ -420,7 +420,87 @@ th{
       </div>
 
     </section>
+    <!-- 매입 요약 -->
+    <section>
 
+      <h2>매입 요약</h2>
+
+      <div class="grid" style="margin-bottom:16px">
+
+        <div class="stat">
+          <span>매입 건수</span>
+          <strong id="purchaseCount">0건</strong>
+        </div>
+
+        <div class="stat">
+          <span>매입 수량</span>
+          <strong id="purchaseQuantity">0개</strong>
+        </div>
+
+        <div class="stat">
+          <span>상품 매입액</span>
+          <strong id="purchaseProductAmount">0원</strong>
+        </div>
+
+        <div class="stat">
+          <span>택배비</span>
+          <strong id="purchaseShippingAmount">0원</strong>
+        </div>
+
+        <div class="stat">
+          <span>기타비용</span>
+          <strong id="purchaseOtherAmount">0원</strong>
+        </div>
+
+        <div class="stat">
+          <span>총 매입액</span>
+          <strong id="purchaseTotalAmount">0원</strong>
+        </div>
+
+        <div class="stat">
+          <span>지급완료</span>
+          <strong id="purchasePaidAmount">0원</strong>
+        </div>
+
+        <div class="stat">
+          <span>미지급</span>
+          <strong id="purchaseUnpaidAmount">0원</strong>
+        </div>
+
+      </div>
+
+      <h3>매입 내역</h3>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>매입일자</th>
+              <th>상품명</th>
+              <th>공급처</th>
+              <th>과세구분</th>
+              <th>수량</th>
+              <th>매입단가</th>
+              <th>상품매입액</th>
+              <th>택배비</th>
+              <th>기타비용</th>
+              <th>총매입액</th>
+              <th>증빙</th>
+              <th>지급상태</th>
+            </tr>
+          </thead>
+
+          <tbody id="purchaseRows">
+            <tr>
+              <td colspan="12">
+                매입내역이 없습니다.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
 
     <!-- 파트너 정산 요약 -->
     <section>
