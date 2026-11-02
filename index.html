@@ -393,7 +393,7 @@ function renderProducts(){
         
        </div>`;
    const btn=st==='판매중'
-     ?`<button class="btn" onclick="openProduct('${e(p.productCode)}'); try{window.trackGroupBuyClick(p)}catch(err){}">공구 참여하기</button>${requestBox}`
+     ?`<button class="btn" onclick="openProduct('${e(p.productCode)}'); try{window.trackGroupBuyClick(products.find(x=>String(x.productCode)===String('${e(p.productCode)}')))}catch(err){console.log('공구클릭 기록 오류:',err)}">공구 참여하기</button>${requestBox}`
      :st==='준비중'
        ?`<button class="btn closed" disabled>공구 준비중</button>`
        :requestBox;
