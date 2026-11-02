@@ -815,7 +815,75 @@ function renderAccounting(res){
       commissions.confirmedCommission
     );
 
+  const purchases =
+    res.purchases || {};
 
+  $('purchaseCount').textContent =
+    Number(purchases.count || 0)
+      .toLocaleString('ko-KR') + '건';
+
+  $('purchaseQuantity').textContent =
+    Number(purchases.quantity || 0)
+      .toLocaleString('ko-KR') + '개';
+
+  $('purchaseProductAmount').textContent =
+    money(purchases.productAmount);
+
+  $('purchaseShippingAmount').textContent =
+    money(purchases.shippingAmount);
+
+  $('purchaseOtherAmount').textContent =
+    money(purchases.otherAmount);
+
+  $('purchaseTotalAmount').textContent =
+    money(purchases.totalAmount);
+
+  $('purchasePaidAmount').textContent =
+    money(purchases.paidAmount);
+
+  $('purchaseUnpaidAmount').textContent =
+    money(purchases.unpaidAmount);
+
+  const purchasesRows =
+    Array.isArray(purchases.rows)
+      ? purchases.rows
+      : [];
+
+  $('purchaseRows').innerHTML =
+    purchasesRows.length
+
+    ? purchasesRows.map(item => `
+
+      <tr>
+        <td>${esc(item.purchaseDate || '')}</td>
+        <td>${esc(item.productName || '')}</td>
+        <td>${esc(item.supplier || '')}</td>
+        <td>${esc(item.taxType || '')}</td>
+
+        <td>
+          ${Number(item.quantity || 0)
+            .toLocaleString('ko-KR')}
+        </td>
+
+        <td>${money(item.purchaseUnitPrice)}</td>
+        <td>${money(item.productAmount)}</td>
+        <td>${money(item.shippingAmount)}</td>
+        <td>${money(item.otherAmount)}</td>
+        <td>${money(item.totalAmount)}</td>
+
+        <td>${esc(item.evidenceType || '')}</td>
+        <td>${esc(item.paymentStatus || '')}</td>
+      </tr>
+
+    `).join('')
+
+    : `
+      <tr>
+        <td colspan="12">
+          매입내역이 없습니다.
+        </td>
+      </tr>
+    `;
   const products =
     Array.isArray(res.products)
       ? res.products
