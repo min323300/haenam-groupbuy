@@ -801,7 +801,15 @@ async function editProduct(code){
     $('saleStatus').value=p.saleStatus||p.status||'판매중';
     $('deliveryDateEnabled').value=p.deliveryDateEnabled||'사용안함';
     $('deliveryDates').value=Array.isArray(p.deliveryDates) ? p.deliveryDates.join(', ') : (p.deliveryDates||'');
-    productDetailBlocks=Array.isArray(p.detailBlocks)?JSON.parse(JSON.stringify(p.detailBlocks)):[];
+    if (Array.isArray(p.detailBlocks)) {
+  productDetailBlocks = JSON.parse(JSON.stringify(p.detailBlocks));
+} else {
+  try {
+    productDetailBlocks = JSON.parse(p.detailBlocks || '[]');
+  } catch (e) {
+    productDetailBlocks = [];
+  }
+}
     productDetailBlocks.forEach(b=>{if(!b.id)b.id=blockId()});
     renderProductDetailBuilder();
     window.scrollTo({top:0,behavior:'smooth'});
