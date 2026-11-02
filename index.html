@@ -459,6 +459,7 @@ function openProduct(code){
  const p=products.find(x=>s(x.productCode)===s(code)); if(!p)return;
  if(p.linkUrl){window.location.href=p.linkUrl;return}
  currentProduct=p;
+ sendVisit('product_view', p);
  modalTitle.textContent='공동구매 주문';
  modalProductName.textContent=p.productName||'상품';
  modalDescription.textContent=p.description||'';
@@ -690,7 +691,7 @@ function showMsg(text,isErr){msg.textContent=text;msg.className='msg '+(isErr?'e
   }
 
   // Apps Script에 방문 기록 전송
-  function sendVisit(eventName) {
+  function sendVisit(eventName, product) {
 
     if (typeof API_URL === 'undefined' || !API_URL) return;
 
@@ -700,8 +701,8 @@ function showMsg(text,isErr){msg.textContent=text;msg.className='msg '+(isErr?'e
       visitorId: visitorId,
       sessionId: sessionId,
       page: location.pathname,
-      productCode: '',
-      productName: '',
+      productCode: product ? (product.productCode || '') : '',
+      productName: product ? (product.productName || '') : '',
       source: getSource(),
       utmSource: params.get('utm_source') || '',
       utmMedium: params.get('utm_medium') || '',
