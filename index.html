@@ -721,7 +721,37 @@ function showMsg(text,isErr){msg.textContent=text;msg.className='msg '+(isErr?'e
       console.log('방문통계 기록 오류:', err);
     });
   }
+// 상품 상세 조회 기록
+function trackProductView(product) {
 
+  if (!product) return;
+  if (typeof API_URL === 'undefined' || !API_URL) return;
+
+  const payload = {
+    action: 'trackVisit',
+    eventName: 'product_view',
+    visitorId: visitorId,
+    sessionId: sessionId,
+    page: location.pathname,
+    productCode: product.productCode || '',
+    productName: product.productName || '',
+    source: getSource(),
+    utmSource: params.get('utm_source') || '',
+    utmMedium: params.get('utm_medium') || '',
+    utmCampaign: params.get('utm_campaign') || '',
+    partnerCode: getPartnerRef()
+  };
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8'
+    },
+    body: JSON.stringify(payload)
+  }).catch(function (err) {
+    console.log('상품 조회 기록 오류:', err);
+  });
+}
   // 최초 페이지 방문
   sendVisit('page_view');
 
