@@ -758,6 +758,15 @@ function trackProductView(product) {
   setInterval(function () {
     sendVisit('heartbeat');
   }, 60000);
+
+// 상품 조회 통계용 전역 함수
+window.trackProductView = function(product) {
+  try {
+    sendVisit('product_view', product);
+  } catch (err) {
+    console.log('상품 조회 통계 기록 오류:', err);
+  }
+};
  
 // 공구 참여 클릭 통계용 전역 함수
 window.trackGroupBuyClick = function(product) {
