@@ -813,6 +813,51 @@ function openCustomerRequest(productCode, requestType){
  document.getElementById('crMessage').placeholder=isInquiry?'상품·가격·배송 등에 대해 궁금한 내용을 적어주세요.':'운영자에게 남길 내용이 있으면 적어주세요.';
  document.getElementById('customerRequestMsg').textContent='';
  document.getElementById('customerRequestMsg').className='msg';
+ const historyBox = document.getElementById('productQuestionHistory');
+const questionList = document.getElementById('productQuestionList');
+
+if (isInquiry) {
+  historyBox.style.display = 'block';
+  questionList.innerHTML = '<div class="muted">상품 문의·답변을 불러오는 중입니다...</div>';
+
+  apiGet({
+    action: 'publicProductQuestions',
+    productCode: p.productCode
+  })
+  .then(function(res) {
+    const questions = res.questions || [];
+
+    if (!questions.length) {
+      questionList.innerHTML =
+        '<div class="muted">아직 등록된 상품 문의·답변이 없습니다.</div>';
+      return;
+    }
+
+    questionList.innerHTML = questions.map(function(item) {
+      return `
+        <div style="padding:12px 0; border-bottom:1px solid #e5e7eb;">
+          <div style="font-weight:700; margin-bottom:6px;">
+            ${esc(item.name || '고객')}
+          </div>
+          <div style="margin-bottom:6px;">
+            <strong>Q.</strong> ${esc(item.question || '')}
+          </div>
+          <div style="color:#176b45;">
+            <strong>A.</strong> ${esc(item.answer || '')}
+          </div>
+        </div>
+      `;
+    }).join('');
+  })
+  .catch(function(err) {
+    questionList.innerHTML =
+      '<div class="muted">문의·답변을 불러오지 못했습니다.</div>';
+  });
+
+} else {
+  historyBox.style.display = 'none';
+  questionList.innerHTML = '';
+}
  document.getElementById('customerRequestModal').classList.add('open');
 }
 function closeCustomerRequestModal(){
