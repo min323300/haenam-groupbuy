@@ -1255,6 +1255,72 @@ function downloadAccountingExcel(){
     '파트너정산'
   );
 
+    /* 4. 매입내역 */
+    const purchases = res.purchases || {};
+    const purchaseRows =
+      Array.isArray(purchases.rows) ? purchases.rows : [];
+
+    const purchaseData = [[
+      '매입번호',
+      '매입일자',
+      '상품코드',
+      '상품명',
+      '공급처',
+      '공급처구분',
+      '과세구분',
+      '수량',
+      '매입단가',
+      '상품매입액',
+      '택배비',
+      '기타비용',
+      '총매입액',
+      '증빙종류',
+      '증빙확인',
+      '지급상태',
+      '지급일',
+      '메모'
+    ]];
+
+    purchaseRows.forEach(function(r){
+      purchaseData.push([
+        r.purchaseNumber || '',
+        r.purchaseDate || '',
+        r.productCode || '',
+        r.productName || '',
+        r.supplier || '',
+        r.supplierType || '',
+        r.taxType || '',
+        Number(r.quantity || 0),
+        Number(r.purchaseUnitPrice || 0),
+        Number(r.productAmount || 0),
+        Number(r.shippingAmount || 0),
+        Number(r.otherAmount || 0),
+        Number(r.totalAmount || 0),
+        r.evidenceType || '',
+        r.evidenceConfirmed || '',
+        r.paymentStatus || '',
+        r.paymentDate || '',
+        r.memo || ''
+      ]);
+    });
+
+    const purchaseSheet =
+      XLSX.utils.aoa_to_sheet(purchaseData);
+
+    purchaseSheet['!cols'] = [
+      {wch:18}, {wch:12}, {wch:24}, {wch:24},
+      {wch:20}, {wch:14}, {wch:12}, {wch:10},
+      {wch:14}, {wch:16}, {wch:14}, {wch:14},
+      {wch:16}, {wch:14}, {wch:14}, {wch:14},
+      {wch:12}, {wch:30}
+    ];
+
+    XLSX.utils.book_append_sheet(
+      wb,
+      purchaseSheet,
+      '매입내역'
+    );
+  
   /* 파일 저장 */
   const fileName =
     '해남공구마켓_회계자료_' +
