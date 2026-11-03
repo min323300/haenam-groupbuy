@@ -393,8 +393,8 @@ async function saveSupplierApplication(btn){
 
     <div class="table-wrap" style="margin-top:14px">
       <table>
-        <thead><tr><th>매입일자</th><th>매입번호</th><th>상품</th><th>공급처</th><th>수량</th><th>매입단가</th><th>상품매입액</th><th>박스당 택배비</th><th>택배비 총액</th><th>기타비용</th><th>총매입액</th><th>지급상태</th><th>지급일</th><th>관리</th></tr></thead>
-        <tbody id="purchaseRows"><tr><td colspan="14">매입내역 불러오기를 눌러주세요.</td></tr></tbody>
+        <thead><tr><th>매입일자</th><th>매입번호</th><th>상품</th><th>공급처</th><th>수량</th><th>매입단가</th><th>상품매입액</th><th>박스당 택배비</th><th>택배비 총액</th><th>기타비용</th><th>총매입액</th><th>지급상태</th><th>지급일</th><th>배송현황</th><th>관리</th></tr></thead>
+        <tbody id="purchaseRows"><tr><td colspan="15">매입내역 불러오기를 눌러주세요.</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -2363,6 +2363,7 @@ async function loadPurchases(){
         <td><b>${money(r.totalAmount||0)}</b></td>
         <td>${esc(r.paymentStatus||'')}</td>
         <td>${formatPurchaseDate(r.paymentDate)}</td>
+        <td>${Number(r.trackingCount||0).toLocaleString('ko-KR')}건 송장 / ${Number(r.deliveredCount||0).toLocaleString('ko-KR')}건 완료</td>
         <td>
           <button class="secondary" type="button" onclick="editPurchase('${esc(r.purchaseNumber||'')}')">수정</button>
           <button class="${r.paymentStatus==='지급완료'?'secondary':'primary'}" type="button"
@@ -2370,7 +2371,7 @@ async function loadPurchases(){
             ${r.paymentStatus==='지급완료'?'미지급으로':'입금완료'}
           </button>
         </td>
-      </tr>`).join('') : '<tr><td colspan="14">조회 기간에 매입내역이 없습니다.</td></tr>';
+      </tr>`).join('') : '<tr><td colspan="15">조회 기간에 매입내역이 없습니다.</td></tr>';
 
     showMessage('purchaseMessage','매입내역을 불러왔습니다.');
   }catch(e){
