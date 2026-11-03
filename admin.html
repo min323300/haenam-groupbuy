@@ -2364,10 +2364,16 @@ async function loadPurchases(){
         <td>${esc(r.paymentStatus||'')}</td>
         <td>${formatPurchaseDate(r.paymentDate)}</td>
         <td>
-          매입 ${Number(r.quantity||0).toLocaleString('ko-KR')}박스 /
-          송장 ${Number(r.trackingCount||0).toLocaleString('ko-KR')}건 /
-          미등록 ${Math.max(0,Number(r.quantity||0)-Number(r.trackingCount||0)).toLocaleString('ko-KR')}건 /
-          완료 ${Number(r.deliveredCount||0).toLocaleString('ko-KR')}건
+          ${(()=>{
+            const qty=Number(r.quantity||0);
+            const tracking=Number(r.trackingCount||0);
+            const delivered=Number(r.deliveredCount||0);
+            const missing=Math.max(0,qty-tracking);
+            const isDone=qty>0 && tracking>=qty && delivered>=qty;
+            const isShipping=tracking>0 && !isDone;
+            const status=isDone?'처리완료':(isShipping?'배송진행중':'송장대기');
+            return `매입 ${qty.toLocaleString('ko-KR')}박스 / 송장 ${tracking.toLocaleString('ko-KR')}건 / 미등록 ${missing.toLocaleString('ko-KR')}건 / 완료 ${delivered.toLocaleString('ko-KR')}건<br><b>${status}</b>`;
+          })()}
         </td>
         <td>
           <button class="secondary" type="button" onclick="editPurchase('${esc(r.purchaseNumber||'')}')">수정</button>
