@@ -2363,7 +2363,12 @@ async function loadPurchases(){
         <td><b>${money(r.totalAmount||0)}</b></td>
         <td>${esc(r.paymentStatus||'')}</td>
         <td>${formatPurchaseDate(r.paymentDate)}</td>
-        <td>${Number(r.trackingCount||0).toLocaleString('ko-KR')}건 송장 / ${Number(r.deliveredCount||0).toLocaleString('ko-KR')}건 완료</td>
+        <td>
+          매입 ${Number(r.quantity||0).toLocaleString('ko-KR')}박스 /
+          송장 ${Number(r.trackingCount||0).toLocaleString('ko-KR')}건 /
+          미등록 ${Math.max(0,Number(r.quantity||0)-Number(r.trackingCount||0)).toLocaleString('ko-KR')}건 /
+          완료 ${Number(r.deliveredCount||0).toLocaleString('ko-KR')}건
+        </td>
         <td>
           <button class="secondary" type="button" onclick="editPurchase('${esc(r.purchaseNumber||'')}')">수정</button>
           <button class="${r.paymentStatus==='지급완료'?'secondary':'primary'}" type="button"
