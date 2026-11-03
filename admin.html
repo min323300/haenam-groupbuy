@@ -360,6 +360,7 @@ async function saveSupplierApplication(btn){
         <input id="purchaseMemo" placeholder="예: 공급처와 협의한 내용, 입금 메모">
       </div>
     </div>
+    <div id="purchaseOrderHint" class="notice" style="display:none;margin-top:10px"></div>
 
     <div class="toolbar">
       <div style="font-weight:700;font-size:16px;margin-right:10px;">
@@ -395,6 +396,49 @@ async function saveSupplierApplication(btn){
       <table>
         <thead><tr><th>매입일자</th><th>매입번호</th><th>상품</th><th>공급처</th><th>수량</th><th>매입단가</th><th>상품매입액</th><th>박스당 택배비</th><th>택배비 총액</th><th>기타비용</th><th>총매입액</th><th>지급상태</th><th>지급일</th><th>배송현황</th><th>관리</th></tr></thead>
         <tbody id="purchaseRows"><tr><td colspan="15">매입내역 불러오기를 눌러주세요.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 주문배송관리 -->
+  <div class="card">
+    <h2>⑧ 주문배송관리</h2>
+    <p class="muted">공급처에 넘길 배송리스트를 받고, 공급처가 보낸 송장번호를 등록합니다. 배송완료로 바꾸면 주문관리의 '배송' 체크와 파트너 수당 확정도 함께 반영됩니다.</p>
+
+    <div class="toolbar">
+      <input id="shipAdminPassword" type="password" placeholder="관리자 비밀번호" style="max-width:220px">
+      <select id="shipProductFilter" style="max-width:260px" onchange="renderShipping()"><option value="">전체 상품</option></select>
+      <select id="shipStatusFilter" style="max-width:150px" onchange="renderShipping()">
+        <option value="">전체 상태</option><option>배송대기</option><option>송장등록</option><option>배송중</option><option>배송완료</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:6px;white-space:nowrap"><input id="shipPaidOnly" type="checkbox" checked onchange="renderShipping()" style="width:auto"> 입금완료만</label>
+      <button class="primary" type="button" onclick="loadShipping()">배송목록 불러오기</button>
+    </div>
+
+    <div class="toolbar">
+      <button class="secondary" type="button" onclick="downloadSupplierShippingList()">공급처 배송리스트 엑셀</button>
+      <label class="secondary" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;background:#fff;font-weight:700">
+        송장 엑셀 올리기
+        <input id="shipUploadFile" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="uploadTrackingExcel(this)">
+      </label>
+      <button id="shipSaveBtn" class="primary" type="button" onclick="saveShippingChanges()">변경내용 저장</button>
+    </div>
+    <div id="shipMessage" class="notice"></div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:12px;">
+      <div class="card" style="margin:0;text-align:center;"><div>주문</div><strong id="shipSumOrders" style="font-size:22px;">0건</strong></div>
+      <div class="card" style="margin:0;text-align:center;"><div>입금완료 수량</div><strong id="shipSumPaidQty" style="font-size:22px;">0박스</strong></div>
+      <div class="card" style="margin:0;text-align:center;"><div>입금 매출</div><strong id="shipSumSales" style="font-size:22px;">0원</strong></div>
+      <div class="card" style="margin:0;text-align:center;"><div>송장 등록</div><strong id="shipSumTracking" style="font-size:22px;">0건</strong></div>
+      <div class="card" style="margin:0;text-align:center;"><div>송장 미등록</div><strong id="shipSumMissing" style="font-size:22px;">0건</strong></div>
+      <div class="card" style="margin:0;text-align:center;"><div>배송완료</div><strong id="shipSumDelivered" style="font-size:22px;">0건</strong></div>
+    </div>
+
+    <datalist id="courierList"><option>CJ대한통운</option><option>한진택배</option><option>롯데택배</option><option>우체국택배</option><option>로젠택배</option><option>경동택배</option></datalist>
+    <div class="table-wrap" style="margin-top:14px">
+      <table>
+        <thead><tr><th>주문번호</th><th>상품</th><th>고객명</th><th>연락처</th><th>수량</th><th>주소</th><th>희망도착일</th><th>입금</th><th>택배사</th><th>송장번호</th><th>송장등록일</th><th>배송상태</th></tr></thead>
+        <tbody id="shipRows"><tr><td colspan="12">관리자 비밀번호를 입력한 뒤 배송목록을 불러와 주세요.</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -2232,6 +2276,12 @@ async function loadPurchaseFormData(){
     $('purchaseSupplier').innerHTML='<option value="">공급처 선택</option>'+
       purchaseSuppliers.map(s=>`<option value="${esc(s.supplierName)}">${esc(s.supplierName)}${s.supplierType?' / '+esc(s.supplierType):''}</option>`).join('');
 
+    // 주문 기준 매출·발주수량 자동 계산용 (주문배송관리 데이터)
+    try{
+      const sr=await apiGet({action:'shippingList',password});
+      purchaseOrderStats=sr.success?buildPurchaseOrderStats(sr.rows||[]):{};
+    }catch(_){ purchaseOrderStats={}; }
+
     showMessage('purchaseSaveMessage',`상품 ${purchaseProducts.length}개, 공급처 ${purchaseSuppliers.length}개를 불러왔습니다.`);
   }catch(e){
     showMessage('purchaseSaveMessage','불러오기 오류: '+e.message,true);
@@ -2251,7 +2301,38 @@ function onPurchaseProductChange(){
   $('purchaseUnitPrice').value=Number(p.defaultPurchaseUnitPrice||0);
   $('purchaseShipping').value=Number(p.defaultShippingFee||0);
   $('purchaseTaxType').value=p.taxType||'';
+  applyPurchaseOrderHint(code);
   calcPurchaseTotal();
+}
+
+/* 주문(입금완료) 기준 발주수량·매출 연결 */
+let purchaseOrderStats={};
+function buildPurchaseOrderStats(rows){
+  const s={};
+  rows.forEach(r=>{
+    const c=r.productCode; if(!c) return;
+    if(!s[c]) s[c]={orders:0,qty:0,paidOrders:0,paidQty:0,paidSales:0};
+    const q=Number(r.qty||0);
+    s[c].orders++; s[c].qty+=q;
+    if(r.paymentConfirmed){ s[c].paidOrders++; s[c].paidQty+=q; s[c].paidSales+=q*Number(r.orderSalePrice||0); }
+  });
+  return s;
+}
+function applyPurchaseOrderHint(code){
+  const box=$('purchaseOrderHint');
+  const st=purchaseOrderStats[code];
+  if(!code||!st){ box.style.display='none'; return; }
+  const already=loadedPurchaseRows
+    .filter(r=>r.productCode===code && r.purchaseNumber!==$('purchaseEditNumber').value)
+    .reduce((a,r)=>a+Number(r.quantity||0),0);
+  const need=Math.max(0,st.paidQty-already);
+  const editing=!!$('purchaseEditNumber').value;
+  if(!editing && need>0) $('purchaseQuantity').value=need;
+  box.className='notice'; box.style.display='block';
+  box.innerHTML=`입금완료 주문 <b>${st.paidOrders}건 · ${st.paidQty}박스</b> (전체 주문 ${st.orders}건 · ${st.qty}박스) · 입금 매출 <b>${money(st.paidSales)}</b><br>`+
+    (loadedPurchaseRows.length?`이미 매입등록 ${already}박스 → `:'')+
+    (editing?`수정 중이라 수량은 바꾸지 않았습니다.`:`발주수량 <b>${need}박스</b> ${need>0?'자동 입력':'(추가 발주할 수량 없음)'}`)+
+    (loadedPurchaseRows.length?'':'<br><span class="muted">매입내역을 먼저 불러오면 이미 등록한 수량을 빼고 계산합니다.</span>');
 }
 
 function calcPurchaseTotal(){
@@ -2281,6 +2362,7 @@ function clearPurchaseForm(){
   $('purchaseMemo').value='';
   $('purchaseEditNumber').value='';
   $('purchaseSaveBtn').textContent='매입 등록';
+  $('purchaseOrderHint').style.display='none';
   calcPurchaseTotal();
   showMessage('purchaseSaveMessage','');
 }
@@ -2369,9 +2451,10 @@ async function loadPurchases(){
             const tracking=Number(r.trackingCount||0);
             const delivered=Number(r.deliveredCount||0);
             const missing=Math.max(0,qty-tracking);
-            const isDone=qty>0 && tracking>=qty && delivered>=qty;
-            const isShipping=tracking>0 && !isDone;
-            const status=isDone?'처리완료':(isShipping?'배송진행중':'송장대기');
+            const shipDone=qty>0 && tracking>=qty && delivered>=qty;
+            const paid=r.paymentStatus==='지급완료';
+            const isDone=shipDone && paid;
+            const status=isDone?'처리완료':(shipDone?'배송완료 · 공급처 지급대기':(tracking>0?'배송진행중':'송장대기'))+(!shipDone&&paid?' · 지급완료':'');
             return `매입 ${qty.toLocaleString('ko-KR')}박스 / 송장 ${tracking.toLocaleString('ko-KR')}건 / 미등록 ${missing.toLocaleString('ko-KR')}건 / 완료 ${delivered.toLocaleString('ko-KR')}건<br><b>${status}</b>`;
           })()}
         </td>
@@ -2440,6 +2523,154 @@ async function togglePurchasePayment(purchaseNumber,status){
   }catch(e){
     showMessage('purchaseMessage','지급상태 변경 오류: '+e.message,true);
   }
+}
+
+/* ---------- 주문배송관리 ---------- */
+let shippingRows=[];
+const SHIP_STATUSES=['배송대기','송장등록','배송중','배송완료'];
+
+function shipPhone(v){
+  let p=String(v||'').replace(/[^0-9]/g,'');
+  if(p.length===10&&p.startsWith('10')) p='0'+p;
+  if(p.length===11&&p.startsWith('010')) return p.replace(/(\d{3})(\d{4})(\d{4})/,'$1-$2-$3');
+  return p||String(v||'');
+}
+function shipPassword(){
+  return ($('shipAdminPassword').value||$('purchaseAdminPassword').value||$('adminPassword').value||'').trim();
+}
+
+async function loadShipping(){
+  try{
+    const password=shipPassword();
+    if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+    showMessage('shipMessage','배송목록을 불러오고 있습니다...');
+    const res=await apiGet({action:'shippingList',password});
+    if(!res.success) throw new Error(res.message||'배송목록 조회 실패');
+    shippingRows=(res.rows||[]).map(r=>({...r,_orig:{courier:r.courier||'',trackingNumber:r.trackingNumber||'',shippingStatus:r.shippingStatus||'배송대기'}}));
+
+    const sel=$('shipProductFilter'); const cur=sel.value;
+    const products=[...new Map(shippingRows.map(r=>[r.productCode,r.productName||r.productCode])).entries()].filter(([c])=>c);
+    sel.innerHTML='<option value="">전체 상품</option>'+products.map(([c,n])=>`<option value="${esc(c)}">${esc(n)}</option>`).join('');
+    if(products.some(([c])=>c===cur)) sel.value=cur;
+
+    renderShipping();
+    showMessage('shipMessage',`주문 ${shippingRows.length}건을 불러왔습니다.`);
+  }catch(e){ showMessage('shipMessage','배송목록 오류: '+e.message,true); }
+}
+
+function shipFiltered(){
+  const code=$('shipProductFilter').value, st=$('shipStatusFilter').value, paidOnly=$('shipPaidOnly').checked;
+  return shippingRows.filter(r=>(!code||r.productCode===code)&&(!st||r.shippingStatus===st)&&(!paidOnly||r.paymentConfirmed));
+}
+
+function shipChanged(r){
+  return r.courier!==r._orig.courier||r.trackingNumber!==r._orig.trackingNumber||r.shippingStatus!==r._orig.shippingStatus;
+}
+
+function renderShipping(){
+  const code=$('shipProductFilter').value;
+  const scope=shippingRows.filter(r=>!code||r.productCode===code);
+  const paid=scope.filter(r=>r.paymentConfirmed);
+  $('shipSumOrders').textContent=scope.length+'건';
+  $('shipSumPaidQty').textContent=paid.reduce((a,r)=>a+Number(r.qty||0),0).toLocaleString('ko-KR')+'박스';
+  $('shipSumSales').textContent=money(paid.reduce((a,r)=>a+Number(r.qty||0)*Number(r.orderSalePrice||0),0));
+  $('shipSumTracking').textContent=paid.filter(r=>r.trackingNumber).length+'건';
+  $('shipSumMissing').textContent=paid.filter(r=>!r.trackingNumber).length+'건';
+  $('shipSumDelivered').textContent=paid.filter(r=>r.shippingStatus==='배송완료').length+'건';
+
+  const rows=shipFiltered();
+  $('shipRows').innerHTML=rows.length?rows.map(r=>`
+    <tr data-order="${esc(r.orderNumber)}" style="${shipChanged(r)?'background:#fffbeb':''}">
+      <td>${esc(r.orderNumber)}</td>
+      <td class="left">${esc(r.productName)}</td>
+      <td>${esc(r.name)}</td>
+      <td>${esc(shipPhone(r.phone))}</td>
+      <td>${Number(r.qty||0)}</td>
+      <td class="left">${esc(r.address)}</td>
+      <td>${esc(r.deliveryDate||'-')}</td>
+      <td>${r.paymentConfirmed?'완료':'<span style="color:#dc2626">미입금</span>'}</td>
+      <td><input list="courierList" value="${esc(r.courier)}" style="min-width:110px" oninput="shipEdit(this,'courier')"></td>
+      <td><input value="${esc(r.trackingNumber)}" style="min-width:140px" oninput="shipEdit(this,'trackingNumber')"></td>
+      <td>${esc(r.trackingDate||'')}</td>
+      <td><select onchange="shipEdit(this,'shippingStatus')">${SHIP_STATUSES.map(s=>`<option ${s===r.shippingStatus?'selected':''}>${s}</option>`).join('')}</select></td>
+    </tr>`).join(''):'<tr><td colspan="12">조건에 맞는 주문이 없습니다.</td></tr>';
+}
+
+function shipEdit(el,field){
+  const no=el.closest('tr').dataset.order;
+  const r=shippingRows.find(x=>x.orderNumber===no); if(!r) return;
+  r[field]=String(el.value||'').trim();
+  if(field==='trackingNumber'){
+    const sel=el.closest('tr').querySelector('select');
+    if(r.trackingNumber&&r.shippingStatus==='배송대기'){ r.shippingStatus='송장등록'; sel.value='송장등록'; }
+    if(!r.trackingNumber&&r.shippingStatus!=='배송완료'){ r.shippingStatus='배송대기'; sel.value='배송대기'; }
+  }
+  el.closest('tr').style.background=shipChanged(r)?'#fffbeb':'';
+}
+
+async function sendShippingItems(items){
+  const password=shipPassword();
+  if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+  const res=await apiPost({action:'shippingUpdate',password,items});
+  if(!res.success) throw new Error(res.message||'저장 실패');
+  return res;
+}
+
+async function saveShippingChanges(){
+  const btn=$('shipSaveBtn');
+  try{
+    const changed=shippingRows.filter(shipChanged);
+    if(!changed.length) return showMessage('shipMessage','바뀐 내용이 없습니다.');
+    btn.disabled=true; btn.textContent='저장 중...';
+    const res=await sendShippingItems(changed.map(r=>({orderNumber:r.orderNumber,courier:r.courier,trackingNumber:r.trackingNumber,shippingStatus:r.shippingStatus})));
+    await loadShipping();
+    showMessage('shipMessage',`${res.updated}건 저장했습니다.`+(res.notFound&&res.notFound.length?` 찾지 못한 주문번호: ${res.notFound.join(', ')}`:''),!!(res.notFound&&res.notFound.length));
+  }catch(e){ showMessage('shipMessage','저장 오류: '+e.message,true); }
+  finally{ btn.disabled=false; btn.textContent='변경내용 저장'; }
+}
+
+function downloadSupplierShippingList(){
+  try{
+    if(!shippingRows.length) throw new Error('먼저 배송목록을 불러와 주세요.');
+    const code=$('shipProductFilter').value;
+    if(!code) throw new Error('공급처에 보낼 상품을 먼저 선택해 주세요.');
+    const rows=shippingRows.filter(r=>r.productCode===code&&r.paymentConfirmed);
+    if(!rows.length) throw new Error('이 상품의 입금완료 주문이 없습니다.');
+    const data=rows.map(r=>({
+      '주문번호':r.orderNumber,'상품명':r.productName,'받는분':r.name,'연락처':shipPhone(r.phone),
+      '주소':r.address,'수량':Number(r.qty||0),'희망도착일':r.deliveryDate||'',
+      '택배사':r.courier||'','송장번호':r.trackingNumber||''
+    }));
+    const ws=XLSX.utils.json_to_sheet(data);
+    ws['!cols']=[{wch:24},{wch:18},{wch:10},{wch:15},{wch:48},{wch:6},{wch:12},{wch:12},{wch:18}];
+    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'배송리스트');
+    const d=new Date(),z=n=>String(n).padStart(2,'0');
+    const name=(rows[0].productName||code).replace(/[\\/:*?"<>|]/g,'');
+    XLSX.writeFile(wb,`해남공구마켓_배송리스트_${name}_${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}.xlsx`);
+    showMessage('shipMessage',`입금완료 ${rows.length}건(${rows.reduce((a,r)=>a+Number(r.qty||0),0)}박스) 배송리스트를 내려받았습니다. 공급처가 택배사·송장번호를 채워 보내면 '송장 엑셀 올리기'로 등록하세요.`);
+  }catch(e){ showMessage('shipMessage',e.message,true); }
+}
+
+async function uploadTrackingExcel(input){
+  const file=input.files&&input.files[0]; input.value='';
+  if(!file) return;
+  try{
+    const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
+    const raw=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:true});
+    const pick=(o,keys)=>{for(const k of Object.keys(o)){const n=k.replace(/\s/g,''); if(keys.includes(n)) return String(o[k]).trim();} return '';};
+    const items=raw.map(o=>({
+      orderNumber:pick(o,['주문번호']),
+      courier:pick(o,['택배사','택배회사']),
+      trackingNumber:pick(o,['송장번호','운송장번호','운송장'])
+    })).filter(x=>x.orderNumber&&x.trackingNumber);
+    if(!items.length) throw new Error("'주문번호'와 '송장번호' 열이 채워진 행을 찾지 못했습니다.");
+    items.forEach(x=>{ if(!x.courier) delete x.courier; });
+    if(!confirm(`송장번호 ${items.length}건을 등록할까요?`)) return;
+    showMessage('shipMessage',`송장 ${items.length}건을 등록하고 있습니다...`);
+    const res=await sendShippingItems(items);
+    await loadShipping();
+    showMessage('shipMessage',`송장 ${res.updated}건을 등록했습니다.`+(res.notFound&&res.notFound.length?` 찾지 못한 주문번호: ${res.notFound.join(', ')}`:''),!!(res.notFound&&res.notFound.length));
+  }catch(e){ showMessage('shipMessage','송장 엑셀 오류: '+e.message,true); }
 }
 
 if($('purchaseDate')) $('purchaseDate').value=todayYmd();
