@@ -325,7 +325,7 @@ async function saveSupplierApplication(btn){
         <input id="purchaseUnitPrice" type="number" min="0" step="1" placeholder="원" oninput="calcPurchaseTotal()">
       </div>
       <div class="field">
-        <label>택배비(총액)</label>
+        <label>박스당 택배비</label>
         <input id="purchaseShipping" type="number" min="0" step="1" value="0" oninput="calcPurchaseTotal()">
       </div>
       <div class="field">
@@ -365,6 +365,8 @@ async function saveSupplierApplication(btn){
       <div style="font-weight:700;font-size:16px;margin-right:10px;">
         상품매입액 <span id="purchaseProductAmountPreview">0원</span>
         &nbsp; / &nbsp;
+        택배비총액 <span id="purchaseShippingTotalPreview">0원</span>
+        &nbsp; / &nbsp;
         총매입액 <span id="purchaseTotalPreview">0원</span>
       </div>
       <button class="primary" type="button" onclick="savePurchase()">매입 등록</button>
@@ -390,8 +392,8 @@ async function saveSupplierApplication(btn){
 
     <div class="table-wrap" style="margin-top:14px">
       <table>
-        <thead><tr><th>매입일자</th><th>매입번호</th><th>상품</th><th>공급처</th><th>수량</th><th>매입단가</th><th>상품매입액</th><th>택배비</th><th>기타비용</th><th>총매입액</th><th>지급상태</th><th>지급일</th></tr></thead>
-        <tbody id="purchaseRows"><tr><td colspan="12">매입내역 불러오기를 눌러주세요.</td></tr></tbody>
+        <thead><tr><th>매입일자</th><th>매입번호</th><th>상품</th><th>공급처</th><th>수량</th><th>매입단가</th><th>상품매입액</th><th>박스당 택배비</th><th>택배비 총액</th><th>기타비용</th><th>총매입액</th><th>지급상태</th><th>지급일</th></tr></thead>
+        <tbody id="purchaseRows"><tr><td colspan="13">매입내역 불러오기를 눌러주세요.</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -2253,11 +2255,13 @@ function onPurchaseProductChange(){
 function calcPurchaseTotal(){
   const q=Math.max(0,Number($('purchaseQuantity').value||0));
   const unit=Math.max(0,Number($('purchaseUnitPrice').value||0));
-  const shipping=Math.max(0,Number($('purchaseShipping').value||0));
+  const shippingPerBox=Math.max(0,Number($('purchaseShipping').value||0));
   const other=Math.max(0,Number($('purchaseOther').value||0));
   const productAmount=q*unit;
-  const total=productAmount+shipping+other;
+  const shippingTotal=q*shippingPerBox;
+  const total=productAmount+shippingTotal+other;
   $('purchaseProductAmountPreview').textContent=money(productAmount);
+  $('purchaseShippingTotalPreview').textContent=money(shippingTotal);
   $('purchaseTotalPreview').textContent=money(total);
 }
 
@@ -2300,7 +2304,7 @@ async function savePurchase(){
       supplierName:$('purchaseSupplier').value,
       quantity,
       purchaseUnitPrice:unitPrice,
-      shippingAmount:Number($('purchaseShipping').value||0),
+      shippingPerBox:Number($('purchaseShipping').value||0),
       otherAmount:Number($('purchaseOther').value||0),
       evidenceType:$('purchaseEvidenceType').value,
       paymentStatus:$('purchasePaymentStatus').value,
@@ -2346,12 +2350,13 @@ async function loadPurchases(){
         <td>${Number(r.quantity||0).toLocaleString('ko-KR')}</td>
         <td>${money(r.purchaseUnitPrice||0)}</td>
         <td>${money(r.productAmount||0)}</td>
+        <td>${money(r.shippingPerBox||0)}</td>
         <td>${money(r.shippingAmount||0)}</td>
         <td>${money(r.otherAmount||0)}</td>
         <td><b>${money(r.totalAmount||0)}</b></td>
         <td>${esc(r.paymentStatus||'')}</td>
         <td>${esc(r.paymentDate||'')}</td>
-      </tr>`).join('') : '<tr><td colspan="12">조회 기간에 매입내역이 없습니다.</td></tr>';
+      </tr>`).join('') : '<tr><td colspan="13">조회 기간에 매입내역이 없습니다.</td></tr>';
 
     showMessage('purchaseMessage','매입내역을 불러왔습니다.');
   }catch(e){
