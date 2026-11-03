@@ -289,13 +289,92 @@ async function saveSupplierApplication(btn){
   </div>
 
 
-  <!-- 매입관리 조회 -->
+  <!-- 매입관리 -->
   <div class="card">
     <h2>⑦ 매입관리</h2>
-    <p class="muted">Google Sheets의 매입관리 자료를 관리자 페이지에서 조회합니다. 1단계에서는 조회만 사용하며, 등록 기능은 조회 테스트 후 추가합니다.</p>
+    <p class="muted">공급처 매입을 등록하고, 매입금액·택배비·지급상태를 한 화면에서 관리합니다.</p>
 
     <div class="toolbar">
       <input id="purchaseAdminPassword" type="password" placeholder="관리자 비밀번호" style="max-width:220px">
+      <button class="secondary" type="button" onclick="loadPurchaseFormData()">상품·공급처 불러오기</button>
+    </div>
+
+    <div class="grid" style="margin-top:14px">
+      <div class="field">
+        <label>매입일자 *</label>
+        <input id="purchaseDate" type="date">
+      </div>
+      <div class="field">
+        <label>상품 *</label>
+        <select id="purchaseProduct" onchange="onPurchaseProductChange()">
+          <option value="">상품을 불러와 주세요</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>공급처 *</label>
+        <select id="purchaseSupplier">
+          <option value="">공급처를 불러와 주세요</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>수량 *</label>
+        <input id="purchaseQuantity" type="number" min="0" step="1" value="1" oninput="calcPurchaseTotal()">
+      </div>
+      <div class="field">
+        <label>매입단가 *</label>
+        <input id="purchaseUnitPrice" type="number" min="0" step="1" placeholder="원" oninput="calcPurchaseTotal()">
+      </div>
+      <div class="field">
+        <label>택배비(총액)</label>
+        <input id="purchaseShipping" type="number" min="0" step="1" value="0" oninput="calcPurchaseTotal()">
+      </div>
+      <div class="field">
+        <label>기타비용</label>
+        <input id="purchaseOther" type="number" min="0" step="1" value="0" oninput="calcPurchaseTotal()">
+      </div>
+      <div class="field">
+        <label>과세구분</label>
+        <input id="purchaseTaxType" readonly placeholder="상품 선택 시 자동">
+      </div>
+      <div class="field">
+        <label>증빙종류</label>
+        <select id="purchaseEvidenceType">
+          <option value="">선택</option>
+          <option value="세금계산서">세금계산서</option>
+          <option value="계산서">계산서</option>
+          <option value="현금영수증">현금영수증</option>
+          <option value="카드">카드</option>
+          <option value="간이영수증">간이영수증</option>
+          <option value="없음">없음</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>지급상태</label>
+        <select id="purchasePaymentStatus">
+          <option value="미지급">미지급</option>
+          <option value="지급완료">지급완료</option>
+        </select>
+      </div>
+      <div class="field full">
+        <label>메모</label>
+        <input id="purchaseMemo" placeholder="예: 공급처와 협의한 내용, 입금 메모">
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div style="font-weight:700;font-size:16px;margin-right:10px;">
+        상품매입액 <span id="purchaseProductAmountPreview">0원</span>
+        &nbsp; / &nbsp;
+        총매입액 <span id="purchaseTotalPreview">0원</span>
+      </div>
+      <button class="primary" type="button" onclick="savePurchase()">매입 등록</button>
+      <button class="secondary" type="button" onclick="clearPurchaseForm()">입력 초기화</button>
+    </div>
+    <div id="purchaseSaveMessage" class="notice"></div>
+
+    <hr style="border:0;border-top:1px solid #e5e7eb;margin:18px 0">
+
+    <div class="toolbar">
       <input id="purchaseStartDate" type="date" style="max-width:170px" title="조회 시작일">
       <input id="purchaseEndDate" type="date" style="max-width:170px" title="조회 종료일">
       <button class="primary" type="button" onclick="loadPurchases()">매입내역 불러오기</button>
@@ -2119,7 +2198,124 @@ async function loadAnalytics(){
   }
 }
 
-/* ---------- 매입관리 조회 ---------- */
+/* ---------- 매입관리 ---------- */
+let purchaseProducts=[];
+let purchaseSuppliers=[];
+
+function todayYmd(){
+  const d=new Date();
+  const y=d.getFullYear();
+  const m=String(d.getMonth()+1).padStart(2,'0');
+  const day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+async function loadPurchaseFormData(){
+  try{
+    const password=$('purchaseAdminPassword').value.trim();
+    if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+
+    showMessage('purchaseSaveMessage','상품·공급처 정보를 불러오고 있습니다...');
+    const res=await apiGet({action:'adminPurchaseFormData',password});
+    if(!res.success) throw new Error(res.message||'상품·공급처 조회 실패');
+
+    purchaseProducts=Array.isArray(res.products)?res.products:[];
+    purchaseSuppliers=Array.isArray(res.suppliers)?res.suppliers:[];
+
+    $('purchaseProduct').innerHTML='<option value="">상품 선택</option>'+
+      purchaseProducts.map(p=>`<option value="${esc(p.productCode)}">${esc(p.productName)} (${esc(p.productCode)})</option>`).join('');
+
+    $('purchaseSupplier').innerHTML='<option value="">공급처 선택</option>'+
+      purchaseSuppliers.map(s=>`<option value="${esc(s.supplierName)}">${esc(s.supplierName)}${s.supplierType?' / '+esc(s.supplierType):''}</option>`).join('');
+
+    showMessage('purchaseSaveMessage',`상품 ${purchaseProducts.length}개, 공급처 ${purchaseSuppliers.length}개를 불러왔습니다.`);
+  }catch(e){
+    showMessage('purchaseSaveMessage','불러오기 오류: '+e.message,true);
+  }
+}
+
+function onPurchaseProductChange(){
+  const code=$('purchaseProduct').value;
+  const p=purchaseProducts.find(x=>x.productCode===code);
+  if(!p){
+    $('purchaseUnitPrice').value='';
+    $('purchaseShipping').value=0;
+    $('purchaseTaxType').value='';
+    calcPurchaseTotal();
+    return;
+  }
+  $('purchaseUnitPrice').value=Number(p.defaultPurchaseUnitPrice||0);
+  $('purchaseShipping').value=Number(p.defaultShippingFee||0);
+  $('purchaseTaxType').value=p.taxType||'';
+  calcPurchaseTotal();
+}
+
+function calcPurchaseTotal(){
+  const q=Math.max(0,Number($('purchaseQuantity').value||0));
+  const unit=Math.max(0,Number($('purchaseUnitPrice').value||0));
+  const shipping=Math.max(0,Number($('purchaseShipping').value||0));
+  const other=Math.max(0,Number($('purchaseOther').value||0));
+  const productAmount=q*unit;
+  const total=productAmount+shipping+other;
+  $('purchaseProductAmountPreview').textContent=money(productAmount);
+  $('purchaseTotalPreview').textContent=money(total);
+}
+
+function clearPurchaseForm(){
+  $('purchaseDate').value=todayYmd();
+  $('purchaseProduct').value='';
+  $('purchaseSupplier').value='';
+  $('purchaseQuantity').value=1;
+  $('purchaseUnitPrice').value='';
+  $('purchaseShipping').value=0;
+  $('purchaseOther').value=0;
+  $('purchaseTaxType').value='';
+  $('purchaseEvidenceType').value='';
+  $('purchasePaymentStatus').value='미지급';
+  $('purchaseMemo').value='';
+  calcPurchaseTotal();
+  showMessage('purchaseSaveMessage','');
+}
+
+async function savePurchase(){
+  try{
+    const password=$('purchaseAdminPassword').value.trim();
+    if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+    if(!$('purchaseDate').value) throw new Error('매입일자를 선택해 주세요.');
+    if(!$('purchaseProduct').value) throw new Error('상품을 선택해 주세요.');
+    if(!$('purchaseSupplier').value) throw new Error('공급처를 선택해 주세요.');
+
+    const quantity=Number($('purchaseQuantity').value||0);
+    const unitPrice=Number($('purchaseUnitPrice').value||0);
+    if(quantity<=0) throw new Error('수량을 1개 이상 입력해 주세요.');
+    if(unitPrice<0) throw new Error('매입단가를 확인해 주세요.');
+
+    showMessage('purchaseSaveMessage','매입내역을 저장하고 있습니다...');
+
+    const res=await apiPost({
+      action:'adminPurchaseSave',
+      password,
+      purchaseDate:$('purchaseDate').value,
+      productCode:$('purchaseProduct').value,
+      supplierName:$('purchaseSupplier').value,
+      quantity,
+      purchaseUnitPrice:unitPrice,
+      shippingAmount:Number($('purchaseShipping').value||0),
+      otherAmount:Number($('purchaseOther').value||0),
+      evidenceType:$('purchaseEvidenceType').value,
+      paymentStatus:$('purchasePaymentStatus').value,
+      memo:$('purchaseMemo').value
+    });
+
+    if(!res.success) throw new Error(res.message||'매입 등록 실패');
+    showMessage('purchaseSaveMessage',`매입 등록 완료: ${res.purchaseNumber||''}`);
+    clearPurchaseForm();
+    await loadPurchases();
+  }catch(e){
+    showMessage('purchaseSaveMessage','매입 등록 오류: '+e.message,true);
+  }
+}
+
 async function loadPurchases(){
   try{
     const password=$('purchaseAdminPassword').value.trim();
@@ -2162,6 +2358,9 @@ async function loadPurchases(){
     showMessage('purchaseMessage','매입내역 조회 오류: '+e.message,true);
   }
 }
+
+if($('purchaseDate')) $('purchaseDate').value=todayYmd();
+calcPurchaseTotal();
 
 renderProductDetailBuilder();  
 if(!API_URL.includes('여기에_')){
