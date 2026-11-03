@@ -289,6 +289,34 @@ async function saveSupplierApplication(btn){
   </div>
 
 
+  <!-- 매입관리 조회 -->
+  <div class="card">
+    <h2>⑦ 매입관리</h2>
+    <p class="muted">Google Sheets의 매입관리 자료를 관리자 페이지에서 조회합니다. 1단계에서는 조회만 사용하며, 등록 기능은 조회 테스트 후 추가합니다.</p>
+
+    <div class="toolbar">
+      <input id="purchaseAdminPassword" type="password" placeholder="관리자 비밀번호" style="max-width:220px">
+      <input id="purchaseStartDate" type="date" style="max-width:170px" title="조회 시작일">
+      <input id="purchaseEndDate" type="date" style="max-width:170px" title="조회 종료일">
+      <button class="primary" type="button" onclick="loadPurchases()">매입내역 불러오기</button>
+    </div>
+    <div id="purchaseMessage" class="notice"></div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px;">
+      <div class="card" style="margin:0;text-align:center;"><div>총 매입건수</div><strong id="purchaseCount" style="font-size:24px;">0</strong>건</div>
+      <div class="card" style="margin:0;text-align:center;"><div>총 매입액</div><strong id="purchaseTotal" style="font-size:24px;">0원</strong></div>
+      <div class="card" style="margin:0;text-align:center;"><div>지급완료</div><strong id="purchasePaid" style="font-size:24px;">0원</strong></div>
+      <div class="card" style="margin:0;text-align:center;"><div>미지급</div><strong id="purchaseUnpaid" style="font-size:24px;">0원</strong></div>
+    </div>
+
+    <div class="table-wrap" style="margin-top:14px">
+      <table>
+        <thead><tr><th>매입일자</th><th>매입번호</th><th>상품</th><th>공급처</th><th>수량</th><th>매입단가</th><th>상품매입액</th><th>택배비</th><th>기타비용</th><th>총매입액</th><th>지급상태</th><th>지급일</th></tr></thead>
+        <tbody id="purchaseRows"><tr><td colspan="12">매입내역 불러오기를 눌러주세요.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="card">
     <h2>④ 파트너스 관리</h2>
     <p class="muted">판매 파트너를 등록하고 전용 홍보 URL을 발급합니다. 1단계에서는 파트너 등록·활성/정지·전용 URL 복사까지만 관리합니다.</p>
@@ -2090,6 +2118,51 @@ async function loadAnalytics(){
     );
   }
 }
+
+/* ---------- 매입관리 조회 ---------- */
+async function loadPurchases(){
+  try{
+    const password=$('purchaseAdminPassword').value.trim();
+    if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+
+    showMessage('purchaseMessage','매입내역을 불러오고 있습니다...');
+    const res=await apiGet({
+      action:'accountingSummary',
+      password:password,
+      startDate:$('purchaseStartDate').value,
+      endDate:$('purchaseEndDate').value
+    });
+    if(!res.success) throw new Error(res.message||'매입내역 조회 실패');
+
+    const p=res.purchases||{};
+    $('purchaseCount').textContent=Number(p.count||0).toLocaleString('ko-KR');
+    $('purchaseTotal').textContent=money(p.totalAmount||0);
+    $('purchasePaid').textContent=money(p.paidAmount||0);
+    $('purchaseUnpaid').textContent=money(p.unpaidAmount||0);
+
+    const rows=Array.isArray(p.rows)?p.rows:[];
+    $('purchaseRows').innerHTML=rows.length ? rows.map(r=>`
+      <tr>
+        <td>${esc(r.purchaseDate||'')}</td>
+        <td>${esc(r.purchaseNumber||'')}</td>
+        <td class="left"><b>${esc(r.productName||r.productCode||'')}</b></td>
+        <td>${esc(r.supplier||'')}</td>
+        <td>${Number(r.quantity||0).toLocaleString('ko-KR')}</td>
+        <td>${money(r.purchaseUnitPrice||0)}</td>
+        <td>${money(r.productAmount||0)}</td>
+        <td>${money(r.shippingAmount||0)}</td>
+        <td>${money(r.otherAmount||0)}</td>
+        <td><b>${money(r.totalAmount||0)}</b></td>
+        <td>${esc(r.paymentStatus||'')}</td>
+        <td>${esc(r.paymentDate||'')}</td>
+      </tr>`).join('') : '<tr><td colspan="12">조회 기간에 매입내역이 없습니다.</td></tr>';
+
+    showMessage('purchaseMessage','매입내역을 불러왔습니다.');
+  }catch(e){
+    showMessage('purchaseMessage','매입내역 조회 오류: '+e.message,true);
+  }
+}
+
 renderProductDetailBuilder();  
 if(!API_URL.includes('여기에_')){
   loadProducts();
