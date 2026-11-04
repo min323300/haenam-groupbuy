@@ -209,7 +209,7 @@ if(sessionStorage.getItem(TOKEN_KEY))loadDashboard();
  * - 받는 사람은 사용자가 카카오톡에서 직접 고른다. 자동·대량 발송 없음.
  * - KAKAO_JS_KEY를 넣으면 카카오 공식 공유(카드형)로, 비워두면 휴대폰 기본 공유 창으로 동작.
  * ========================================================== */
-const KAKAO_JS_KEY = ''; // 카카오 디벨로퍼스에서 받은 JavaScript 키 (없으면 비워 둠)
+const KAKAO_JS_KEY = 'a97bcb8e859ff278204e160fb5a81b57'; // 카카오 디벨로퍼스 '해남공구마켓' 앱(ID 1636560) JavaScript 키
 const MARKET_URL = 'https://min323300.github.io/haenam-groupbuy/';
 
 function promoText_(v){ return v===null||v===undefined ? '' : String(v); }
@@ -310,9 +310,10 @@ async function sharePromo(p, text, link){
   }
   return (await promoCopy(text)) ? 'copied' : 'fail';
 }
+loadKakaoSdk_(); // 페이지가 열릴 때 미리 불러와 공유 버튼을 누르면 바로 창이 뜨게 함
 function shareResultMessage(r){
   return {
-    kakao: '카카오톡이 열렸습니다. 보낼 친구나 채팅방을 직접 선택해 주세요.',
+    kakao: '카카오톡 공유 창이 열렸습니다. 보낼 친구나 채팅방을 골라 보내세요. (PC는 처음 한 번 카카오 로그인이 필요합니다. 창이 안 보이면 브라우저의 팝업 차단을 해제해 주세요.)',
     shared: '공유 창에서 카카오톡을 선택해 보낼 친구나 채팅방을 고르세요.',
     cancel: '공유를 취소했습니다.',
     copied: 'PC에서는 홍보 문구를 복사했습니다. 카카오톡 PC에서 보낼 채팅방을 열고 붙여넣기(Ctrl+V) 하세요. 휴대폰에서 누르면 카카오톡 공유 창이 열립니다.',
