@@ -459,7 +459,9 @@ async function sharePromo(p, text, link){
       return 'kakao';
     } catch (e) { /* 아래 방식으로 계속 */ }
   }
-  if (navigator.share) {
+  // 휴대폰에서만 공유 창을 연다. PC는 공유 창이 안 뜨거나 카카오톡이 목록에 없는 경우가 많아 바로 복사한다.
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  if (isMobile && navigator.share) {
     try { await navigator.share({ title: promoText_(p.productName) + ' 공동구매', text: text }); return 'shared'; }
     catch (e) { if (e && e.name === 'AbortError') return 'cancel'; }
   }
@@ -470,7 +472,7 @@ function shareResultMessage(r){
     kakao: '카카오톡이 열렸습니다. 보낼 친구나 채팅방을 직접 선택해 주세요.',
     shared: '공유 창에서 카카오톡을 선택해 보낼 친구나 채팅방을 고르세요.',
     cancel: '공유를 취소했습니다.',
-    copied: '이 기기에서는 공유 창을 열 수 없어 문구를 복사했습니다. 카카오톡 채팅방에 붙여넣기(Ctrl+V) 하세요.',
+    copied: 'PC에서는 홍보 문구를 복사했습니다. 카카오톡 PC에서 보낼 채팅방을 열고 붙여넣기(Ctrl+V) 하세요. 휴대폰에서 누르면 카카오톡 공유 창이 열립니다.',
     fail: '복사에 실패했습니다. 아래 문구를 길게 눌러 직접 복사해 주세요.'
   }[r] || '';
 }
