@@ -315,7 +315,7 @@ async function loadPublicReviews(){
   grid.innerHTML=reviews.map(r=>{
    const rating=Math.max(0,Math.min(5,Number(r.rating||0)));
    const stars='★'.repeat(rating)+'☆'.repeat(5-rating);
-   const img=imageUrl(r.imageUrl||'');
+   const img=imageUrl(r.imageUrl||'','w600');
    return `<article class="review-card">
      <div class="review-stars">${stars}</div>
      <div class="review-name">${e(r.name||'')}</div>
@@ -342,7 +342,7 @@ function reviewBackdropClose(ev){if(ev.target.id==='reviewModal')closeReviewModa
 function s(v){return String(v==null?'':v)}
 function e(v){return s(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
 function money(v){return Number(v||0).toLocaleString('ko-KR')+'원'}
-function imageUrl(url){
+function imageUrl(url, size){
   let u = String(url || '').trim();
   if(!u) return '';
 
@@ -361,7 +361,7 @@ function imageUrl(url){
   if(id){
     return 'https://drive.google.com/thumbnail?id='
       + encodeURIComponent(id)
-      + '&sz=w1600';
+      + '&sz=' + (size || 'w1600');
   }
 
   return u;
@@ -386,15 +386,25 @@ function duration(ms){
  let h=Math.floor(sec/3600);sec%=3600;let m=Math.floor(sec/60);let ss=sec%60;
  return (d?d+'일 ':'')+String(h).padStart(2,'0')+'시간 '+String(m).padStart(2,'0')+'분 '+String(ss).padStart(2,'0')+'초';
 }
+// 마지막으로 받은 상품 목록을 기억해 두었다가 다음 방문 때 바로 보여주고, 뒤에서 최신 정보로 바꿉니다.
+const PRODUCTS_LOCAL_KEY='haenamProductsCache_v1';
 async function loadProducts(){
+ let shownFromCache=false;
+ try{
+  const saved=JSON.parse(localStorage.getItem(PRODUCTS_LOCAL_KEY)||'null');
+  if(saved&&Array.isArray(saved.products)&&Date.now()-saved.at<7*86400000){
+   products=saved.products; renderProducts(); shownFromCache=true;
+  }
+ }catch(_){}
  try{
   const r=await fetch(API_URL+'?action=products&t='+Date.now());
   const data=await r.json();
   if(data.success===false)throw new Error(data.message||'상품 조회 실패');
   products=Array.isArray(data.products)?data.products:[];
   renderProducts();
+  try{localStorage.setItem(PRODUCTS_LOCAL_KEY,JSON.stringify({at:Date.now(),products}));}catch(_){}
  }catch(err){
-  document.getElementById('productGrid').innerHTML='<div class="empty">상품을 불러오지 못했습니다.<br>'+e(err.message)+'</div>';
+  if(!shownFromCache) document.getElementById('productGrid').innerHTML='<div class="empty">상품을 불러오지 못했습니다.<br>'+e(err.message)+'</div>';
  }
 }
 function renderProducts(){
@@ -407,7 +417,7 @@ function renderProducts(){
  grid.innerHTML=sorted.map(p=>{
    const st=stateOf(p),target=Number(p.targetOrders||0),count=Number(p.orderCount||0);
    const percent=target>0?Math.min(100,Math.round(count/target*100)):0;
-   const img=imageUrl(p.image);
+   const img=imageUrl(p.image,'w600'); // 카드용 작은 사진
    const requestBox=`<div class="customer-request-box">
        <strong>${st==='종료'?'공동구매가 종료되었습니다':'추가 요청·문의'}</strong>
        <div class="customer-request-actions">
