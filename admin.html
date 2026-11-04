@@ -125,6 +125,7 @@ async function saveSupplierApplication(btn){
 <body>
 <div class="wrap">
   <h1>해남공구마켓 관리자</h1>
+  <div id="partnerAppAlert" class="notice" style="cursor:pointer;font-weight:700" onclick="$('partnerAppSection').scrollIntoView({behavior:'smooth'})"></div>
 
   <div class="card">
     <h2>① 공구상품 관리</h2>
@@ -439,6 +440,26 @@ async function saveSupplierApplication(btn){
       <table>
         <thead><tr><th>주문번호</th><th>상품</th><th>고객명</th><th>연락처</th><th>수량</th><th>주소</th><th>희망도착일</th><th>입금</th><th>택배사</th><th>송장번호</th><th>송장등록일</th><th>배송상태</th></tr></thead>
         <tbody id="shipRows"><tr><td colspan="12">관리자 비밀번호를 입력한 뒤 배송목록을 불러와 주세요.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 파트너 신청 관리 -->
+  <div class="card" id="partnerAppSection">
+    <h2>④-1 파트너 신청 관리 <span id="partnerAppBadge" class="badge" style="display:none;background:#fdecec;color:#c62828"></span></h2>
+    <p class="muted">고객 홈페이지에서 들어온 파트너 신청입니다. [승인]을 누르면 아래 ④ 파트너스 관리 등록 칸에 이름과 연락처가 채워지고, 파트너 등록을 마치면 신청 상태가 '등록완료'로 바뀝니다.</p>
+    <div class="toolbar">
+      <input id="partnerAppPassword" type="password" placeholder="관리자 비밀번호" style="max-width:220px">
+      <select id="partnerAppStatusFilter" style="max-width:150px" onchange="renderPartnerApplications()">
+        <option value="">전체 상태</option><option>접수</option><option>승인</option><option>보류</option><option>등록완료</option>
+      </select>
+      <button class="primary" type="button" onclick="loadPartnerApplications()">신청 불러오기</button>
+    </div>
+    <div id="partnerAppMessage" class="notice"></div>
+    <div class="table-wrap" style="margin-top:12px">
+      <table>
+        <thead><tr><th>신청일</th><th>신청자</th><th>연락처</th><th>상태</th><th>처리일</th><th>파트너코드</th><th>관리자메모</th><th>처리</th></tr></thead>
+        <tbody id="partnerAppRows"><tr><td colspan="8">관리자 비밀번호를 입력한 뒤 신청을 불러와 주세요.</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -1091,6 +1112,7 @@ productFilter.value = currentFilter;
         <td><button class="primary" onclick="saveOrderRow(this)">저장</button></td>
       </tr>`).join('');
     showMessage('orderMessage',`${filteredRows.length}건의 주문을 불러왔습니다.`);
+    checkNewPartnerApplications(password);
   }catch(e){showMessage('orderMessage','주문 조회 오류: '+e.message,true)}
 }
 async function downloadOrdersExcel(){
@@ -1279,6 +1301,83 @@ function partnerPassword(){
   return $('partnerAdminPassword').value || $('adminPassword').value || '';
 }
 
+/* ---------- 파트너 신청 관리 ---------- */
+let partnerApplications=[];
+let pendingPartnerApplicationId='';
+function partnerAppPassword(){
+  return ($('partnerAppPassword').value||$('partnerAdminPassword').value||$('adminPassword').value||'').trim();
+}
+function partnerAppDate(v){ return String(v||'').slice(0,10).replace(/-/g,'.'); }
+function setPartnerAppCount(n){
+  const b=$('partnerAppBadge'), a=$('partnerAppAlert');
+  if(n>0){
+    b.textContent=`새 신청 ${n}건`; b.style.display='inline-block';
+    a.textContent=`새 파트너 신청이 ${n}건 있습니다. 눌러서 확인하기 →`; a.className='notice'; a.style.display='block';
+  }else{ b.style.display='none'; a.style.display='none'; }
+}
+async function checkNewPartnerApplications(password){
+  try{ const r=await apiGet({action:'partnerApplicationList',password}); if(r.success) setPartnerAppCount(r.newCount||0); }catch(_){}
+}
+async function loadPartnerApplications(silent){
+  try{
+    const password=partnerAppPassword();
+    if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+    const res=await apiGet({action:'partnerApplicationList',password});
+    if(!res.success) throw new Error(res.message||'파트너 신청 조회 실패');
+    partnerApplications=res.rows||[];
+    setPartnerAppCount(res.newCount||0);
+    renderPartnerApplications();
+    if(!silent) showMessage('partnerAppMessage',`파트너 신청 ${partnerApplications.length}건을 불러왔습니다.`);
+  }catch(e){ showMessage('partnerAppMessage','파트너 신청 조회 오류: '+e.message,true); }
+}
+function renderPartnerApplications(){
+  const f=$('partnerAppStatusFilter').value;
+  const rows=partnerApplications.filter(r=>!f||r.status===f);
+  const color={접수:'#c62828',승인:'#1d4ed8',보류:'#6b7280',등록완료:'#17623f'};
+  $('partnerAppRows').innerHTML=rows.length?rows.map(r=>`
+    <tr data-id="${esc(r.id)}">
+      <td>${esc(partnerAppDate(r.createdAt))}</td>
+      <td><b>${esc(r.name)}</b></td>
+      <td><a href="tel:${esc(r.phone)}">${esc(r.phone)}</a></td>
+      <td><b style="color:${color[r.status]||'#333'}">${esc(r.status)}</b></td>
+      <td>${esc(partnerAppDate(r.processedAt))}</td>
+      <td>${esc(r.partnerCode||'')}</td>
+      <td><input class="pa-memo" value="${esc(r.adminMemo)}" placeholder="예: 11/4 통화, 블로그 운영" style="min-width:180px"></td>
+      <td style="white-space:nowrap">
+        ${r.status==='등록완료'?'<span class="muted">완료</span>':`
+        <button class="primary" type="button" onclick="approvePartnerApplication(this)">승인</button>
+        <button class="secondary" type="button" onclick="setPartnerApplicationStatus(this,'보류')">보류</button>`}
+      </td>
+    </tr>`).join(''):'<tr><td colspan="8">조건에 맞는 신청이 없습니다.</td></tr>';
+}
+async function setPartnerApplicationStatus(btn,status){
+  const tr=btn.closest('tr'), id=tr.dataset.id;
+  try{
+    const password=partnerAppPassword();
+    if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+    btn.disabled=true;
+    const res=await apiPost({action:'partnerApplicationUpdate',password,id,status,adminMemo:tr.querySelector('.pa-memo').value});
+    if(!res.success) throw new Error(res.message||'상태 변경 실패');
+    showMessage('partnerAppMessage',res.message);
+    await loadPartnerApplications(true);
+    return true;
+  }catch(e){ showMessage('partnerAppMessage','처리 오류: '+e.message,true); btn.disabled=false; return false; }
+}
+async function approvePartnerApplication(btn){
+  const id=btn.closest('tr').dataset.id;
+  const r=partnerApplications.find(x=>x.id===id); if(!r) return;
+  if(!confirm(`${r.name}님 신청을 승인할까요?\n승인 후 아래 파트너 등록 칸에서 로그인 ID와 초기 비밀번호를 정해 등록해 주세요.`)) return;
+  if(!(await setPartnerApplicationStatus(btn,'승인'))) return;
+  pendingPartnerApplicationId=id;
+  if(!$('partnerAdminPassword').value) $('partnerAdminPassword').value=partnerAppPassword();
+  $('partnerName').value=r.name;
+  $('partnerMemo').value=`연락처 ${r.phone} / 파트너 신청 ${r.id}`;
+  $('partnerLoginId').value=''; $('partnerLoginPassword').value='';
+  $('partnerLoginId').focus();
+  $('partnerName').scrollIntoView({behavior:'smooth',block:'center'});
+  showMessage('partnerMessage',`${r.name}님 정보를 채웠습니다. 로그인 ID와 초기 비밀번호를 정한 뒤 [파트너 등록]을 눌러 주세요.`);
+}
+
 function clearPartnerForm(){
   $('partnerName').value='';
   $('partnerLoginId').value='';
@@ -1359,7 +1458,16 @@ async function savePartner(){
 
     clearPartnerForm();
     showMessage('partnerMessage',`파트너가 등록되었습니다. 코드: ${res.partnerCode}`);
+
     await loadPartners();
+    if(pendingPartnerApplicationId){
+      try{
+        const u=await apiPost({action:'partnerApplicationUpdate',password,id:pendingPartnerApplicationId,status:'등록완료',partnerCode:res.partnerCode});
+        if(u.success) showMessage('partnerMessage',`파트너가 등록되었습니다. 코드: ${res.partnerCode} (파트너 신청도 '등록완료'로 처리했습니다)`);
+      }catch(_){}
+      pendingPartnerApplicationId='';
+      loadPartnerApplications(true);
+    }
   }catch(e){
     showMessage('partnerMessage','파트너 등록 오류: '+e.message,true);
   }
