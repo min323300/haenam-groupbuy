@@ -42,6 +42,7 @@
     th,td{border:1px solid #ddd;padding:9px;text-align:center;font-size:13px}
     th{background:#eef4ef}
     td.left{text-align:left}
+    .sp-modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:none;align-items:center;justify-content:center;padding:16px}.sp-modal.open{display:flex}.sp-modal-card{background:#fff;border-radius:16px;padding:22px;width:100%;max-width:520px;max-height:92vh;overflow:auto}
     .review-photo{width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #ddd}
     .review-actions{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
     .review-status{font-weight:700}
@@ -313,9 +314,12 @@ async function saveSupplierApplication(btn){
       </div>
       <div class="field">
         <label>공급처 *</label>
-        <select id="purchaseSupplier">
-          <option value="">공급처를 불러와 주세요</option>
-        </select>
+        <div style="display:flex;gap:6px">
+          <select id="purchaseSupplier" style="flex:1;min-width:0">
+            <option value="">공급처를 불러와 주세요</option>
+          </select>
+          <button type="button" class="secondary" style="white-space:nowrap" onclick="openSupplierRegister()">+ 공급처 등록</button>
+        </div>
       </div>
       <div class="field">
         <label>수량 *</label>
@@ -768,6 +772,26 @@ async function saveSupplierApplication(btn){
   </div>
 </div>
 
+
+<!-- 공급처 등록 창 (⑦ 매입관리) -->
+<div id="supplierRegisterModal" class="sp-modal" onclick="if(event.target.id==='supplierRegisterModal')closeSupplierRegister()">
+  <div class="sp-modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><h2 style="margin:0">공급처 등록</h2><button type="button" class="secondary" onclick="closeSupplierRegister()" aria-label="닫기">✕</button></div>
+    <p class="muted">저장하면 구글시트 '공급처관리'에 자동으로 추가되고, 매입관리 공급처 목록에서 바로 선택됩니다. 공급처코드(SUP-000)는 자동으로 붙습니다.</p>
+    <div class="grid" style="margin-top:10px">
+      <div class="field full"><label for="spRegName">공급처명 *</label><input id="spRegName" maxlength="60" placeholder="예: 해남 김농부 / 땅끝농원"></div>
+      <div class="field full"><label for="spRegType">공급자구분 *</label><select id="spRegType"><option value="">선택</option><option>농가·개인</option><option>개인사업자</option><option>법인사업자</option></select></div>
+      <div class="field"><label for="spRegOwner">대표자명</label><input id="spRegOwner" maxlength="30" placeholder="선택 입력"></div>
+      <div class="field"><label for="spRegPhone">연락처</label><input id="spRegPhone" inputmode="tel" placeholder="010-1234-5678"></div>
+      <div class="field full"><label for="spRegBiz">사업자등록번호</label><input id="spRegBiz" inputmode="numeric" placeholder="123-45-67890 (농가는 비워 두세요)"></div>
+    </div>
+    <div id="spRegMessage" class="notice"></div>
+    <div class="toolbar" style="justify-content:flex-end">
+      <button type="button" class="secondary" onclick="closeSupplierRegister()">취소</button>
+      <button type="button" class="primary" id="spRegSave" onclick="saveSupplierRegister()">공급처 저장</button>
+    </div>
+  </div>
+</div>
 <script>
 /* 현재 사용 중인 Apps Script 웹앱 주소를 그대로 유지하세요. */
 const API_URL = 'https://script.google.com/macros/s/AKfycbz9-pk6kkPk01Lh11agNKxeV1Gjo_kzAPYOXyJ9kXUVY7r8t3ptrLurCjOwdTf31f00ug/exec';
@@ -2381,8 +2405,7 @@ async function loadPurchaseFormData(){
     $('purchaseProduct').innerHTML='<option value="">상품 선택</option>'+
       purchaseProducts.map(p=>`<option value="${esc(p.productCode)}">${esc(p.productName)} (${esc(p.productCode)})</option>`).join('');
 
-    $('purchaseSupplier').innerHTML='<option value="">공급처 선택</option>'+
-      purchaseSuppliers.map(s=>`<option value="${esc(s.supplierName)}">${esc(s.supplierName)}${s.supplierType?' / '+esc(s.supplierType):''}</option>`).join('');
+    renderPurchaseSuppliers();
 
     // 주문 기준 매출·발주수량 자동 계산용 (주문배송관리 데이터)
     try{
@@ -2394,6 +2417,44 @@ async function loadPurchaseFormData(){
   }catch(e){
     showMessage('purchaseSaveMessage','불러오기 오류: '+e.message,true);
   }
+}
+
+/* ---------- 공급처 등록 ---------- */
+function renderPurchaseSuppliers(selectName){
+  $('purchaseSupplier').innerHTML='<option value="">공급처 선택</option>'+
+    purchaseSuppliers.map(s=>`<option value="${esc(s.supplierName)}">${esc(s.supplierName)}${s.supplierType?' / '+esc(s.supplierType):''}</option>`).join('');
+  if(selectName!==undefined) $('purchaseSupplier').value=selectName;
+}
+function openSupplierRegister(){
+  ['spRegName','spRegOwner','spRegPhone','spRegBiz'].forEach(id=>$(id).value='');
+  $('spRegType').value='';
+  $('spRegMessage').style.display='none';
+  $('supplierRegisterModal').classList.add('open');
+  setTimeout(()=>$('spRegName').focus(),50);
+}
+function closeSupplierRegister(){ $('supplierRegisterModal').classList.remove('open'); }
+async function saveSupplierRegister(){
+  const btn=$('spRegSave');
+  try{
+    const password=$('purchaseAdminPassword').value.trim()||$('adminPassword').value.trim();
+    if(!password) throw new Error('매입관리의 관리자 비밀번호를 먼저 입력해 주세요.');
+    const supplierName=$('spRegName').value.trim().replace(/\s+/g,' ');
+    const supplierType=$('spRegType').value;
+    if(!supplierName) throw new Error('공급처명을 입력해 주세요.');
+    if(!supplierType) throw new Error('공급자구분을 선택해 주세요.');
+    const key=v=>String(v||'').replace(/\s+/g,'').toLowerCase();
+    const dup=purchaseSuppliers.find(s=>key(s.supplierName)===key(supplierName));
+    if(dup) throw new Error(`"${dup.supplierName}" 공급처가 이미 있습니다. 목록에서 선택해 주세요.`);
+    btn.disabled=true; btn.textContent='저장 중...';
+    const res=await apiPost({action:'adminSupplierSave',password,supplierName,supplierType,
+      ownerName:$('spRegOwner').value.trim(),phone:$('spRegPhone').value.trim(),businessNumber:$('spRegBiz').value.trim()});
+    if(!res.success) throw new Error(res.message||'공급처 등록 실패');
+    purchaseSuppliers.push(res.supplier);
+    renderPurchaseSuppliers(res.supplier.supplierName);
+    closeSupplierRegister();
+    showMessage('purchaseSaveMessage',res.message+' 매입 공급처로 선택했습니다.');
+  }catch(e){ showMessage('spRegMessage',e.message,true); }
+  finally{ btn.disabled=false; btn.textContent='공급처 저장'; }
 }
 
 function onPurchaseProductChange(){
