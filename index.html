@@ -63,6 +63,15 @@ form label{display:block;font-size:13px;font-weight:800;margin:13px 0 6px}
 input,select,textarea{width:100%;padding:12px;border:1px solid #ccd3cc;border-radius:9px;font-size:15px}
 textarea{min-height:80px;resize:vertical} .privacy{display:flex;gap:8px;align-items:flex-start;margin:13px 0;font-size:12px;color:#666} .privacy input{width:auto;margin-top:2px}
 .msg{margin-top:12px;padding:11px;border-radius:9px;display:none} .ok{display:block;background:#e8f6ed;color:#17623f} .err{display:block;background:#fdeaea;color:#a32121}
+/* 주문서 개선: 입금자명·주소검색·교환환불 안내·동의 상세 */
+.of-row{display:flex;gap:8px}.of-row input{flex:1}.of-sub-btn{flex:none;border:0;border-radius:9px;padding:0 16px;background:var(--green);color:#fff;font-weight:800;cursor:pointer;font-size:14px}
+.of-gap{margin-top:8px}.of-inline{display:flex!important;align-items:center;gap:6px;font-size:12px!important;font-weight:500!important;color:#555;margin:6px 0 0!important}.of-inline input{width:auto}
+.of-hint{font-size:12px;color:#777;margin-top:5px}.of-error{font-size:12px;color:#a32121;margin-top:5px;display:none}
+.of-notice{background:#f6f8f7;border:1px solid #e1e8e4;border-radius:12px;padding:13px 15px;font-size:13px;line-height:1.7;color:#333;margin:16px 0 12px}.of-notice strong{display:block;font-size:14px;margin-bottom:5px;color:var(--green)}.of-notice ul{margin:0;padding-left:18px}
+.of-all{display:flex!important;align-items:center;gap:8px;font-size:14px!important;font-weight:900!important;padding:12px 14px;border:2px solid var(--green);border-radius:11px;margin:0 0 8px!important;cursor:pointer}.of-all input{width:18px;height:18px}
+.of-consent{border:1px solid #e1e8e4;border-radius:11px;margin-bottom:8px;overflow:hidden}.of-consent-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:#fafbfa}.of-consent-head label{display:flex!important;align-items:flex-start;gap:8px;margin:0!important;font-size:13px!important;cursor:pointer}.of-consent-head input{width:auto;margin-top:2px}
+.of-toggle{flex:none;background:none;border:0;color:var(--green);font-size:12px;cursor:pointer;text-decoration:underline}.of-consent-body{display:none;padding:2px 12px 12px;font-size:12px}.of-consent-body.open{display:block}.of-consent-body table{width:100%;border-collapse:collapse;margin-top:6px}.of-consent-body th,.of-consent-body td{border:1px solid #e1e8e4;padding:7px;text-align:left;vertical-align:top;line-height:1.5}.of-consent-body th{width:26%;background:#f6f8f7;font-weight:700}
+.of-done{background:#f1f8f3;border:1px solid #d6e9dc;border-radius:13px;padding:16px;margin-top:12px;line-height:1.9;font-size:14px}.of-done strong{display:block;color:var(--green);font-size:16px;margin-bottom:4px}
 .detail-blocks{margin:24px 0}.detail-block{margin:0 0 22px}.detail-block.image img{display:block;width:100%;height:auto;border-radius:14px;background:#f5f5f5}.detail-block.text{font-size:16px;line-height:1.85;white-space:pre-wrap;color:#303a34}.detail-block.emphasis{font-size:20px;line-height:1.65;font-weight:900;text-align:center;padding:22px 18px;border-radius:14px;background:#f1f8f3;color:var(--green);white-space:pre-wrap}.detail-order-btn{margin-top:22px;padding:16px;font-size:17px}
 
 .review-section{margin-top:55px;padding-top:42px;border-top:1px solid var(--line)}
@@ -163,9 +172,18 @@ footer{background:#203028;color:#dbe4df;text-align:center;padding:30px 20px;font
 </div>
    <form id="orderForm">
     <label>성함</label><input id="name" required autocomplete="name">
-    <label>연락처</label><input id="phone" type="tel" required placeholder="010-0000-0000" autocomplete="tel">
+    <label>연락처</label><input id="phone" type="tel" required placeholder="010-0000-0000" autocomplete="tel" inputmode="numeric">
+    <div id="phoneError" class="of-error">연락처를 010-0000-0000 형식으로 입력해 주세요.</div>
+    <label>입금자명</label><input id="depositorName" required>
+    <label class="of-inline"><input id="sameAsOrderer" type="checkbox" checked> 주문자와 같음</label>
+    <div class="of-hint">입금자명이 주문자와 다르면 체크를 풀고 입력해 주세요. 입금 확인이 빨라집니다.</div>
     <label>주문 수량</label><select id="qty"><option value="1">1개</option><option value="2">2개</option><option value="3">3개</option><option value="4">4개</option><option value="5">5개</option><option value="6">6개</option><option value="7">7개</option><option value="8">8개</option><option value="9">9개</option><option value="10">10개</option></select>
-    <label>배송 주소</label><input id="address" required autocomplete="street-address">
+    <label>배송 주소</label>
+    <div class="of-row"><input id="zipcode" placeholder="우편번호" readonly><button type="button" class="of-sub-btn" id="findAddressBtn">주소 검색</button></div>
+    <input id="addrBase" class="of-gap" placeholder="주소 검색 버튼을 눌러 주세요" readonly>
+    <input id="addrDetail" class="of-gap" placeholder="상세 주소 (동·호수 등)" autocomplete="address-line2">
+    <input id="address" type="hidden">
+    <div id="addressError" class="of-error">주소 검색 후 상세 주소까지 입력해 주세요.</div>
     <div id="deliveryDateBox" style="display:none;">
       <label>희망 도착일</label>
       <select id="deliveryDate">
@@ -174,9 +192,43 @@ footer{background:#203028;color:#dbe4df;text-align:center;padding:30px 20px;font
       <div class="muted">관리자가 지정한 날짜 중에서 선택해 주세요.</div>
     </div>
     <label>요청사항</label><textarea id="memo" placeholder="배송 시 요청사항을 적어주세요."></textarea>
-    <label class="privacy"><input id="privacy" type="checkbox" required><span>주문 접수와 배송을 위한 개인정보 수집·이용에 동의합니다.</span></label>
+    <div class="of-notice">
+     <strong>주문 전 꼭 확인해 주세요</strong>
+     <ul>
+      <li>주문 후 <b>24시간 안에</b> 입금해 주세요. 기한 안에 입금되지 않으면 주문이 취소될 수 있습니다.</li>
+      <li>입금 후 <b>발송 전까지</b>는 취소 시 전액 환불해 드립니다.</li>
+      <li>신선 농수산물 특성상 <b>단순 변심에 의한 교환·반품은 어렵습니다.</b> 받은 뒤 시간이 지나면 다시 판매할 수 없기 때문입니다.</li>
+      <li>상품이 <b>상했거나 파손되었거나 잘못 배송된 경우</b> 사진과 함께 고객센터(010-5478-5289)로 연락 주시면 교환 또는 환불해 드리며, 배송비는 저희가 부담합니다. 받으신 날 연락 주시면 가장 빠르게 처리됩니다.</li>
+      <li>상품이 안내된 내용과 다른 경우에는 받은 날부터 3개월, 그 사실을 안 날부터 30일 안에 청약철회가 가능합니다.</li>
+     </ul>
+    </div>
+    <label class="of-all"><input id="agreeAll" type="checkbox"> 아래 내용에 모두 동의합니다</label>
+    <div class="of-consent">
+     <div class="of-consent-head"><label><input id="privacy" class="of-agree" type="checkbox"><span>[필수] 개인정보 수집·이용 동의</span></label><button type="button" class="of-toggle" data-target="consentPrivacyBody">자세히</button></div>
+     <div class="of-consent-body" id="consentPrivacyBody"><table>
+      <tr><th>수집 항목</th><td>성함, 연락처, 입금자명, 배송 주소, 요청사항</td></tr>
+      <tr><th>수집 목적</th><td>공동구매 주문 접수, 입금 확인, 상품 배송, 주문 관련 안내 및 고객 상담</td></tr>
+      <tr><th>보유 기간</th><td>전자상거래법에 따라 계약·청약철회 기록과 대금결제·재화 공급 기록은 5년, 소비자 불만·분쟁 처리 기록은 3년 보관 후 파기합니다.</td></tr>
+      <tr><th>동의 거부 권리</th><td>동의를 거부할 수 있으나, 거부하시면 주문이 불가합니다.</td></tr>
+     </table></div>
+    </div>
+    <div class="of-consent">
+     <div class="of-consent-head"><label><input id="agreeThird" class="of-agree" type="checkbox"><span>[필수] 개인정보 제3자 제공 동의</span></label><button type="button" class="of-toggle" data-target="consentThirdBody">자세히</button></div>
+     <div class="of-consent-body" id="consentThirdBody"><table>
+      <tr><th>제공받는 자</th><td>주문하신 상품의 생산자(공급업체)</td></tr>
+      <tr><th>제공 목적</th><td>상품 포장 및 발송, 배송 관련 연락</td></tr>
+      <tr><th>제공 항목</th><td>성함, 연락처, 배송 주소, 요청사항</td></tr>
+      <tr><th>보유 기간</th><td>배송 완료 후 지체 없이 파기 (관계 법령에 따라 보관이 필요한 경우 해당 기간까지)</td></tr>
+      <tr><th>동의 거부 권리</th><td>동의를 거부할 수 있으나, 거부하시면 상품 발송이 불가하여 주문이 불가합니다.</td></tr>
+     </table></div>
+    </div>
+    <div class="of-consent">
+     <div class="of-consent-head"><label><input id="agreeOrderNotice" class="of-agree" type="checkbox"><span>[필수] 주문 내용과 교환·환불 안내를 확인했습니다</span></label></div>
+    </div>
+    <div id="agreeError" class="of-error">필수 항목에 모두 동의해 주세요.</div>
     <button id="orderButton" class="btn" type="submit">공동구매 주문하기</button>
     <div id="msg" class="msg"></div>
+    <div id="orderDoneBox" class="of-done" style="display:none"></div>
    </form>
   </div>
  </div>
@@ -287,6 +339,33 @@ function getPartnerRef(){
 }
 
 capturePartnerRef();
+
+// 광고 소재 추적: 마지막으로 클릭한 링크의 utm 값을 30일간 보관 (파트너 ref와 같은 기준)
+const UTM_STORE_KEY = 'haenamUtm';
+const UTM_FIELDS = ['utm_source','utm_medium','utm_campaign','utm_content'];
+function captureUtm(){
+  try{
+    const params = new URLSearchParams(location.search);
+    if(!UTM_FIELDS.some(k => params.get(k))) return;
+    const data = { savedAt: Date.now() };
+    UTM_FIELDS.forEach(k => { data[k] = String(params.get(k) || '').trim().slice(0,100); });
+    localStorage.setItem(UTM_STORE_KEY, JSON.stringify(data));
+  }catch(err){}
+}
+function getStoredUtm(){
+  try{
+    const data = JSON.parse(localStorage.getItem(UTM_STORE_KEY) || '{}');
+    if(!data.savedAt || (Date.now() - data.savedAt) > PARTNER_REF_DAYS * 86400000){
+      localStorage.removeItem(UTM_STORE_KEY);
+      return {};
+    }
+    return data;
+  }catch(err){ return {}; }
+}
+captureUtm();
+
+// 입금 기한(시간) — 주문서의 "주문 전 꼭 확인해 주세요" 안내 문구와 같게 맞춰 주세요.
+const DEPOSIT_HOURS = 24;
 
 let products = [];
 let currentProduct = null;
@@ -502,6 +581,7 @@ function openProduct(code){
  const p=products.find(x=>s(x.productCode)===s(code)); if(!p)return;
  if(p.linkUrl){window.location.href=p.linkUrl;return}
  currentProduct=p;
+ const doneBox=document.getElementById('orderDoneBox'); if(doneBox)doneBox.style.display='none';
  try{trackProductView(p);}catch(err){console.log('상품조회 기록 오류:',err);}
  modalTitle.textContent='공동구매 주문';
  modalProductName.textContent=p.productName||'상품';
@@ -615,27 +695,154 @@ function closeModal(){
   document.body.style.overflow='';
 }
 function backdropClose(ev){if(ev.target.id==='orderModal')closeModal()}
+// ---------- 주문서 보조 기능 ----------
+// 입금자명 = 주문자
+function syncDepositor(){
+  const same = document.getElementById('sameAsOrderer');
+  const dep = document.getElementById('depositorName');
+  if(same.checked){ dep.value = document.getElementById('name').value; dep.readOnly = true; }
+  else { dep.readOnly = false; }
+}
+document.getElementById('sameAsOrderer').addEventListener('change', function(){
+  syncDepositor();
+  if(!this.checked){ const dep=document.getElementById('depositorName'); dep.value=''; dep.focus(); }
+});
+document.getElementById('name').addEventListener('input', syncDepositor);
+syncDepositor();
+
+// 연락처 자동 하이픈
+document.getElementById('phone').addEventListener('input', function(){
+  const d = this.value.replace(/\D/g,'').slice(0,11);
+  this.value = d.length < 4 ? d : d.length < 8 ? d.slice(0,3)+'-'+d.slice(3)
+    : d.slice(0,3)+'-'+d.slice(3,d.length-4)+'-'+d.slice(-4);
+});
+function isValidPhone(v){ return /^01[016789]-\d{3,4}-\d{4}$/.test(v); }
+
+// 주소 검색 (다음 우편번호 서비스: 무료, 키 불필요)
+let postcodeLoading = null;
+function loadPostcodeScript(){
+  if(window.daum && window.daum.Postcode) return Promise.resolve();
+  if(postcodeLoading) return postcodeLoading;
+  postcodeLoading = new Promise(function(resolve, reject){
+    const sc = document.createElement('script');
+    sc.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
+    sc.onload = resolve;
+    sc.onerror = function(){ postcodeLoading = null; reject(new Error('주소 검색을 불러오지 못했습니다.')); };
+    document.head.appendChild(sc);
+  });
+  return postcodeLoading;
+}
+document.getElementById('findAddressBtn').addEventListener('click', async function(){
+  try{
+    await loadPostcodeScript();
+    new daum.Postcode({
+      oncomplete: function(data){
+        document.getElementById('zipcode').value = data.zonecode;
+        document.getElementById('addrBase').value = data.roadAddress || data.jibunAddress;
+        document.getElementById('addressError').style.display = 'none';
+        document.getElementById('addrDetail').focus();
+      }
+    }).open();
+  }catch(err){
+    showMsg(err.message + ' 잠시 후 다시 시도해 주세요.', true);
+  }
+});
+function buildAddress(){
+  const zip = document.getElementById('zipcode').value.trim();
+  const base = document.getElementById('addrBase').value.trim();
+  const detail = document.getElementById('addrDetail').value.trim();
+  document.getElementById('address').value = zip && base ? ('['+zip+'] '+base+' '+detail).trim() : '';
+  return !!(zip && base && detail);
+}
+
+// 동의: 전체 동의 / 자세히 보기
+const agreeBoxes = Array.from(document.querySelectorAll('.of-agree'));
+document.getElementById('agreeAll').addEventListener('change', function(){
+  agreeBoxes.forEach(b => { b.checked = this.checked; });
+  if(this.checked) document.getElementById('agreeError').style.display = 'none';
+});
+agreeBoxes.forEach(b => b.addEventListener('change', function(){
+  document.getElementById('agreeAll').checked = agreeBoxes.every(x => x.checked);
+}));
+document.querySelectorAll('.of-toggle').forEach(btn => btn.addEventListener('click', function(){
+  const body = document.getElementById(btn.dataset.target);
+  body.classList.toggle('open');
+  btn.textContent = body.classList.contains('open') ? '접기' : '자세히';
+}));
+
+function showOrderDone(data, payload, total){
+  const box = document.getElementById('orderDoneBox');
+  const deadline = new Date(Date.now() + DEPOSIT_HOURS * 3600000);
+  const deadlineText = deadline.toLocaleString('ko-KR',{month:'long',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit'});
+  const orderNo = data && (data.orderNo || data.orderId || data.orderNumber);
+  box.innerHTML =
+    '<strong>주문이 접수되었습니다</strong>' +
+    (orderNo ? '주문번호: <b>'+e(orderNo)+'</b><br>' : '') +
+    '상품: <b>'+e(payload.productName)+'</b> '+e(payload.qty)+'개<br>' +
+    '입금 금액: <b>'+total.toLocaleString('ko-KR')+'원</b><br>' +
+    '입금자명: <b>'+e(payload.depositorName)+'</b><br>' +
+    '입금 기한: <b>'+e(deadlineText)+'까지</b><br>' +
+    '<span style="font-size:12px;color:#5f6b61">위 결제 안내의 계좌로 입금해 주세요. 주문 상태는 상품의 "주문현황 보기"에서 확인할 수 있습니다.</span>';
+  box.style.display = 'block';
+  box.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function resetOrderFormExtras(){
+  document.getElementById('agreeAll').checked = false;
+  document.querySelectorAll('.of-error').forEach(el => { el.style.display = 'none'; });
+  syncDepositor();
+}
+
 orderForm.addEventListener('submit',async ev=>{
  ev.preventDefault(); if(!currentProduct)return;
  if(stateOf(currentProduct)!=='판매중'){showMsg('현재 주문할 수 없는 상품입니다.',true);return}
+
+ // 입력 확인
+ syncDepositor();
+ const phoneVal = String(document.getElementById('phone').value || '').trim();
+ const okPhone = isValidPhone(phoneVal);
+ const okAddress = buildAddress();
+ const okAgree = agreeBoxes.every(b => b.checked);
+ document.getElementById('phoneError').style.display = okPhone ? 'none' : 'block';
+ document.getElementById('addressError').style.display = okAddress ? 'none' : 'block';
+ document.getElementById('agreeError').style.display = okAgree ? 'none' : 'block';
+ if(!okPhone || !okAddress || !okAgree){
+   showMsg('입력 내용을 확인해 주세요.', true);
+   return;
+ }
+
  orderButton.disabled=true;orderButton.textContent='주문 접수 중...';
+ document.getElementById('orderDoneBox').style.display='none';
  try{
+  const utm = getStoredUtm();
   const payload = {
   action: 'addOrder',
   productCode: currentProduct.productCode,
   productName: currentProduct.productName,
   name: String(document.getElementById('name').value || '').trim(),
-  phone: String(document.getElementById('phone').value || '').trim(),
+  phone: phoneVal,
   qty: document.getElementById('qty').value || 1,
   address: String(document.getElementById('address').value || '').trim(),
   deliveryDate: String(document.getElementById('deliveryDate').value || '').trim(),
   memo: String(document.getElementById('memo').value || '').trim(),
-  partnerCode: getPartnerRef()
+  partnerCode: getPartnerRef(),
+  // ↓ 새로 추가된 값 (앱스스크립트에서 열을 추가하면 시트에 저장됩니다)
+  depositorName: String(document.getElementById('depositorName').value || '').trim(),
+  privacyAgreed: true,
+  thirdPartyAgreed: true,
+  orderNoticeAgreed: true,
+  agreedAt: new Date().toISOString(),
+  utmSource: utm.utm_source || '',
+  utmMedium: utm.utm_medium || '',
+  utmCampaign: utm.utm_campaign || '',
+  utmContent: utm.utm_content || ''
 };
+  const total = Number(currentProduct.salePrice || 0) * Number(payload.qty || 1);
   const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
   const data=await r.json(); if(data.success===false)throw new Error(data.message||'주문 접수 실패');
   showMsg('주문이 정상적으로 접수되었습니다. 결제 안내에 따라 입금해 주세요.',false);
-  orderForm.reset(); currentProduct.orderCount=Number(currentProduct.orderCount||0)+1; renderProducts();
+  showOrderDone(data, payload, total);
+  orderForm.reset(); resetOrderFormExtras(); currentProduct.orderCount=Number(currentProduct.orderCount||0)+1; renderProducts();
  }catch(err){showMsg('주문 오류: '+err.message,true)}
  finally{orderButton.disabled=false;orderButton.textContent='공동구매 주문하기'}
 });
@@ -750,6 +957,7 @@ function showMsg(text,isErr){msg.textContent=text;msg.className='msg '+(isErr?'e
       utmSource: params.get('utm_source') || '',
       utmMedium: params.get('utm_medium') || '',
       utmCampaign: params.get('utm_campaign') || '',
+      utmContent: params.get('utm_content') || '',
       partnerCode: getPartnerRef()
     };
 
@@ -781,6 +989,7 @@ function trackProductView(product) {
     utmSource: params.get('utm_source') || '',
     utmMedium: params.get('utm_medium') || '',
     utmCampaign: params.get('utm_campaign') || '',
+    utmContent: params.get('utm_content') || '',
     partnerCode: getPartnerRef()
   };
 
