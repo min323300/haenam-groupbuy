@@ -25,6 +25,11 @@
     .danger{background:#d9534f;color:#fff}
     .blue{background:#2878d0;color:#fff}
     .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
+    .order-status-filter{display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center;margin-top:10px;padding:10px 12px;background:#f6f8f6;border:1px solid #e1e8e3;border-radius:10px}
+    .order-status-filter label{display:flex;align-items:center;gap:5px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
+    .order-status-filter input{width:auto}
+    .order-status-filter b{display:inline-block;min-width:22px;padding:1px 7px;border-radius:999px;background:#e3efe7;color:#17623f;font-size:12px;text-align:center}
+    .osf-title{font-size:13px;color:#555;font-weight:700}
     .notice{padding:11px 13px;border-radius:9px;background:#eef8f2;color:#17623f;margin:12px 0;display:none}
     .error{background:#fdeaea;color:#a32121}
     .muted{color:#68736b;font-size:13px;line-height:1.55}
@@ -274,12 +279,21 @@ async function saveSupplierApplication(btn){
    <div class="toolbar">
   <input id="adminPassword" type="password" placeholder="관리자 비밀번호" style="max-width:220px">
 
-  <select id="orderProductFilter" style="max-width:240px">
+  <select id="orderProductFilter" style="max-width:240px" onchange="renderOrders()">
     <option value="">전체 상품</option>
   </select>
 
   <button class="primary" onclick="loadOrders()">주문 불러오기</button>
-  <button class="secondary" type="button" onclick="downloadOrdersExcel()">엑셀 다운로드</button>
+  <button class="secondary" type="button" onclick="downloadOrdersExcel()">주문목록 엑셀</button>
+  <button class="blue" type="button" onclick="downloadHanjinExcel()">한진택배 엑셀</button>
+</div>
+<div class="order-status-filter">
+  <span class="osf-title">표시할 주문</span>
+  <label><input type="checkbox" id="osfAll" onchange="toggleAllOrderStatus(this.checked)"> 전체</label>
+  <label><input type="checkbox" class="osf" value="unpaid" checked onchange="onOrderStatusFilterChange()"> 미입금 <b id="osfCountUnpaid">0</b></label>
+  <label><input type="checkbox" class="osf" value="paid" checked onchange="onOrderStatusFilterChange()"> 입금완료(배송 전) <b id="osfCountPaid">0</b></label>
+  <label><input type="checkbox" class="osf" value="shipped" onchange="onOrderStatusFilterChange()"> 배송완료 <b id="osfCountShipped">0</b></label>
+  <span class="muted">화면 목록과 엑셀 2종 모두 선택한 상품·상태의 주문만 담깁니다.</span>
 </div>
     <div id="orderMessage" class="notice"></div>
     <div class="table-wrap" style="margin-top:12px">
@@ -1094,36 +1108,88 @@ async function saveProduct(){
 }
 
 /* ---------- 주문관리 ---------- */
+// 한진택배 엑셀의 보내는 사람 정보
+const HANJIN_SENDER = {
+  name: '해남공구마켓',
+  phone: '010-5478-5289',
+  address: '전라남도 해남군 황산면 평덕길 111'
+};
+// 한진택배 양식의 고정값 (보내 주신 양식 기준)
+const HANJIN_FIXED = { type: '', fare: '선불', q: 1, s: 1 };
+// 한진 양식 파일에 제목 행이 없어 데이터만 넣습니다. 제목 행이 필요하면 true 로 바꾸세요.
+const HANJIN_INCLUDE_HEADER = false;
+
+let orderCache = [];
+
+function orderNoOf(o){ return String(o.orderNo || o.orderNumber || '').trim(); }
+function orderStatusOf(o){
+  if (o.shippingCompleted) return 'shipped';
+  if (o.paymentConfirmed) return 'paid';
+  return 'unpaid';
+}
+function selectedOrderStatuses(){
+  return Array.from(document.querySelectorAll('.osf:checked')).map(el => el.value);
+}
+function toggleAllOrderStatus(on){
+  document.querySelectorAll('.osf').forEach(el => { el.checked = on; });
+  renderOrders();
+}
+function onOrderStatusFilterChange(){
+  const all = Array.from(document.querySelectorAll('.osf'));
+  $('osfAll').checked = all.every(el => el.checked);
+  renderOrders();
+}
+// 선택한 상품 + 선택한 상태에 해당하는 주문만
+function getFilteredOrders(){
+  const product = $('orderProductFilter').value;
+  const statuses = selectedOrderStatuses();
+  return orderCache.filter(o =>
+    (!product || String(o.productName || '').trim() === product) &&
+    statuses.includes(orderStatusOf(o))
+  );
+}
+function updateOrderStatusCounts(){
+  const product = $('orderProductFilter').value;
+  const base = orderCache.filter(o => !product || String(o.productName || '').trim() === product);
+  const count = st => base.filter(o => orderStatusOf(o) === st).length;
+  $('osfCountUnpaid').textContent = count('unpaid');
+  $('osfCountPaid').textContent = count('paid');
+  $('osfCountShipped').textContent = count('shipped');
+}
+
+async function fetchOrders(){
+  const password = $('adminPassword').value;
+  if(!password) throw new Error('관리자 비밀번호를 입력해주세요.');
+  const res = await apiGet({action:'orders', password});
+  if(!res.success) throw new Error(res.message || '주문 조회 실패');
+  orderCache = (res.orders || res.data || []).filter(o => orderNoOf(o) !== '');
+
+  const productFilter = $('orderProductFilter');
+  const currentFilter = productFilter.value;
+  const productNames = [...new Set(
+    orderCache.map(o => String(o.productName || '').trim()).filter(Boolean)
+  )].sort();
+  productFilter.innerHTML =
+    '<option value="">전체 상품</option>' +
+    productNames.map(name => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
+  productFilter.value = productNames.includes(currentFilter) ? currentFilter : '';
+  return password;
+}
+
 async function loadOrders(){
   try{
-    const password=$('adminPassword').value;
-    const res=await apiGet({action:'orders',password});
-    if(!res.success) throw new Error(res.message||'주문 조회 실패');
-    const rows=(res.orders||res.data||[]).filter(o =>
-      String(o.orderNo || o.orderNumber || '').trim() !== ''
-    );
-    const productFilter = $('orderProductFilter');
-const currentFilter = productFilter.value;
+    const password = await fetchOrders();
+    renderOrders();
+    checkNewPartnerApplications(password);
+  }catch(e){showMessage('orderMessage','주문 조회 오류: '+e.message,true)}
+}
 
-const productNames = [...new Set(
-  rows
-    .map(o => String(o.productName || '').trim())
-    .filter(Boolean)
-)].sort();
-
-productFilter.innerHTML =
-  '<option value="">전체 상품</option>' +
-  productNames.map(name =>
-    `<option value="${esc(name)}">${esc(name)}</option>`
-  ).join('');
-
-productFilter.value = currentFilter;
-    const filteredRows = currentFilter
-  ? rows.filter(o => String(o.productName || '').trim() === currentFilter)
-  : rows;
-    $('orderRows').innerHTML=filteredRows.map((o,i)=>`
-      <tr data-order="${esc(o.orderNo||o.orderNumber||'')}">
-        <td>${esc(o.orderNo||o.orderNumber||'')}</td><td>${esc(o.createdAt||o.date||'')}</td>
+function renderOrders(){
+  updateOrderStatusCounts();
+  const filteredRows = getFilteredOrders();
+  $('orderRows').innerHTML = filteredRows.length ? filteredRows.map(o=>`
+      <tr data-order="${esc(orderNoOf(o))}">
+        <td>${esc(orderNoOf(o))}</td><td>${esc(o.createdAt||o.date||'')}</td>
         <td>${esc(o.productName||'')}</td><td>${esc(o.name||'')}</td><td>${esc(o.phone||'')}</td>
         <td>${esc(o.qty || o.quantity || '')}</td><td class="left">${esc(o.address||'')}</td>
         <td>${esc(o.deliveryDate||'-')}</td>
@@ -1134,60 +1200,54 @@ productFilter.value = currentFilter;
         <td><input type="checkbox" class="ship" ${o.shippingCompleted?'checked':''}></td>
         <td><input class="memo" value="${esc(o.adminMemo||'')}"></td>
         <td><button class="primary" onclick="saveOrderRow(this)">저장</button></td>
-      </tr>`).join('');
-    showMessage('orderMessage',`${filteredRows.length}건의 주문을 불러왔습니다.`);
-    checkNewPartnerApplications(password);
-  }catch(e){showMessage('orderMessage','주문 조회 오류: '+e.message,true)}
+      </tr>`).join('')
+    : '<tr><td colspan="15">선택한 조건에 맞는 주문이 없습니다.</td></tr>';
+  const product = $('orderProductFilter').value;
+  showMessage('orderMessage', `${product || '전체 상품'} · ${filteredRows.length}건 표시 (전체 ${orderCache.length}건 중)`);
 }
+
+function formatPhoneForExcel(phone){
+  let p = String(phone || '').replace(/[^0-9]/g,'');
+  if(p.length === 10 && p.startsWith('10')) p = '0' + p;
+  if(p.length === 11) return p.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+  if(p.length === 10) return p.replace(/(\d{2,3})(\d{3,4})(\d{4})/, '$1-$2-$3');
+  return p;
+}
+// 주소 앞의 [우편번호] 표시 제거 (택배 주소 인식용)
+function addressForCourier(address){
+  return String(address || '').replace(/^\s*\[\d{5}\]\s*/, '').trim();
+}
+function excelFileStamp(){
+  const now = new Date(), p = n => String(n).padStart(2,'0');
+  return now.getFullYear() + p(now.getMonth()+1) + p(now.getDate()) + '_' + p(now.getHours()) + p(now.getMinutes());
+}
+function excelProductLabel(){
+  const product = $('orderProductFilter').value;
+  return (product || '전체상품').replace(/[\\/:*?"<>|\s]+/g,'_').slice(0,30);
+}
+// 엑셀 다운로드 전에 최신 주문을 다시 불러온 뒤, 화면과 같은 조건으로 걸러냅니다.
+async function ordersForExcel(){
+  if(typeof XLSX === 'undefined') throw new Error('엑셀 기능을 불러오지 못했습니다. 페이지를 새로고침해 주세요.');
+  if(!selectedOrderStatuses().length) throw new Error('표시할 주문 상태를 하나 이상 선택해 주세요.');
+  await fetchOrders();
+  renderOrders();
+  const rows = getFilteredOrders();
+  if(!rows.length) throw new Error('선택한 상품·상태에 해당하는 주문이 없습니다.');
+  return rows;
+}
+
 async function downloadOrdersExcel(){
   try{
-    const password = $('adminPassword').value;
-
-    if(!password){
-      showMessage('orderMessage','관리자 비밀번호를 입력해주세요.',true);
-      return;
-    }
-
-    const res = await apiGet({
-      action:'orders',
-      password
-    });
-
-    if(!res.success){
-      throw new Error(res.message || '주문 조회 실패');
-    }
-
-    const orders = (res.orders || res.data || []).filter(o =>
-      String(o.orderNo || o.orderNumber || '').trim() !== ''
-    );
-
-    if(!orders.length){
-      showMessage('orderMessage','다운로드할 주문이 없습니다.',true);
-      return;
-    }
-
-    function formatPhone(phone){
-      let p = String(phone || '').replace(/[^0-9]/g,'');
-
-      if(p.length === 10 && p.startsWith('10')){
-        p = '0' + p;
-      }
-
-      if(p.length === 11 && p.startsWith('010')){
-        return p.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
-      }
-
-      return p;
-    }
-
+    const orders = await ordersForExcel();
     const excelData = orders.map(o => ({
-      '주문번호': String(o.orderNo || o.orderNumber || ''),
+      '주문번호': orderNoOf(o),
       '접수일시': String(o.createdAt || o.date || ''),
       '상품명': String(o.productName || ''),
       '이름': String(o.name || ''),
-      '연락처': formatPhone(o.phone),
+      '연락처': formatPhoneForExcel(o.phone),
       '수량': Number(o.quantity || o.qty || 0),
       '주소': String(o.address || ''),
+      '희망도착일': String(o.deliveryDate || ''),
       '요청사항': String(o.memo || ''),
       '전화확인': o.phoneConfirmed ? '완료' : '',
       '입금확인': o.paymentConfirmed ? '완료' : '',
@@ -1195,57 +1255,52 @@ async function downloadOrdersExcel(){
       '배송완료': o.shippingCompleted ? '완료' : '',
       '관리자메모': String(o.adminMemo || '')
     }));
-
     const worksheet = XLSX.utils.json_to_sheet(excelData);
-
-    worksheet['!cols'] = [
-      {wch:25},
-      {wch:22},
-      {wch:22},
-      {wch:12},
-      {wch:16},
-      {wch:8},
-      {wch:45},
-      {wch:30},
-      {wch:12},
-      {wch:12},
-      {wch:12},
-      {wch:12},
-      {wch:30}
-    ];
-
+    worksheet['!cols'] = [{wch:25},{wch:22},{wch:22},{wch:12},{wch:16},{wch:8},{wch:45},{wch:14},{wch:30},{wch:10},{wch:10},{wch:10},{wch:10},{wch:30}];
     const workbook = XLSX.utils.book_new();
-
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      '주문목록'
-    );
-
-    const now = new Date();
-
-    const p = n => String(n).padStart(2,'0');
-
-    const fileName =
-      '해남공구마켓_주문목록_' +
-      now.getFullYear() +
-      p(now.getMonth()+1) +
-      p(now.getDate()) +
-      '.xlsx';
-
-    XLSX.writeFile(workbook,fileName);
-
-    showMessage(
-      'orderMessage',
-      `${orders.length}건의 주문을 엑셀 파일로 다운로드했습니다.`
-    );
-
+    XLSX.utils.book_append_sheet(workbook, worksheet, '주문목록');
+    XLSX.writeFile(workbook, '해남공구마켓_주문목록_' + excelProductLabel() + '_' + excelFileStamp() + '.xlsx');
+    showMessage('orderMessage', `${orders.length}건의 주문을 주문목록 엑셀로 다운로드했습니다.`);
   }catch(e){
-    showMessage(
-      'orderMessage',
-      '엑셀 다운로드 오류: ' + e.message,
-      true
-    );
+    showMessage('orderMessage','엑셀 다운로드 오류: ' + e.message, true);
+  }
+}
+
+// 한진택배 양식 (보내 주신 양식의 19칸 순서 그대로)
+// 받는분 | 받는분연락처 | 받는분 | 받는분연락처 | (빈칸) | 받는분 주소 |
+// 업체명 | 업체연락처 | 업체명 | 업체연락처 | (빈칸) | 보내는분 주소 |
+// 수량 | 품명 | 타입 | 선불 | 1 | 배송메시지 | 1
+async function downloadHanjinExcel(){
+  try{
+    const orders = await ordersForExcel();
+    const rows = orders.map(o => {
+      const name = String(o.name || '').trim();
+      const phone = formatPhoneForExcel(o.phone);
+      return [
+        name, phone, name, phone, '',
+        addressForCourier(o.address),
+        HANJIN_SENDER.name, HANJIN_SENDER.phone, HANJIN_SENDER.name, HANJIN_SENDER.phone, '',
+        HANJIN_SENDER.address,
+        Number(o.quantity || o.qty || 1),
+        String(o.productName || ''),
+        HANJIN_FIXED.type,
+        HANJIN_FIXED.fare,
+        HANJIN_FIXED.q,
+        String(o.memo || '').replace(/[\r\n]+/g,' ').trim(),
+        HANJIN_FIXED.s
+      ];
+    });
+    if(HANJIN_INCLUDE_HEADER){
+      rows.unshift(['받는분','받는분연락처','받는분','받는분연락처','','받는분 주소','업체명','업체연락처','업체명','업체연락처','','보내는분 주소','수량','품명','타입','선불','1','배송메시지','1']);
+    }
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    worksheet['!cols'] = [{wch:10},{wch:15},{wch:10},{wch:15},{wch:4},{wch:45},{wch:14},{wch:15},{wch:14},{wch:15},{wch:4},{wch:32},{wch:6},{wch:24},{wch:6},{wch:6},{wch:4},{wch:30},{wch:4}];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+    XLSX.writeFile(workbook, '한진택배_' + excelProductLabel() + '_' + excelFileStamp() + '.xls', {bookType:'biff8'});
+    showMessage('orderMessage', `${orders.length}건을 한진택배 양식(.xls)으로 다운로드했습니다.`);
+  }catch(e){
+    showMessage('orderMessage','한진택배 엑셀 오류: ' + e.message, true);
   }
 }
 async function saveOrderRow(btn){
@@ -1301,9 +1356,18 @@ async function saveOrderRow(btn){
       }
     }
 
+    const cached = orderCache.find(o => orderNoOf(o) === orderNo);
+    if(cached){
+      cached.phoneConfirmed = tr.querySelector('.tel').checked;
+      cached.paymentConfirmed = tr.querySelector('.pay').checked;
+      cached.guideCompleted = tr.querySelector('.guide').checked;
+      cached.shippingCompleted = tr.querySelector('.ship').checked;
+      updateOrderStatusCounts();
+    }
+
     showMessage(
       'orderMessage',
-      '주문 상태를 저장했습니다.'
+      '주문 상태를 저장했습니다. (목록 정리는 "주문 불러오기" 또는 체크박스 변경 시 반영됩니다)'
     );
 
   }catch(e){
