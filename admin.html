@@ -30,6 +30,11 @@
     .order-status-filter input{width:auto}
     .order-status-filter b{display:inline-block;min-width:22px;padding:1px 7px;border-radius:999px;background:#e3efe7;color:#17623f;font-size:12px;text-align:center}
     .osf-title{font-size:13px;color:#555;font-weight:700}
+    .track-panel{margin-top:12px;padding:14px;border:1px solid #cfe0d5;border-radius:12px;background:#f8fbf9}
+    .track-panel textarea{min-height:140px;font-family:inherit}
+    .track-panel td{vertical-align:middle}
+    .track-panel td.raw{text-align:left;font-size:12px;color:#444;white-space:pre-wrap;max-width:320px}
+    .track-panel select,.track-panel input{padding:7px 8px;font-size:13px}
     .notice{padding:11px 13px;border-radius:9px;background:#eef8f2;color:#17623f;margin:12px 0;display:none}
     .error{background:#fdeaea;color:#a32121}
     .muted{color:#68736b;font-size:13px;line-height:1.55}
@@ -285,7 +290,6 @@ async function saveSupplierApplication(btn){
 
   <button class="primary" onclick="loadOrders()">주문 불러오기</button>
   <button class="secondary" type="button" onclick="downloadOrdersExcel()">주문목록 엑셀</button>
-  <button class="blue" type="button" onclick="downloadHanjinExcel()">한진택배 엑셀</button>
 </div>
 <div class="order-status-filter">
   <span class="osf-title">표시할 주문</span>
@@ -293,7 +297,7 @@ async function saveSupplierApplication(btn){
   <label><input type="checkbox" class="osf" value="unpaid" checked onchange="onOrderStatusFilterChange()"> 미입금 <b id="osfCountUnpaid">0</b></label>
   <label><input type="checkbox" class="osf" value="paid" checked onchange="onOrderStatusFilterChange()"> 입금완료(배송 전) <b id="osfCountPaid">0</b></label>
   <label><input type="checkbox" class="osf" value="shipped" onchange="onOrderStatusFilterChange()"> 배송완료 <b id="osfCountShipped">0</b></label>
-  <span class="muted">화면 목록과 엑셀 2종 모두 선택한 상품·상태의 주문만 담깁니다.</span>
+  <span class="muted">화면 목록과 주문목록 엑셀 모두 선택한 상품·상태의 주문만 담깁니다. 한진택배 엑셀은 ⑧ 주문배송관리에 있습니다.</span>
 </div>
     <div id="orderMessage" class="notice"></div>
     <div class="table-wrap" style="margin-top:12px">
@@ -427,20 +431,52 @@ async function saveSupplierApplication(btn){
     <div class="toolbar">
       <input id="shipAdminPassword" type="password" placeholder="관리자 비밀번호" style="max-width:220px">
       <select id="shipProductFilter" style="max-width:260px" onchange="renderShipping()"><option value="">전체 상품</option></select>
-      <select id="shipStatusFilter" style="max-width:150px" onchange="renderShipping()">
-        <option value="">전체 상태</option><option>배송대기</option><option>송장등록</option><option>배송중</option><option>배송완료</option>
-      </select>
-      <label style="display:flex;align-items:center;gap:6px;white-space:nowrap"><input id="shipPaidOnly" type="checkbox" checked onchange="renderShipping()" style="width:auto"> 입금완료만</label>
       <button class="primary" type="button" onclick="loadShipping()">배송목록 불러오기</button>
+    </div>
+    <div class="order-status-filter">
+      <span class="osf-title">표시할 주문</span>
+      <label><input type="checkbox" id="ssfAll" onchange="toggleAllShipStatus(this.checked)"> 전체</label>
+      <label><input type="checkbox" class="ssf" value="unpaid" onchange="onShipStatusFilterChange()"> 미입금 <b id="ssfCount-unpaid">0</b></label>
+      <label><input type="checkbox" class="ssf" value="배송대기" checked onchange="onShipStatusFilterChange()"> 배송대기 <b id="ssfCount-배송대기">0</b></label>
+      <label><input type="checkbox" class="ssf" value="송장등록" checked onchange="onShipStatusFilterChange()"> 송장등록 <b id="ssfCount-송장등록">0</b></label>
+      <label><input type="checkbox" class="ssf" value="배송중" checked onchange="onShipStatusFilterChange()"> 배송중 <b id="ssfCount-배송중">0</b></label>
+      <label><input type="checkbox" class="ssf" value="배송완료" onchange="onShipStatusFilterChange()"> 배송완료 <b id="ssfCount-배송완료">0</b></label>
+      <span class="muted">화면 목록과 엑셀 모두 선택한 상품·상태만 담깁니다. (한진 엑셀은 미입금 제외)</span>
     </div>
 
     <div class="toolbar">
+      <button class="blue" type="button" onclick="downloadShipHanjinExcel()">한진택배 엑셀</button>
       <button class="secondary" type="button" onclick="downloadSupplierShippingList()">공급처 배송리스트 엑셀</button>
       <label class="secondary" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;background:#fff;font-weight:700">
         송장 엑셀 올리기
         <input id="shipUploadFile" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="uploadTrackingExcel(this)">
       </label>
+      <button class="secondary" type="button" onclick="toggleTrackPaste()">송장 텍스트 붙여넣기</button>
       <button id="shipSaveBtn" class="primary" type="button" onclick="saveShippingChanges()">변경내용 저장</button>
+    </div>
+
+    <div id="trackPastePanel" class="track-panel" style="display:none">
+      <strong>공급처에서 문자·카톡으로 받은 송장 내용을 그대로 붙여 넣으세요</strong>
+      <div class="muted" style="margin:4px 0 8px">이름·연락처·주문번호와 송장번호(10~14자리 숫자)를 찾아 주문과 자동으로 연결합니다. 저장 전에 미리보기에서 확인할 수 있습니다.</div>
+      <textarea id="trackPasteText" placeholder="예)&#10;최명란 010-6286-2801 4567-1234-5678&#10;조애숙 8박스 송장 456712345679"></textarea>
+      <div class="toolbar" style="margin-top:8px">
+        <label style="display:flex;align-items:center;gap:6px;white-space:nowrap;font-weight:700">기본 택배사 <input id="trackDefaultCourier" list="courierList" value="한진택배" style="max-width:150px"></label>
+        <button class="primary" type="button" onclick="parseTrackPaste()">인식하기</button>
+        <button class="secondary" type="button" onclick="document.getElementById('trackPasteText').value='';">지우기</button>
+      </div>
+    </div>
+
+    <div id="trackPreview" class="track-panel" style="display:none">
+      <strong id="trackPreviewTitle">송장 등록 미리보기</strong>
+      <div class="muted" style="margin:4px 0 8px">🟢 자동 연결 · 🟡 확인 필요(같은 고객 여러 건 등) · 🔴 연결 못 함 — 연결 주문을 직접 바꿀 수 있습니다. "등록 안 함"은 저장되지 않습니다.</div>
+      <div class="table-wrap"><table style="min-width:900px">
+        <thead><tr><th style="width:40px">상태</th><th>인식한 내용</th><th style="width:150px">택배사</th><th style="width:190px">송장번호</th><th style="width:330px">연결 주문</th></tr></thead>
+        <tbody id="trackPreviewRows"></tbody>
+      </table></div>
+      <div class="toolbar">
+        <button class="primary" type="button" onclick="confirmTrackPreview()">선택한 송장 등록하기</button>
+        <button class="secondary" type="button" onclick="closeTrackPreview()">취소</button>
+      </div>
     </div>
     <div id="shipMessage" class="notice"></div>
 
@@ -1270,39 +1306,49 @@ async function downloadOrdersExcel(){
 // 받는분 | 받는분연락처 | 받는분 | 받는분연락처 | (빈칸) | 받는분 주소 |
 // 업체명 | 업체연락처 | 업체명 | 업체연락처 | (빈칸) | 보내는분 주소 |
 // 수량 | 품명 | 타입 | 선불 | 1 | 배송메시지 | 1
-async function downloadHanjinExcel(){
-  try{
-    const orders = await ordersForExcel();
-    const rows = orders.map(o => {
-      const name = String(o.name || '').trim();
-      const phone = formatPhoneForExcel(o.phone);
-      return [
-        name, phone, name, phone, '',
-        addressForCourier(o.address),
-        HANJIN_SENDER.name, HANJIN_SENDER.phone, HANJIN_SENDER.name, HANJIN_SENDER.phone, '',
-        HANJIN_SENDER.address,
-        Number(o.quantity || o.qty || 1),
-        String(o.productName || ''),
-        HANJIN_FIXED.type,
-        HANJIN_FIXED.fare,
-        HANJIN_FIXED.q,
-        String(o.memo || '').replace(/[\r\n]+/g,' ').trim(),
-        HANJIN_FIXED.s
-      ];
-    });
-    if(HANJIN_INCLUDE_HEADER){
-      rows.unshift(['받는분','받는분연락처','받는분','받는분연락처','','받는분 주소','업체명','업체연락처','업체명','업체연락처','','보내는분 주소','수량','품명','타입','선불','1','배송메시지','1']);
-    }
-    const worksheet = XLSX.utils.aoa_to_sheet(rows);
-    worksheet['!cols'] = [{wch:10},{wch:15},{wch:10},{wch:15},{wch:4},{wch:45},{wch:14},{wch:15},{wch:14},{wch:15},{wch:4},{wch:32},{wch:6},{wch:24},{wch:6},{wch:6},{wch:4},{wch:30},{wch:4}];
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
-    XLSX.writeFile(workbook, '한진택배_' + excelProductLabel() + '_' + excelFileStamp() + '.xls', {bookType:'biff8'});
-    showMessage('orderMessage', `${orders.length}건을 한진택배 양식(.xls)으로 다운로드했습니다.`);
-  }catch(e){
-    showMessage('orderMessage','한진택배 엑셀 오류: ' + e.message, true);
+function hanjinRowsOf(list){
+  const rows = list.map(o => {
+    const name = String(o.name || '').trim();
+    const phone = formatPhoneForExcel(o.phone);
+    return [
+      name, phone, name, phone, '',
+      addressForCourier(o.address),
+      HANJIN_SENDER.name, HANJIN_SENDER.phone, HANJIN_SENDER.name, HANJIN_SENDER.phone, '',
+      HANJIN_SENDER.address,
+      Number(o.quantity || o.qty || 1),
+      String(o.productName || ''),
+      HANJIN_FIXED.type,
+      HANJIN_FIXED.fare,
+      HANJIN_FIXED.q,
+      String(o.memo || '').replace(/[\r\n]+/g,' ').trim(),
+      HANJIN_FIXED.s
+    ];
+  });
+  if(HANJIN_INCLUDE_HEADER){
+    rows.unshift(['받는분','받는분연락처','받는분','받는분연락처','','받는분 주소','업체명','업체연락처','업체명','업체연락처','','보내는분 주소','수량','품명','타입','선불','1','배송메시지','1']);
   }
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:10},{wch:15},{wch:10},{wch:15},{wch:4},{wch:45},{wch:14},{wch:15},{wch:14},{wch:15},{wch:4},{wch:32},{wch:6},{wch:24},{wch:6},{wch:6},{wch:4},{wch:30},{wch:4}];
+  return ws;
 }
+// 공급처가 송장번호만 채워서 돌려주는 시트 (주문번호로 정확히 등록됨)
+function trackingReplySheetOf(list){
+  const data = list.map(o => ({
+    '주문번호': String(o.orderNumber || o.orderNo || ''),
+    '상품명': String(o.productName || ''),
+    '받는분': String(o.name || ''),
+    '연락처': formatPhoneForExcel(o.phone),
+    '주소': String(o.address || ''),
+    '수량': Number(o.quantity || o.qty || 0),
+    '희망도착일': String(o.deliveryDate || ''),
+    '택배사': String(o.courier || HANJIN_DEFAULT_COURIER),
+    '송장번호': String(o.trackingNumber || '')
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:24},{wch:18},{wch:10},{wch:15},{wch:48},{wch:6},{wch:12},{wch:12},{wch:18}];
+  return ws;
+}
+
 async function saveOrderRow(btn){
   const tr = btn.closest('tr');
 
@@ -2772,6 +2818,27 @@ function shipPassword(){
   return ($('shipAdminPassword').value||$('purchaseAdminPassword').value||$('adminPassword').value||'').trim();
 }
 
+const HANJIN_DEFAULT_COURIER = '한진택배';
+const SHIP_CATEGORIES = ['unpaid','배송대기','송장등록','배송중','배송완료'];
+
+// 배송 화면 분류: 배송완료 > 미입금 > 배송상태
+function shipCategory(r){
+  if(r.shippingStatus === '배송완료') return '배송완료';
+  if(!r.paymentConfirmed) return 'unpaid';
+  return SHIP_STATUSES.includes(r.shippingStatus) ? r.shippingStatus : '배송대기';
+}
+function selectedShipCategories(){
+  return Array.from(document.querySelectorAll('.ssf:checked')).map(el => el.value);
+}
+function toggleAllShipStatus(on){
+  document.querySelectorAll('.ssf').forEach(el => { el.checked = on; });
+  renderShipping();
+}
+function onShipStatusFilterChange(){
+  $('ssfAll').checked = Array.from(document.querySelectorAll('.ssf')).every(el => el.checked);
+  renderShipping();
+}
+
 async function loadShipping(){
   try{
     const password=shipPassword();
@@ -2780,6 +2847,16 @@ async function loadShipping(){
     const res=await apiGet({action:'shippingList',password});
     if(!res.success) throw new Error(res.message||'배송목록 조회 실패');
     shippingRows=(res.rows||[]).map(r=>({...r,_orig:{courier:r.courier||'',trackingNumber:r.trackingNumber||'',shippingStatus:r.shippingStatus||'배송대기'}}));
+
+    // 배송메시지(고객 요청사항)는 주문관리에서 가져와 붙입니다.
+    try{
+      const ores=await apiGet({action:'orders',password});
+      if(ores && ores.success){
+        const memoMap={};
+        (ores.orders||ores.data||[]).forEach(o=>{ memoMap[String(o.orderNo||o.orderNumber||'').trim()]=String(o.memo||''); });
+        shippingRows.forEach(r=>{ r.memo=memoMap[r.orderNumber]||''; });
+      }
+    }catch(_){}
 
     const sel=$('shipProductFilter'); const cur=sel.value;
     const products=[...new Map(shippingRows.map(r=>[r.productCode,r.productName||r.productCode])).entries()].filter(([c])=>c);
@@ -2791,9 +2868,13 @@ async function loadShipping(){
   }catch(e){ showMessage('shipMessage','배송목록 오류: '+e.message,true); }
 }
 
+function shipScope(){
+  const code=$('shipProductFilter').value;
+  return shippingRows.filter(r=>!code||r.productCode===code);
+}
 function shipFiltered(){
-  const code=$('shipProductFilter').value, st=$('shipStatusFilter').value, paidOnly=$('shipPaidOnly').checked;
-  return shippingRows.filter(r=>(!code||r.productCode===code)&&(!st||r.shippingStatus===st)&&(!paidOnly||r.paymentConfirmed));
+  const cats=selectedShipCategories();
+  return shipScope().filter(r=>cats.includes(shipCategory(r)));
 }
 
 function shipChanged(r){
@@ -2801,8 +2882,7 @@ function shipChanged(r){
 }
 
 function renderShipping(){
-  const code=$('shipProductFilter').value;
-  const scope=shippingRows.filter(r=>!code||r.productCode===code);
+  const scope=shipScope();
   const paid=scope.filter(r=>r.paymentConfirmed);
   $('shipSumOrders').textContent=scope.length+'건';
   $('shipSumPaidQty').textContent=paid.reduce((a,r)=>a+Number(r.qty||0),0).toLocaleString('ko-KR')+'박스';
@@ -2810,6 +2890,7 @@ function renderShipping(){
   $('shipSumTracking').textContent=paid.filter(r=>r.trackingNumber).length+'건';
   $('shipSumMissing').textContent=paid.filter(r=>!r.trackingNumber).length+'건';
   $('shipSumDelivered').textContent=paid.filter(r=>r.shippingStatus==='배송완료').length+'건';
+  SHIP_CATEGORIES.forEach(c=>{ const el=$('ssfCount-'+c); if(el) el.textContent=scope.filter(r=>shipCategory(r)===c).length; });
 
   const rows=shipFiltered();
   $('shipRows').innerHTML=rows.length?rows.map(r=>`
@@ -2862,48 +2943,248 @@ async function saveShippingChanges(){
   finally{ btn.disabled=false; btn.textContent='변경내용 저장'; }
 }
 
+function shipFileLabel(){
+  const code=$('shipProductFilter').value;
+  const r=shippingRows.find(x=>x.productCode===code);
+  return ((r&&r.productName)||'전체상품').replace(/[\\/:*?"<>|\s]+/g,'_').slice(0,30);
+}
+
+// 한진택배 엑셀: 1번 시트 = 한진 업로드용, 2번 시트 = 공급처 송장 회신용
+function downloadShipHanjinExcel(){
+  try{
+    if(typeof XLSX==='undefined') throw new Error('엑셀 기능을 불러오지 못했습니다. 페이지를 새로고침해 주세요.');
+    if(!shippingRows.length) throw new Error('먼저 배송목록을 불러와 주세요.');
+    const list=shipFiltered();
+    const rows=list.filter(r=>r.paymentConfirmed);
+    const skipped=list.length-rows.length;
+    if(!rows.length) throw new Error('선택한 조건에 입금완료 주문이 없습니다.');
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,hanjinRowsOf(rows),'Sheet1');
+    XLSX.utils.book_append_sheet(wb,trackingReplySheetOf(rows),'송장회신');
+    XLSX.writeFile(wb,'한진택배_'+shipFileLabel()+'_'+excelFileStamp()+'.xls',{bookType:'biff8'});
+    showMessage('shipMessage',`한진택배 양식 ${rows.length}건(${rows.reduce((a,r)=>a+Number(r.qty||0),0)}박스)을 내려받았습니다.`+(skipped?` 미입금 ${skipped}건은 제외했습니다.`:'')+` 공급처에는 '송장회신' 시트에 송장번호만 채워 돌려 달라고 하세요.`);
+  }catch(e){ showMessage('shipMessage','한진택배 엑셀 오류: '+e.message,true); }
+}
+
 function downloadSupplierShippingList(){
   try{
     if(!shippingRows.length) throw new Error('먼저 배송목록을 불러와 주세요.');
     const code=$('shipProductFilter').value;
     if(!code) throw new Error('공급처에 보낼 상품을 먼저 선택해 주세요.');
-    const rows=shippingRows.filter(r=>r.productCode===code&&r.paymentConfirmed);
-    if(!rows.length) throw new Error('이 상품의 입금완료 주문이 없습니다.');
-    const data=rows.map(r=>({
-      '주문번호':r.orderNumber,'상품명':r.productName,'받는분':r.name,'연락처':shipPhone(r.phone),
-      '주소':r.address,'수량':Number(r.qty||0),'희망도착일':r.deliveryDate||'',
-      '택배사':r.courier||'','송장번호':r.trackingNumber||''
-    }));
-    const ws=XLSX.utils.json_to_sheet(data);
-    ws['!cols']=[{wch:24},{wch:18},{wch:10},{wch:15},{wch:48},{wch:6},{wch:12},{wch:12},{wch:18}];
-    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'배송리스트');
-    const d=new Date(),z=n=>String(n).padStart(2,'0');
-    const name=(rows[0].productName||code).replace(/[\\/:*?"<>|]/g,'');
-    XLSX.writeFile(wb,`해남공구마켓_배송리스트_${name}_${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}.xlsx`);
-    showMessage('shipMessage',`입금완료 ${rows.length}건(${rows.reduce((a,r)=>a+Number(r.qty||0),0)}박스) 배송리스트를 내려받았습니다. 공급처가 택배사·송장번호를 채워 보내면 '송장 엑셀 올리기'로 등록하세요.`);
+    const rows=shipFiltered().filter(r=>r.paymentConfirmed);
+    if(!rows.length) throw new Error('선택한 조건에 입금완료 주문이 없습니다.');
+    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,trackingReplySheetOf(rows),'배송리스트');
+    XLSX.writeFile(wb,`해남공구마켓_배송리스트_${shipFileLabel()}_${excelFileStamp()}.xlsx`);
+    showMessage('shipMessage',`입금완료 ${rows.length}건(${rows.reduce((a,r)=>a+Number(r.qty||0),0)}박스) 배송리스트를 내려받았습니다. 공급처가 송장번호를 채워 보내면 '송장 엑셀 올리기'로 등록하세요.`);
   }catch(e){ showMessage('shipMessage',e.message,true); }
 }
 
+/* ---------- 송장 등록: 엑셀 / 텍스트 공통 ---------- */
+let trackPreviewItems=[];
+const digitsOf=v=>String(v||'').replace(/\D/g,'');
+const normName=v=>String(v||'').replace(/\s/g,'');
+function normAddr(v){ return String(v||'').replace(/^\s*\[\d{5}\]\s*/,'').replace(/[\s,()\-]/g,''); }
+function addrScore(a,b){
+  const x=normAddr(a), y=normAddr(b); if(!x||!y) return 0;
+  if(x===y) return 3;
+  if(x.includes(y)||y.includes(x)) return 2;
+  let n=0; while(n<x.length&&n<y.length&&x[n]===y[n]) n++;
+  return n>=12?1:0;
+}
+function phoneMatch(given,order){
+  const g=digitsOf(given), o=digitsOf(order); if(!g||!o) return 0;
+  const gg=g.length===10&&g.startsWith('10')?'0'+g:g, oo=o.length===10&&o.startsWith('10')?'0'+o:o;
+  if(gg.length>=10&&gg===oo) return 3;
+  if(gg.length>=4&&oo.endsWith(gg.slice(-4))&&gg.length<10) return 1; // 일부만 적힌 번호
+  return 0;
+}
+function detectCourier(text){
+  const s=String(text||'');
+  if(/한진/.test(s)) return '한진택배';
+  if(/CJ|대한통운/i.test(s)) return 'CJ대한통운';
+  if(/롯데/.test(s)) return '롯데택배';
+  if(/우체국/.test(s)) return '우체국택배';
+  if(/로젠/.test(s)) return '로젠택배';
+  if(/경동/.test(s)) return '경동택배';
+  return '';
+}
+// 주문 찾기: 주문번호 → 연락처·이름·주소 점수
+function findOrderCandidates(info, pool){
+  if(info.orderNumber){
+    const hit=shippingRows.find(r=>r.orderNumber===info.orderNumber);
+    if(hit) return {status:'ok',order:hit,candidates:[hit]};
+  }
+  const scored=pool.map(r=>{
+    const ph=phoneMatch(info.phone,r.phone);
+    const nm=info.name&&normName(info.name)===normName(r.name)?2:0;
+    const ad=info.address?addrScore(info.address,r.address):0;
+    return {r,score:ph+nm+ad,ph,nm};
+  }).filter(x=>x.ph>=3||x.nm>0&&(x.ph>0||!info.phone));
+  if(!scored.length) return {status:'none',order:null,candidates:[]};
+  const best=Math.max(...scored.map(x=>x.score));
+  const top=scored.filter(x=>x.score===best).map(x=>x.r);
+  if(top.length===1) return {status:'ok',order:top[0],candidates:scored.map(x=>x.r)};
+  return {status:'check',order:null,candidates:top};
+}
+// 같은 고객이 여러 건이면 아직 송장이 없는 주문부터 하나씩 배정
+function assignPreview(items){
+  const used=new Set();
+  items.forEach(it=>{
+    if(it.status==='ok'&&it.order) used.add(it.order.orderNumber);
+  });
+  items.forEach(it=>{
+    if(it.status==='check'){
+      const pick=it.candidates.find(c=>!used.has(c.orderNumber)&&!c.trackingNumber)||it.candidates.find(c=>!used.has(c.orderNumber));
+      if(pick){ it.order=pick; used.add(pick.orderNumber); }
+    }
+  });
+  return items;
+}
+function previewPool(){
+  // 선택한 상품이 있으면 그 상품 안에서, 없으면 전체에서 찾습니다. 배송완료 주문은 제외.
+  return shipScope().filter(r=>r.shippingStatus!=='배송완료');
+}
+function openTrackPreview(items, title){
+  trackPreviewItems=assignPreview(items);
+  $('trackPreviewTitle').textContent=title;
+  const pool=previewPool();
+  const optionList=pool.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko'));
+  $('trackPreviewRows').innerHTML=trackPreviewItems.map((it,i)=>{
+    const icon=it.status==='ok'?'🟢':it.status==='check'?'🟡':'🔴';
+    const sel=it.order?it.order.orderNumber:'';
+    const cand=new Set(it.candidates.map(c=>c.orderNumber));
+    const opts=['<option value="">등록 안 함</option>']
+      .concat(it.candidates.map(c=>`<option value="${esc(c.orderNumber)}" ${c.orderNumber===sel?'selected':''}>★ ${esc(c.name)} · ${esc(shipPhone(c.phone))} · ${Number(c.qty||0)}개 · ${esc(String(c.address||'').slice(0,18))}${c.trackingNumber?' (송장있음)':''}</option>`))
+      .concat(optionList.filter(c=>!cand.has(c.orderNumber)).map(c=>`<option value="${esc(c.orderNumber)}" ${c.orderNumber===sel?'selected':''}>${esc(c.name)} · ${esc(shipPhone(c.phone))} · ${Number(c.qty||0)}개 · ${esc(String(c.address||'').slice(0,18))}${c.trackingNumber?' (송장있음)':''}</option>`));
+    return `<tr data-i="${i}">
+      <td>${icon}</td>
+      <td class="raw">${esc(it.raw)}</td>
+      <td><input class="tp-courier" list="courierList" value="${esc(it.courier)}"></td>
+      <td><input class="tp-tracking" value="${esc(it.trackingNumber)}"></td>
+      <td><select class="tp-order">${opts.join('')}</select></td>
+    </tr>`;
+  }).join('');
+  $('trackPreview').style.display='block';
+  $('trackPreview').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function closeTrackPreview(){ $('trackPreview').style.display='none'; trackPreviewItems=[]; }
+async function confirmTrackPreview(){
+  try{
+    const byOrder={};
+    document.querySelectorAll('#trackPreviewRows tr').forEach(tr=>{
+      const no=tr.querySelector('.tp-order').value;
+      const tracking=tr.querySelector('.tp-tracking').value.trim();
+      const courier=tr.querySelector('.tp-courier').value.trim();
+      if(!no||!tracking) return;
+      if(!byOrder[no]) byOrder[no]={orderNumber:no,courier,trackingNumbers:[]};
+      if(!byOrder[no].trackingNumbers.includes(tracking)) byOrder[no].trackingNumbers.push(tracking);
+      if(courier) byOrder[no].courier=courier;
+    });
+    const items=Object.values(byOrder).map(x=>({orderNumber:x.orderNumber,courier:x.courier,trackingNumber:x.trackingNumbers.join(', ')}));
+    items.forEach(x=>{ if(!x.courier) delete x.courier; });
+    if(!items.length) throw new Error('등록할 송장이 없습니다. 연결 주문과 송장번호를 확인해 주세요.');
+    const overwrite=items.filter(x=>{const r=shippingRows.find(o=>o.orderNumber===x.orderNumber);return r&&r.trackingNumber&&r.trackingNumber!==x.trackingNumber;}).length;
+    if(!confirm(`송장 ${items.length}건을 등록할까요?`+(overwrite?`\n(이미 송장이 있는 ${overwrite}건은 새 번호로 바뀝니다)`:''))) return;
+    showMessage('shipMessage',`송장 ${items.length}건을 등록하고 있습니다...`);
+    const res=await sendShippingItems(items);
+    closeTrackPreview();
+    await loadShipping();
+    showMessage('shipMessage',`송장 ${res.updated}건을 등록했습니다.`+(res.notFound&&res.notFound.length?` 찾지 못한 주문번호: ${res.notFound.join(', ')}`:''),!!(res.notFound&&res.notFound.length));
+  }catch(e){ showMessage('shipMessage','송장 등록 오류: '+e.message,true); }
+}
+
+/* 엑셀 올리기: 우리 송장회신 시트, 공급처 배송리스트, 한진 결과 파일 모두 읽습니다 */
 async function uploadTrackingExcel(input){
   const file=input.files&&input.files[0]; input.value='';
   if(!file) return;
   try{
+    if(!shippingRows.length) throw new Error('먼저 배송목록을 불러와 주세요.');
     const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
-    const raw=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:true});
-    const pick=(o,keys)=>{for(const k of Object.keys(o)){const n=k.replace(/\s/g,''); if(keys.includes(n)) return String(o[k]).trim();} return '';};
-    const items=raw.map(o=>({
-      orderNumber:pick(o,['주문번호']),
-      courier:pick(o,['택배사','택배회사']),
-      trackingNumber:pick(o,['송장번호','운송장번호','운송장'])
-    })).filter(x=>x.orderNumber&&x.trackingNumber);
-    if(!items.length) throw new Error("'주문번호'와 '송장번호' 열이 채워진 행을 찾지 못했습니다.");
-    items.forEach(x=>{ if(!x.courier) delete x.courier; });
-    if(!confirm(`송장번호 ${items.length}건을 등록할까요?`)) return;
-    showMessage('shipMessage',`송장 ${items.length}건을 등록하고 있습니다...`);
-    const res=await sendShippingItems(items);
-    await loadShipping();
-    showMessage('shipMessage',`송장 ${res.updated}건을 등록했습니다.`+(res.notFound&&res.notFound.length?` 찾지 못한 주문번호: ${res.notFound.join(', ')}`:''),!!(res.notFound&&res.notFound.length));
+    const pick=(o,keys)=>{for(const k of Object.keys(o)){const n=k.replace(/\s|_\d+$/g,''); if(keys.includes(n)) return String(o[k]).trim();} return '';};
+    const pool=previewPool();
+    const items=[];
+    wb.SheetNames.forEach(sn=>{
+      const raw=XLSX.utils.sheet_to_json(wb.Sheets[sn],{defval:'',raw:false});
+      raw.forEach(o=>{
+        const trackingNumber=pick(o,['송장번호','운송장번호','운송장','송장','운송장No','운송장NO']);
+        if(!trackingNumber||digitsOf(trackingNumber).length<8) return;
+        const info={
+          orderNumber:pick(o,['주문번호','고객주문번호','참조번호']),
+          name:pick(o,['받는분','받는분성명','수하인','수하인명','수취인','수취인명','고객명','이름']),
+          phone:pick(o,['연락처','받는분연락처','받는분전화번호','받는분휴대폰','수하인전화','수하인전화번호','수하인휴대폰','수취인연락처','전화번호','휴대폰']),
+          address:pick(o,['주소','받는분주소','수하인주소','수취인주소'])
+        };
+        const m=findOrderCandidates(info,pool);
+        items.push({raw:[sn,info.orderNumber,info.name,info.phone,trackingNumber].filter(Boolean).join(' · '),
+          trackingNumber,courier:pick(o,['택배사','택배회사'])||HANJIN_DEFAULT_COURIER,...m});
+      });
+    });
+    if(!items.length) throw new Error("송장번호가 채워진 행을 찾지 못했습니다. '송장번호' 또는 '운송장번호' 열이 있는지 확인해 주세요.");
+    openTrackPreview(items,`엑셀에서 송장 ${items.length}건을 찾았습니다`);
   }catch(e){ showMessage('shipMessage','송장 엑셀 오류: '+e.message,true); }
+}
+
+/* 텍스트 붙여넣기 */
+function toggleTrackPaste(){
+  const p=$('trackPastePanel'); p.style.display=p.style.display==='none'?'block':'none';
+  if(p.style.display==='block') $('trackPasteText').focus();
+}
+function extractTrackings(line){
+  // 주문번호·전화번호·날짜를 먼저 지운 뒤 남은 숫자에서 송장번호(10~14자리)를 찾습니다.
+  let s=String(line||'')
+    .replace(/HN-\d{8}-\d{6}-\d{3}/g,' ')
+    .replace(/(?<!\d)01[016789][\s\-.]?[\d*]{3,4}[\s\-.]?\d{4}(?!\d)/g,' ')
+    .replace(/(?<!\d)0\d{1,2}-\d{3,4}-\d{4}(?!\d)/g,' ')
+    .replace(/(?<!\d)\d{4}[-./]\d{1,2}[-./]\d{1,2}(?!\d)/g,' ');
+  const out=[];
+  (s.match(/\d+(?:-\d+)*/g)||[]).forEach(tok=>{ const d=digitsOf(tok); if(d.length>=10&&d.length<=14) out.push(d); });
+  if(!out.length){
+    // "4567 1234 5678" 처럼 띄어 쓴 경우
+    (s.match(/\d{3,6}(?: \d{3,6}){1,3}/g)||[]).forEach(tok=>{ const d=digitsOf(tok); if(d.length>=10&&d.length<=14) out.push(d); });
+  }
+  return [...new Set(out)];
+}
+function parseTrackPaste(){
+  try{
+    if(!shippingRows.length) throw new Error('먼저 배송목록을 불러와 주세요.');
+    const text=$('trackPasteText').value;
+    if(!text.trim()) throw new Error('송장 내용을 붙여 넣어 주세요.');
+    const pool=previewPool();
+    const names=[...new Set(pool.map(r=>normName(r.name)).filter(n=>n.length>=2))].sort((a,b)=>b.length-a.length);
+    const defCourier=$('trackDefaultCourier').value.trim()||HANJIN_DEFAULT_COURIER;
+    const textCourier=detectCourier(text);
+    const items=[];
+    let pending={lines:[]};
+    text.split(/\r?\n/).forEach(rawLine=>{
+      const line=rawLine.trim(); if(!line) return;
+      const compact=normName(line);
+      const ono=(line.match(/HN-\d{8}-\d{6}-\d{3}/)||[])[0]||'';
+      const phoneM=line.match(/01[016789][\s\-.]?[\d*]{3,4}[\s\-.]?\d{4}/);
+      const name=names.find(n=>compact.includes(n))||'';
+      const trackings=extractTrackings(line);
+      // 다른 고객 정보가 나오면 앞 줄 정보는 버리고 새로 시작 (앞 고객 송장이 없던 경우)
+      const hasPend=pending.name||pending.phone||pending.orderNumber;
+      const conflict=(name&&pending.name&&name!==pending.name)
+        ||(phoneM&&pending.phone&&digitsOf(phoneM[0])!==digitsOf(pending.phone))
+        ||(ono&&pending.orderNumber&&ono!==pending.orderNumber);
+      if(hasPend&&conflict) pending={lines:[]};
+      if(ono) pending.orderNumber=ono;
+      if(phoneM) pending.phone=phoneM[0];
+      if(name) pending.name=name;
+      const lc=detectCourier(line); if(lc) pending.courier=lc;
+      pending.lines.push(line);
+      if(trackings.length){
+        const info={orderNumber:pending.orderNumber||'',name:pending.name||'',phone:pending.phone||''};
+        const m=(info.orderNumber||info.name||info.phone)?findOrderCandidates(info,pool):{status:'none',order:null,candidates:[]};
+        trackings.forEach(tn=>{
+          items.push({raw:pending.lines.join('\n'),trackingNumber:tn,courier:pending.courier||textCourier||defCourier,...m});
+        });
+        pending={lines:[]};
+      }
+    });
+    if(!items.length) throw new Error('송장번호(10~14자리 숫자)를 찾지 못했습니다.');
+    openTrackPreview(items,`붙여넣은 내용에서 송장 ${items.length}건을 찾았습니다`);
+  }catch(e){ showMessage('shipMessage','송장 텍스트 오류: '+e.message,true); }
 }
 
 if($('purchaseDate')) $('purchaseDate').value=todayYmd();
