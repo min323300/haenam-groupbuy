@@ -1334,6 +1334,7 @@ async function loadBusinessFooter() {
     if (settings.mailOrderNumber) parts.push('통신판매업신고번호: ' + e(settings.mailOrderNumber));
     if (settings.businessAddress) parts.push('사업장 주소: ' + e(settings.businessAddress));
     if (settings.customerServicePhone) parts.push('고객센터: ' + e(settings.customerServicePhone));
+    parts.push('이메일: hypo3300@naver.com');
 
     footer.innerHTML = parts.join(' · ');
   } catch (err) {
