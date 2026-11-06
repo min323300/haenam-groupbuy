@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /partner.html
+Disallow: /promotion.html
+Disallow: /accounting.html
+
+Sitemap: https://haenamgonggu.kr/sitemap.xml
