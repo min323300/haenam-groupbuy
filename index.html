@@ -468,12 +468,24 @@ function duration(ms){
 }
 // 마지막으로 받은 상품 목록을 기억해 두었다가 다음 방문 때 바로 보여주고, 뒤에서 최신 정보로 바꿉니다.
 const PRODUCTS_LOCAL_KEY='haenamProductsCache_v1';
+// 광고 바로가기: 주소에 ?product=상품코드 가 있으면 그 상품 주문창을 한 번 자동으로 엽니다.
+// 예) https://haenamgonggu.kr/?product=P-20261023175212-432&utm_source=daangn...
+let deepLinkDone=false;
+function openProductFromUrl(){
+ if(deepLinkDone)return;
+ const code=s(new URLSearchParams(location.search).get('product')).trim();
+ if(!code){deepLinkDone=true;return}
+ const p=products.find(x=>s(x.productCode)===code);
+ if(!p)return; // 아직 목록에 없으면 최신 목록을 받은 뒤 다시 시도
+ deepLinkDone=true;
+ if(stateOf(p)==='판매중')openProduct(code);
+}
 async function loadProducts(){
  let shownFromCache=false;
  try{
   const saved=JSON.parse(localStorage.getItem(PRODUCTS_LOCAL_KEY)||'null');
   if(saved&&Array.isArray(saved.products)&&Date.now()-saved.at<7*86400000){
-   products=saved.products; renderProducts(); shownFromCache=true;
+   products=saved.products; renderProducts(); shownFromCache=true; openProductFromUrl();
   }
  }catch(_){}
  try{
@@ -481,7 +493,7 @@ async function loadProducts(){
   const data=await r.json();
   if(data.success===false)throw new Error(data.message||'상품 조회 실패');
   products=Array.isArray(data.products)?data.products:[];
-  renderProducts();
+  renderProducts(); openProductFromUrl(); deepLinkDone=true;
   try{localStorage.setItem(PRODUCTS_LOCAL_KEY,JSON.stringify({at:Date.now(),products}));}catch(_){}
  }catch(err){
   if(!shownFromCache) document.getElementById('productGrid').innerHTML='<div class="empty">상품을 불러오지 못했습니다.<br>'+e(err.message)+'</div>';
