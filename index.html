@@ -38,6 +38,9 @@ main{max-width:1180px;margin:45px auto;padding:0 20px 70px}
 .section-head{display:flex;justify-content:space-between;gap:15px;align-items:end;margin-bottom:20px}
 .section-head h2{font-size:31px;margin:0} .section-head p{margin:0;color:#777}
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.search-wrap{position:relative;margin:0 0 18px}#productSearch{width:100%;padding:14px 16px;border:2px solid #d8e2da;border-radius:14px;font-size:16px;background:#fff;box-sizing:border-box}#productSearch:focus{outline:none;border-color:var(--green)}
+.search-suggest{display:none;position:absolute;left:0;right:0;top:100%;margin-top:6px;background:#fff;border:1px solid #dce5de;border-radius:14px;box-shadow:0 10px 24px rgba(0,0,0,.12);z-index:20;overflow:hidden}.search-suggest.open{display:block}
+.suggest-item{display:flex;justify-content:space-between;gap:10px;width:100%;padding:12px 16px;border:0;border-bottom:1px solid #f0f2f0;background:#fff;font-size:15px;text-align:left;cursor:pointer}.suggest-item:last-child{border-bottom:0}.suggest-item:hover{background:#f3f8f4}.suggest-item b{white-space:nowrap;color:var(--green)}.suggest-item mark{background:#fff2b8;padding:0}.suggest-empty{padding:12px 16px;color:#7a847c;font-size:14px}
 .product{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,.06);display:flex;flex-direction:column}
 .imgbox{aspect-ratio:4/3;background:#e9eee9;position:relative;overflow:hidden}
 .imgbox img{width:100%;height:100%;object-fit:cover;display:block}
@@ -117,7 +120,7 @@ footer{background:#203028;color:#dbe4df;text-align:center;padding:30px 20px;font
 <header><div class="header-in"><div class="logo">해남공구마켓<small>해남 농수산물 산지 공동구매</small></div><a class="header-link" href="#products">진행 공구 보기</a></div></header>
 <section class="hero"><div class="hero-in"><div><div class="eyebrow">HAENAM GROUP BUY MARKET</div><h1>해남의 좋은 상품을<br>함께 더 합리적으로</h1><p>쌀·고구마·배추 등 해남에서 준비한 농수산물 공동구매를 한곳에서 확인하세요.<br>남은 기간과 현재 주문 현황도 실시간으로 확인할 수 있습니다.</p></div><div class="hero-box"><strong>🌾 지금 진행 중인 공구</strong><span>관리자에서 상품을 등록하면 이 화면에 자동으로 추가됩니다. 상품별 공구기간·주문현황·결제계좌도 각각 관리됩니다.</span></div></div></section>
 <div class="stats"><div class="stats-in"><div class="stat"><span>진행 중 공구</span><b id="activeCount">-</b></div><div class="stat"><span>전체 주문</span><b id="totalOrders">-</b></div><div class="stat"><span>등록 상품</span><b id="totalProducts">-</b></div></div></div>
-<main id="products"><div class="section-head"><div><div class="eyebrow">NOW OPEN</div><h2>진행 중인 공동구매</h2></div><p>상품을 눌러 주문과 결제계좌를 확인하세요.</p></div><div id="productGrid" class="grid"><div class="loading">공구상품을 불러오는 중입니다.</div></div>
+<main id="products"><div class="section-head"><div><div class="eyebrow">NOW OPEN</div><h2>진행 중인 공동구매</h2></div><p>상품을 눌러 주문과 결제계좌를 확인하세요.</p></div><div class="search-wrap"><input id="productSearch" type="search" autocomplete="off" placeholder="🔍 상품 찾기 (예: 키위, ㄱㄷ)" oninput="onProductSearch()" onfocus="onProductSearch()"><div id="searchSuggest" class="search-suggest"></div></div><div id="productGrid" class="grid"><div class="loading">공구상품을 불러오는 중입니다.</div></div>
 
 <section class="partner-join" id="partner-join">
  <h3>🤝 해남공구마켓과 함께하세요!</h3>
@@ -509,14 +512,61 @@ async function loadProducts(){
   if(!shownFromCache) document.getElementById('productGrid').innerHTML='<div class="empty">상품을 불러오지 못했습니다.<br>'+e(err.message)+'</div>';
  }
 }
+// ---------- 상품 검색 (앞글자·포함·초성 검색) ----------
+const CHO=['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+function choOf(str){return Array.from(s(str)).map(c=>{const k=c.charCodeAt(0)-0xAC00;return k>=0&&k<11172?CHO[Math.floor(k/588)]:c}).join('')}
+function normQ(str){return s(str).toLowerCase().replace(/\s+/g,'')}
+function searchTextOf(p){return [groupOf(p)||p.productName,p.productName,productMeta(p,'cardDesc'),s(p.description)].join(' ')}
+function matchScore(p,q){
+ const nq=normQ(q); if(!nq) return 1;
+ const name=normQ(groupOf(p)||p.productName), all=normQ(searchTextOf(p));
+ const isCho=/^[ㄱ-ㅎ]+$/.test(nq);
+ if(isCho){ if(choOf(name).startsWith(nq)) return 3; if(choOf(name).includes(nq)) return 2; if(choOf(all).includes(nq)) return 1; return 0; }
+ if(name.startsWith(nq)) return 3; if(name.includes(nq)) return 2; if(all.includes(nq)) return 1;
+ // 입력 중인 마지막 글자(받침 전)도 잡기: '고' → '골·곡·곤…'
+ const last=nq.slice(-1), head=nq.slice(0,-1), k=last.charCodeAt(0)-0xAC00;
+ if(k>=0&&k<11172&&k%28===0){
+  const from=String.fromCharCode(0xAC00+k), to=String.fromCharCode(0xAC00+k+27);
+  const esc=head.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), re=new RegExp(esc+'['+from+'-'+to+']');
+  const m=name.match(re); if(m) return m.index===0?3:2;
+  if(re.test(all)) return 1;
+ }
+ return 0;
+}
+function displayOrderOf(p){const n=Number(productMeta(p,'displayOrder'));return n>0?n:9999}
+function hl(text,q){
+ const t=s(text), nq=s(q).trim(); if(!nq||/^[ㄱ-ㅎ]+$/.test(nq)) return e(t);
+ const i=t.toLowerCase().indexOf(nq.toLowerCase()); if(i<0) return e(t);
+ return e(t.slice(0,i))+'<mark>'+e(t.slice(i,i+nq.length))+'</mark>'+e(t.slice(i+nq.length));
+}
+let searchQuery='';
+function onProductSearch(){
+ const input=document.getElementById('productSearch'), box=document.getElementById('searchSuggest');
+ searchQuery=input.value; renderProducts();
+ const q=searchQuery.trim();
+ if(!q){box.classList.remove('open');box.innerHTML='';return}
+ const list=products.filter(p=>s(leaderOf(p).productCode)===s(p.productCode)&&stateOf(p)!=='종료')
+  .map(p=>({p,sc:matchScore(p,q)})).filter(x=>x.sc>0).sort((a,b)=>b.sc-a.sc||displayOrderOf(a.p)-displayOrderOf(b.p)).slice(0,6);
+ box.innerHTML=list.length?list.map(({p})=>`<button type="button" class="suggest-item" onmousedown="event.preventDefault();pickSuggest('${e(p.productCode)}')"><span>${hl(groupOf(p)||p.productName,q)}</span><b>${stateOf(p)==='판매중'?money(p.salePrice)+(siblingsOf(p).length>1?'~':''):e(stateOf(p))}</b></button>`).join(''):'<div class="suggest-empty">찾는 상품이 없어요. 아래 "상품 문의하기"로 요청해 주세요.</div>';
+ box.classList.add('open');
+}
+function pickSuggest(code){
+ const box=document.getElementById('searchSuggest'); box.classList.remove('open');
+ const p=products.find(x=>s(x.productCode)===s(code)); if(!p) return;
+ if(stateOf(p)==='판매중') openProduct(code);
+ else { const el=document.querySelector(`[data-card="${CSS.escape(code)}"]`); if(el) el.scrollIntoView({behavior:'smooth',block:'center'}); }
+}
+document.addEventListener('click',ev=>{if(!ev.target.closest('.search-wrap')){const b=document.getElementById('searchSuggest');if(b)b.classList.remove('open')}});
 function renderProducts(){
  const grid=document.getElementById('productGrid');
  document.getElementById('totalProducts').textContent=products.length+'개';
  document.getElementById('activeCount').textContent=products.filter(p=>stateOf(p)==='판매중').length+'개';
  document.getElementById('totalOrders').textContent=products.reduce((a,p)=>a+Number(p.orderCount||0),0)+'건';
  if(!products.length){grid.innerHTML='<div class="empty">현재 등록된 공구상품이 없습니다.</div>';return}
- const sorted=[...products].sort((a,b)=>{const rank={'판매중':0,'준비중':1,'종료':2};return rank[stateOf(a)]-rank[stateOf(b)]})
-   .filter(p=>s(leaderOf(p).productCode)===s(p.productCode)); // 옵션 묶음은 대표 상품 카드 1개만
+ const sorted=[...products].sort((a,b)=>{const rank={'판매중':0,'준비중':1,'종료':2};return (rank[stateOf(a)]-rank[stateOf(b)])||(displayOrderOf(leaderOf(a))-displayOrderOf(leaderOf(b)))})
+   .filter(p=>s(leaderOf(p).productCode)===s(p.productCode)) // 옵션 묶음은 대표 상품 카드 1개만
+   .filter(p=>!searchQuery.trim()||matchScore(p,searchQuery)>0);
+ if(!sorted.length){grid.innerHTML='<div class="empty">"'+e(searchQuery)+'"에 맞는 상품이 없어요.<br>다른 글자로 찾아보세요.</div>';return}
  grid.innerHTML=sorted.map(p=>{
    const sib=siblingsOf(p);
    const st=stateOf(p),target=Number(p.targetOrders||0),count=sib.reduce((a,x)=>a+Number(x.orderCount||0),0);
@@ -544,10 +594,10 @@ function renderProducts(){
      :st==='준비중'
        ?`<button class="btn closed" disabled>공구 준비중</button>`
        :requestBox;
-   return `<article class="product">
+   return `<article class="product" data-card="${e(p.productCode)}">
     <div class="imgbox"${st==='판매중'?` onclick="openProduct('${e(p.productCode)}')" style="cursor:pointer"`:''}>${img?`<img src="${e(img)}" alt="${e(p.productName)}">`:'<div class="noimg">🌾</div>'}<span class="status ${st==='종료'?'end':st==='준비중'?'ready':''}">${st}</span></div>
     <div class="product-body"><h3>${e(groupOf(p)||p.productName)}</h3><div class="desc">${e(cardDescOf(p))}</div>
-    <div class="price-row"><div class="price">${money(p.salePrice)}${sib.length>1?'~':''}</div>${priceNoteHtml(p)}</div>${optionPricesHtml(p)}${Number(p.normalPrice)>Number(p.salePrice)?`<div class="normal">${money(p.normalPrice)}</div>`:''}
+    <div class="price-row"><div class="price">${Number(p.salePrice)>0?money(p.salePrice)+(sib.length>1?'~':''):'<span style="font-size:20px;color:#7a847c">가격 준비중</span>'}</div>${Number(p.salePrice)>0?priceNoteHtml(p):''}</div>${optionPricesHtml(p)}${Number(p.normalPrice)>Number(p.salePrice)?`<div class="normal">${money(p.normalPrice)}</div>`:''}
     <div class="timer" data-code="${e(p.productCode)}">${remainText(p)}</div>
     <div class="progress-line"><span>현재 <b>${count}건</b></span><span>목표 ${target||'-'}건</span></div>
     <div class="progress"><div class="bar" style="width:${percent}%"></div></div>${btn}</div></article>`;
@@ -558,7 +608,7 @@ function tick(){
  if(currentProduct)document.getElementById('modalTimer').textContent=remainText(currentProduct);
 }
 // 관리자 저장 스크립트가 '글' 블록만 남기므로 특수 블록은 [[표시]]를 붙인 글로 저장됩니다.
-const BLOCK_MARKERS={cardDesc:'[[카드설명]]',priceNote:'[[가격옆문구]]',fold:'[[접기]]',group:'[[묶음]]',optionLabel:'[[옵션명]]'};
+const BLOCK_MARKERS={cardDesc:'[[카드설명]]',priceNote:'[[가격옆문구]]',fold:'[[접기]]',group:'[[묶음]]',optionLabel:'[[옵션명]]',displayOrder:'[[순서]]'};
 function decodeDetailBlock(b){
  if(b&&s(b.type).toLowerCase()==='text'){
   const v=s(b.value||b.text||b.content);
