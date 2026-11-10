@@ -537,7 +537,7 @@ function renderProducts(){
        ?`<button class="btn closed" disabled>공구 준비중</button>`
        :requestBox;
    return `<article class="product">
-    <div class="imgbox">${img?`<img src="${e(img)}" alt="${e(p.productName)}">`:'<div class="noimg">🌾</div>'}<span class="status ${st==='종료'?'end':st==='준비중'?'ready':''}">${st}</span></div>
+    <div class="imgbox"${st==='판매중'?` onclick="openProduct('${e(p.productCode)}')" style="cursor:pointer"`:''}>${img?`<img src="${e(img)}" alt="${e(p.productName)}">`:'<div class="noimg">🌾</div>'}<span class="status ${st==='종료'?'end':st==='준비중'?'ready':''}">${st}</span></div>
     <div class="product-body"><h3>${e(p.productName)}</h3><div class="desc">${e(p.description||'해남에서 준비한 공동구매 상품입니다.')}</div>
     <div class="price">${money(p.salePrice)}</div>${Number(p.normalPrice)>Number(p.salePrice)?`<div class="normal">${money(p.normalPrice)}</div>`:''}
     <div class="timer" data-code="${e(p.productCode)}">${remainText(p)}</div>
