@@ -552,7 +552,17 @@ function tick(){
  document.querySelectorAll('.timer[data-code]').forEach(el=>{const p=products.find(x=>s(x.productCode)===el.dataset.code);if(p)el.textContent=remainText(p)});
  if(currentProduct)document.getElementById('modalTimer').textContent=remainText(currentProduct);
 }
-function parseDetailBlocks(p){
+// 관리자 저장 스크립트가 '글' 블록만 남기므로 특수 블록은 [[표시]]를 붙인 글로 저장됩니다.
+const BLOCK_MARKERS={cardDesc:'[[카드설명]]',priceNote:'[[가격옆문구]]',fold:'[[접기]]'};
+function decodeDetailBlock(b){
+ if(b&&s(b.type).toLowerCase()==='text'){
+  const v=s(b.value||b.text||b.content);
+  for(const [type,mk] of Object.entries(BLOCK_MARKERS)) if(v.startsWith(mk)) return {type,value:v.slice(mk.length).trim()};
+ }
+ return b;
+}
+function parseDetailBlocks(p){ return parseDetailBlocksRaw(p).map(decodeDetailBlock); }
+function parseDetailBlocksRaw(p){
  let raw=p.detailBlocks;
  if(raw==null||raw==='') raw=p.detailPage;
  if(raw==null||raw==='') raw=p.detailContent;

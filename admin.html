@@ -900,6 +900,19 @@ async function apiPost(data){
 /* ---------- 상품 카드 설명 · 가격 옆 문구 ---------- */
 // 앱스스크립트가 상품설명 칸을 저장하지 못해서, 상세페이지 블록(저장이 되는 곳)에 함께 담아 저장합니다.
 const PRODUCT_META_TYPES=['cardDesc','priceNote'];
+// 저장 스크립트가 이미지·글·강조문구 블록만 남기므로, 특수 블록은 '글' 블록 앞에 표시를 붙여 저장합니다.
+const BLOCK_MARKERS={cardDesc:'[[카드설명]]',priceNote:'[[가격옆문구]]',fold:'[[접기]]'};
+function decodeBlock(b){
+  if(b&&b.type==='text'){
+    const v=String(b.value||'');
+    for(const [type,mk] of Object.entries(BLOCK_MARKERS)) if(v.startsWith(mk)) return {...b,type,value:v.slice(mk.length).trim(),imageUrl:''};
+  }
+  return b;
+}
+function encodeBlock(b){
+  if(BLOCK_MARKERS[b.type]) return {type:'text',value:BLOCK_MARKERS[b.type]+(b.value||''),imageUrl:''};
+  return {type:b.type,value:b.value||'',imageUrl:b.imageUrl||''};
+}
 function updateMetaCount(){
   const d=$('productDescription'), n=$('priceNote');
   if(d&&$('productDescriptionCount')) $('productDescriptionCount').textContent=d.value.length+'/40자';
@@ -911,9 +924,7 @@ function detailBlocksForSave(){
   const note=$('priceNote').value.trim().slice(0,12);
   if(desc) meta.push({type:'cardDesc',value:desc,imageUrl:''});
   if(note) meta.push({type:'priceNote',value:note,imageUrl:''});
-  return meta.concat(productDetailBlocks
-    .filter(b=>!PRODUCT_META_TYPES.includes(b.type))
-    .map(b=>({type:b.type,value:b.value||'',imageUrl:b.imageUrl||''})));
+  return meta.concat(productDetailBlocks.filter(b=>!PRODUCT_META_TYPES.includes(b.type))).map(encodeBlock);
 }
 
 /* ---------- 상품별 상세페이지 ---------- */
@@ -1060,18 +1071,18 @@ async function editProduct(code){
     $('productName').value=p.productName||p.name||'';
     $('salePrice').value=p.salePrice||p.price||'';
     $('normalPrice').value=p.normalPrice||'';
-    $('startDate').value=toLocalInput(p.startDate);
-    $('endDate').value=toLocalInput(p.endDate);
-    $('targetCount').value=p.targetCount||'';
+    $('startDate').value=toLocalInput(p.startDate||p.startAt);
+    $('endDate').value=toLocalInput(p.endDate||p.endAt);
+    $('targetCount').value=p.targetCount||p.targetOrders||'';
     $('paymentMethod').value=p.paymentMethod||'계좌이체';
     $('productImage').value=p.productImage||p.image||'';
     $('productDescription').value=p.productDescription||p.description||'';
     $('priceNote').value='';
-    $('productLink').value=p.productLink||p.link||'';
+    $('productLink').value=p.productLink||p.link||p.linkUrl||'';
     $('bankName').value=p.bankName||'';
     $('accountNumber').value=p.accountNumber||'';
     $('accountHolder').value=p.accountHolder||'';
-    $('paymentGuide').value=p.paymentGuide||'';
+    $('paymentGuide').value=p.paymentGuide||p.paymentMessage||'';
     $('saleStatus').value=p.saleStatus||p.status||'판매중';
     $('deliveryDateEnabled').value=p.deliveryDateEnabled||'사용안함';
     $('deliveryDates').value=Array.isArray(p.deliveryDates) ? p.deliveryDates.join(', ') : (p.deliveryDates||'');
@@ -1085,6 +1096,7 @@ async function editProduct(code){
   }
 }
     // 카드 설명·가격 옆 문구는 상세페이지 블록에 함께 저장되지만, 편집은 위 입력칸에서 합니다.
+    productDetailBlocks=productDetailBlocks.map(decodeBlock);
     productDetailBlocks.forEach(b=>{
       if(b.type==='cardDesc'&&b.value) $('productDescription').value=b.value;
       if(b.type==='priceNote') $('priceNote').value=b.value||'';
@@ -1111,6 +1123,7 @@ async function saveDetailPage(){
       normalPrice:$('normalPrice').value,
       productImage:$('productImage').value.trim(),
       productDescription:$('productDescription').value.trim(),
+      description:$('productDescription').value.trim(),
       startDate:$('startDate').value,
       endDate:$('endDate').value,
       targetCount:$('targetCount').value,
@@ -1147,6 +1160,7 @@ async function saveProduct(){
       normalPrice:$('normalPrice').value,
       productImage:$('productImage').value.trim(),
       productDescription:$('productDescription').value.trim(),
+      description:$('productDescription').value.trim(),
       startDate:$('startDate').value,
       endDate:$('endDate').value,
       targetCount:$('targetCount').value,
