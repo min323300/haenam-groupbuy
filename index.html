@@ -635,8 +635,8 @@ function selectOption(code){
  openProduct(code);
  if(dd&&keep&&[...dd.options].some(o=>o.value===keep)) dd.value=keep;
 }
-function cardDescOf(p){return productMeta(p,'cardDesc')||s(p.description).trim()||'해남에서 준비한 공동구매 상품입니다.'}
-function priceNoteHtml(p){const n=productMeta(p,'priceNote');return n?`<span class="price-note">${e(n)}</span>`:''}
+function cardDescOf(p){return productMeta(p,'cardDesc')||siblingsOf(p).map(x=>productMeta(x,'cardDesc')).find(Boolean)||s(p.description).trim()||'해남에서 준비한 공동구매 상품입니다.'}
+function priceNoteHtml(p){const n=productMeta(p,'priceNote')||(typeof siblingsOf==='function'?siblingsOf(p).map(x=>productMeta(x,'priceNote')).find(Boolean):'');return n?`<span class="price-note">${e(n)}</span>`:''}
 function renderDetailBlocks(p){
  const box=document.getElementById('detailBlocks');
  const blocks=parseDetailBlocks(p);
@@ -676,12 +676,12 @@ function openProduct(code){
  modalTitle.textContent='공동구매 주문';
  const lead=leaderOf(p);
  modalProductName.textContent=groupOf(p)||p.productName||'상품';
- modalDescription.textContent=productMeta(p,'cardDesc')||productMeta(lead,'cardDesc')||p.description||'';
+ modalDescription.textContent=productMeta(p,'cardDesc')||siblingsOf(p).map(x=>productMeta(x,'cardDesc')).find(Boolean)||p.description||'';
  renderOptionBox(p);
  modalPrice.innerHTML=`<span class="price-row">${money(p.salePrice)}${priceNoteHtml(p)}</span>`;
  modalTimer.textContent=remainText(p);
  const img=imageUrl(p.image||lead.image); modalImage.style.display=img?'block':'none'; if(img)modalImage.src=img;
- try { renderDetailBlocks(hasContentBlocks(p)?p:lead); } catch(e) { console.error('상세페이지 오류:', e); }
+ try { renderDetailBlocks(hasContentBlocks(p)?p:(siblingsOf(p).find(hasContentBlocks)||lead)); } catch(e) { console.error('상세페이지 오류:', e); }
  let pay='<b>결제 안내</b><br>';
  if(p.paymentMethod)pay+='결제방식: '+e(p.paymentMethod)+'<br>';
  if(p.bankName||p.accountNumber){
