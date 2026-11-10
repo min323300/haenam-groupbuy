@@ -115,6 +115,7 @@ footer{background:#203028;color:#dbe4df;text-align:center;padding:30px 20px;font
 .partner-modal-card{max-width:480px}.partner-modal-card .notice{margin-top:12px;padding:11px 13px;border-radius:10px;background:#eef6f0;color:var(--green);font-size:14px}.partner-modal-card .notice:empty{display:none}.partner-modal-card .notice.error{background:#fdecec;color:#c62828}.partner-hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}.partner-done{text-align:center;padding:18px 6px 6px}.partner-done .check{width:56px;height:56px;border-radius:50%;background:#e8f5ec;color:var(--green);font-size:30px;font-weight:900;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}.partner-done strong{display:block;font-size:19px;margin-bottom:8px}.partner-done p{color:#5f6b61;margin:0 0 18px;line-height:1.7}.partner-privacy-box{font-size:12px;color:#6c756d;line-height:1.7;background:#f6f7f6;padding:12px;border-radius:10px;margin-top:14px}
 @media(max-width:580px){.partner-join{padding:22px 16px}.partner-join h3{font-size:19px}}
 </style>
+<link rel="preconnect" href="https://drive.google.com"><link rel="preconnect" href="https://lh3.googleusercontent.com" crossorigin>
 </head>
 <body>
 <header><div class="header-in"><div class="logo">해남공구마켓<small>해남 농수산물 산지 공동구매</small></div><a class="header-link" href="#products">진행 공구 보기</a></div></header>
@@ -435,6 +436,11 @@ function reviewBackdropClose(ev){if(ev.target.id==='reviewModal')closeReviewModa
 function s(v){return String(v==null?'':v)}
 function e(v){return s(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
 function money(v){return Number(v||0).toLocaleString('ko-KR')+'원'}
+// 화면 크기에 맞는 사진 크기 (휴대폰은 작게 받아서 빨리 뜨게)
+function detailImgSize(){
+ const w=Math.min(window.innerWidth||720,720), dpr=Math.min(window.devicePixelRatio||1,2);
+ return 'w'+Math.min(1600,Math.max(600,Math.ceil(w*dpr/100)*100));
+}
 function imageUrl(url, size){
   let u = String(url || '').trim();
   if(!u) return '';
@@ -636,9 +642,9 @@ function detailBlockHtml(p,b){
  const type=s(b.type||b.kind).toLowerCase();
  if(type==='image'){
   const raw = b.imageUrl || b.url || b.src || b.value || b.image || '';
-  const src = imageUrl(raw);
+  const src = imageUrl(raw, detailImgSize());
   return src
-    ? `<div class="detail-block image"><img src="${e(src)}" alt="${e(p.productName)} 상세 이미지" loading="lazy"
+    ? `<div class="detail-block image"><img src="${e(src)}" alt="${e(p.productName)} 상세 이미지" loading="lazy" decoding="async"
          style="width:100%;height:auto;display:block;border-radius:12px;margin:12px 0;"></div>`
     : '';
  }
@@ -730,7 +736,7 @@ function openProduct(code){
  renderOptionBox(p);
  modalPrice.innerHTML=`<span class="price-row">${money(p.salePrice)}${priceNoteHtml(p)}</span>`;
  modalTimer.textContent=remainText(p);
- const img=imageUrl(p.image||lead.image); modalImage.style.display=img?'block':'none'; if(img)modalImage.src=img;
+ const img=imageUrl(p.image||lead.image, detailImgSize()); modalImage.style.display=img?'block':'none'; if(img)modalImage.src=img;
  try { renderDetailBlocks(hasContentBlocks(p)?p:(siblingsOf(p).find(hasContentBlocks)||lead)); } catch(e) { console.error('상세페이지 오류:', e); }
  let pay='<b>결제 안내</b><br>';
  if(p.paymentMethod)pay+='결제방식: '+e(p.paymentMethod)+'<br>';
