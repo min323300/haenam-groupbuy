@@ -193,6 +193,7 @@ async function saveSupplierApplication(btn){
       <button class="secondary" type="button" onclick="addProductDetailBlock('image')">+ 이미지 추가</button>
       <button class="secondary" type="button" onclick="addProductDetailBlock('text')">+ 글 추가</button>
       <button class="secondary" type="button" onclick="addProductDetailBlock('price')">+ 강조문구 추가</button>
+      <button class="secondary" type="button" onclick="addProductDetailBlock('fold')">+ 접기 구분선</button>
     </div>
     <div id="productDetailBuilder" class="detail-builder" style="margin-top:10px"></div>
     <div class="toolbar" style="margin-top:14px">
@@ -918,7 +919,7 @@ function renderProductDetailBuilder(){
     return;
   }
   box.innerHTML=productDetailBlocks.map((b,i)=>{
-    const label=b.type==='image'?'이미지':b.type==='price'?'강조문구':'글';
+    const label=b.type==='image'?'이미지':b.type==='price'?'강조문구':b.type==='fold'?'접기 구분선':'글';
     let body='';
     if(b.type==='image'){
       const imageSrc=normalizeDriveImageUrl(b.imageUrl||b.value||'');
@@ -941,6 +942,9 @@ function renderProductDetailBuilder(){
               oninput="updateProductBlock(${i},'imageUrl',this.value);updateProductBlock(${i},'value',this.value)">
           </details>
         </div>`;
+    }else if(b.type==='fold'){
+      body=`<input placeholder="접힌 버튼 글자 (비우면: 상품 자세히 보기)" value="${esc(b.value)}" oninput="updateProductBlock(${i},'value',this.value)">
+        <div style="margin-top:6px;font-size:12px;color:#68736b">이 구분선 <b>아래</b>에 있는 블록들은 고객 화면에서 접혀 있고, 버튼을 눌러야 펼쳐집니다. 한 상품에 하나만 넣어 주세요.</div>`;
     }else if(b.type==='price'){
       body=`<textarea placeholder="예: 공동구매 특가 59,900원 / 무료배송" oninput="updateProductBlock(${i},'value',this.value)">${esc(b.value)}</textarea>`;
     }else{
