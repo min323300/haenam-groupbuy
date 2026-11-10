@@ -175,7 +175,8 @@ async function saveSupplierApplication(btn){
       <div class="field"><label>목표 주문건수</label><input id="targetCount" type="number" min="0"></div>
       <div class="field"><label>결제방식</label><select id="paymentMethod"><option>계좌이체</option><option>현장결제</option><option>기타</option></select></div>
       <div class="field full"><label>대표이미지 주소</label><input id="productImage" placeholder="대표 이미지 URL"></div>
-      <div class="field full"><label>상품 설명</label><textarea id="productDescription" placeholder="상품 카드와 상세페이지 상단에 사용할 설명"></textarea></div>
+      <div class="field full"><label>상품 한 줄 설명 <span class="muted" id="productDescriptionCount">0/40자</span></label><textarea id="productDescription" maxlength="40" rows="2" placeholder="예: 신안 천일염으로 절인 해남 절임배추 20kg · 원하는 도착일 선택" oninput="updateMetaCount()"></textarea><span class="muted">상품 카드와 주문창의 상품명 바로 아래에 보입니다. 40자 이내(휴대폰에서 2줄)로 써 주세요.</span></div>
+      <div class="field full"><label>가격 옆 문구 <span class="muted" id="priceNoteCount">0/12자</span></label><input id="priceNote" maxlength="12" placeholder="예: 택배비 포함" oninput="updateMetaCount()"><span class="muted">가격 바로 옆에 작은 표시로 보입니다. 12자 이내. 비워 두면 보이지 않습니다.</span></div>
       <div class="field full"><label>공구 연결 링크</label><input id="productLink" placeholder="예: https://.../product.html?id=..."></div>
     </div>
 
@@ -896,6 +897,25 @@ async function apiPost(data){
   return r.json();
 }
 
+/* ---------- 상품 카드 설명 · 가격 옆 문구 ---------- */
+// 앱스스크립트가 상품설명 칸을 저장하지 못해서, 상세페이지 블록(저장이 되는 곳)에 함께 담아 저장합니다.
+const PRODUCT_META_TYPES=['cardDesc','priceNote'];
+function updateMetaCount(){
+  const d=$('productDescription'), n=$('priceNote');
+  if(d&&$('productDescriptionCount')) $('productDescriptionCount').textContent=d.value.length+'/40자';
+  if(n&&$('priceNoteCount')) $('priceNoteCount').textContent=n.value.length+'/12자';
+}
+function detailBlocksForSave(){
+  const meta=[];
+  const desc=$('productDescription').value.trim().slice(0,40);
+  const note=$('priceNote').value.trim().slice(0,12);
+  if(desc) meta.push({type:'cardDesc',value:desc,imageUrl:''});
+  if(note) meta.push({type:'priceNote',value:note,imageUrl:''});
+  return meta.concat(productDetailBlocks
+    .filter(b=>!PRODUCT_META_TYPES.includes(b.type))
+    .map(b=>({type:b.type,value:b.value||'',imageUrl:b.imageUrl||''})));
+}
+
 /* ---------- 상품별 상세페이지 ---------- */
 function addProductDetailBlock(type){
   productDetailBlocks.push({id:blockId(),type,value:'',imageUrl:''});
@@ -999,7 +1019,7 @@ $('productImageFile').addEventListener('change', async e=>{
 
 /* ---------- 상품 ---------- */
 function newProduct(){
-  ['productCode','productName','salePrice','normalPrice','startDate','endDate','targetCount','productImage','productDescription','productLink','bankName','accountNumber','accountHolder','paymentGuide'].forEach(id=>$(id).value='');
+  ['productCode','productName','salePrice','normalPrice','startDate','endDate','targetCount','productImage','productDescription','priceNote','productLink','bankName','accountNumber','accountHolder','paymentGuide'].forEach(id=>$(id).value='');updateMetaCount();
 
   $('deliveryDateEnabled').value='사용안함';
   $('deliveryDates').value='';
@@ -1046,6 +1066,7 @@ async function editProduct(code){
     $('paymentMethod').value=p.paymentMethod||'계좌이체';
     $('productImage').value=p.productImage||p.image||'';
     $('productDescription').value=p.productDescription||p.description||'';
+    $('priceNote').value='';
     $('productLink').value=p.productLink||p.link||'';
     $('bankName').value=p.bankName||'';
     $('accountNumber').value=p.accountNumber||'';
@@ -1063,6 +1084,13 @@ async function editProduct(code){
     productDetailBlocks = [];
   }
 }
+    // 카드 설명·가격 옆 문구는 상세페이지 블록에 함께 저장되지만, 편집은 위 입력칸에서 합니다.
+    productDetailBlocks.forEach(b=>{
+      if(b.type==='cardDesc'&&b.value) $('productDescription').value=b.value;
+      if(b.type==='priceNote') $('priceNote').value=b.value||'';
+    });
+    productDetailBlocks=productDetailBlocks.filter(b=>!PRODUCT_META_TYPES.includes(b.type));
+    updateMetaCount();
     productDetailBlocks.forEach(b=>{if(!b.id)b.id=blockId()});
     renderProductDetailBuilder();
     window.scrollTo({top:0,behavior:'smooth'});
@@ -1095,11 +1123,7 @@ async function saveDetailPage(){
       saleStatus:$('saleStatus').value,
       deliveryDateEnabled:$('deliveryDateEnabled').value,
       deliveryDates:$('deliveryDates').value.split(',').map(v=>v.trim()).filter(Boolean),
-      detailBlocks:productDetailBlocks.map(b=>({
-        type:b.type,
-        value:b.value||'',
-        imageUrl:b.imageUrl||''
-      }))
+      detailBlocks:detailBlocksForSave()
     };
 
     showMessage('productMessage','상세페이지 전체를 저장하고 있습니다...');
@@ -1135,7 +1159,7 @@ async function saveProduct(){
       saleStatus:$('saleStatus').value,
       deliveryDateEnabled:$('deliveryDateEnabled').value,
       deliveryDates:$('deliveryDates').value.split(',').map(v=>v.trim()).filter(Boolean),
-      detailBlocks:productDetailBlocks.map(b=>({type:b.type,value:b.value||'',imageUrl:b.imageUrl||''}))
+      detailBlocks:detailBlocksForSave()
     };
     showMessage('productMessage','상품과 상세페이지를 저장하고 있습니다...');
     console.log('상품저장 payload=', payload);
