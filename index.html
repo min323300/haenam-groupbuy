@@ -48,6 +48,8 @@ main{max-width:1180px;margin:45px auto;padding:0 20px 70px}
 .product h3{font-size:21px;margin:0 0 8px} .desc{color:#68736c;font-size:14px;line-height:1.55;min-height:44px}
 .product .desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .price-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.price-row .price{margin:0}
+.option-prices{display:flex;flex-direction:column;gap:2px;margin:6px 0 2px;font-size:13px;color:#4a564e}.option-prices b{color:#1d2a22}
+#optionBox{margin:14px 0 6px}.option-title{font-weight:800;margin-bottom:8px}.option-btn{display:flex;justify-content:space-between;align-items:center;width:100%;padding:13px 14px;margin:0 0 8px;border:2px solid #d8ddd8;border-radius:12px;background:#fff;font-size:15px;cursor:pointer;text-align:left}.option-btn.on{border-color:var(--green);background:#f1f8f3}.option-btn span{flex:1;padding-right:10px}.option-btn b{font-size:16px;white-space:nowrap}
 .price-note{display:inline-block;padding:4px 10px;border-radius:999px;background:#e8f5ec;color:var(--green);font-size:13px;font-weight:800;line-height:1.4;white-space:nowrap}
 .price{font-size:27px;font-weight:900;margin:13px 0 5px} .normal{font-size:13px;color:#999;text-decoration:line-through}
 .timer{margin:14px 0 8px;background:#f5f8f5;border-radius:10px;padding:11px;font-weight:800;color:#b45618}
@@ -163,6 +165,7 @@ footer{background:#203028;color:#dbe4df;text-align:center;padding:30px 20px;font
   <div class="modal-body">
    <img id="modalImage" class="detail-img" alt="상품 이미지" style="display:none">
    <h2 id="modalProductName"></h2><div id="modalDescription" class="desc"></div>
+   <div id="optionBox" style="display:none"></div>
    <div class="price" id="modalPrice"></div><div id="modalTimer" class="timer"></div>
    <div id="detailBlocks" class="detail-blocks"></div>
    <div id="paymentBox" class="payment"></div>
@@ -512,9 +515,11 @@ function renderProducts(){
  document.getElementById('activeCount').textContent=products.filter(p=>stateOf(p)==='판매중').length+'개';
  document.getElementById('totalOrders').textContent=products.reduce((a,p)=>a+Number(p.orderCount||0),0)+'건';
  if(!products.length){grid.innerHTML='<div class="empty">현재 등록된 공구상품이 없습니다.</div>';return}
- const sorted=[...products].sort((a,b)=>{const rank={'판매중':0,'준비중':1,'종료':2};return rank[stateOf(a)]-rank[stateOf(b)]});
+ const sorted=[...products].sort((a,b)=>{const rank={'판매중':0,'준비중':1,'종료':2};return rank[stateOf(a)]-rank[stateOf(b)]})
+   .filter(p=>s(leaderOf(p).productCode)===s(p.productCode)); // 옵션 묶음은 대표 상품 카드 1개만
  grid.innerHTML=sorted.map(p=>{
-   const st=stateOf(p),target=Number(p.targetOrders||0),count=Number(p.orderCount||0);
+   const sib=siblingsOf(p);
+   const st=stateOf(p),target=Number(p.targetOrders||0),count=sib.reduce((a,x)=>a+Number(x.orderCount||0),0);
    const percent=target>0?Math.min(100,Math.round(count/target*100)):0;
    const img=imageUrl(p.image,'w600'); // 카드용 작은 사진
    const requestBox=`<div class="customer-request-box">
@@ -541,8 +546,8 @@ function renderProducts(){
        :requestBox;
    return `<article class="product">
     <div class="imgbox"${st==='판매중'?` onclick="openProduct('${e(p.productCode)}')" style="cursor:pointer"`:''}>${img?`<img src="${e(img)}" alt="${e(p.productName)}">`:'<div class="noimg">🌾</div>'}<span class="status ${st==='종료'?'end':st==='준비중'?'ready':''}">${st}</span></div>
-    <div class="product-body"><h3>${e(p.productName)}</h3><div class="desc">${e(cardDescOf(p))}</div>
-    <div class="price-row"><div class="price">${money(p.salePrice)}</div>${priceNoteHtml(p)}</div>${Number(p.normalPrice)>Number(p.salePrice)?`<div class="normal">${money(p.normalPrice)}</div>`:''}
+    <div class="product-body"><h3>${e(groupOf(p)||p.productName)}</h3><div class="desc">${e(cardDescOf(p))}</div>
+    <div class="price-row"><div class="price">${money(p.salePrice)}</div>${priceNoteHtml(p)}</div>${optionPricesHtml(p)}${Number(p.normalPrice)>Number(p.salePrice)?`<div class="normal">${money(p.normalPrice)}</div>`:''}
     <div class="timer" data-code="${e(p.productCode)}">${remainText(p)}</div>
     <div class="progress-line"><span>현재 <b>${count}건</b></span><span>목표 ${target||'-'}건</span></div>
     <div class="progress"><div class="bar" style="width:${percent}%"></div></div>${btn}</div></article>`;
@@ -553,7 +558,7 @@ function tick(){
  if(currentProduct)document.getElementById('modalTimer').textContent=remainText(currentProduct);
 }
 // 관리자 저장 스크립트가 '글' 블록만 남기므로 특수 블록은 [[표시]]를 붙인 글로 저장됩니다.
-const BLOCK_MARKERS={cardDesc:'[[카드설명]]',priceNote:'[[가격옆문구]]',fold:'[[접기]]'};
+const BLOCK_MARKERS={cardDesc:'[[카드설명]]',priceNote:'[[가격옆문구]]',fold:'[[접기]]',group:'[[묶음]]',optionLabel:'[[옵션명]]'};
 function decodeDetailBlock(b){
  if(b&&s(b.type).toLowerCase()==='text'){
   const v=s(b.value||b.text||b.content);
@@ -602,6 +607,34 @@ function detailBlockHtml(p,b){
 function productMeta(p,type){
  try{const b=parseDetailBlocks(p).find(x=>s(x.type).toLowerCase()===type.toLowerCase());return b?s(b.value).trim():''}catch(_){return ''}
 }
+// 옵션 묶음: 같은 묶음 이름의 상품을 상품 1개 + 옵션 선택으로 보여 줍니다 (가격 높은 순, 첫 번째가 대표).
+function groupOf(p){return productMeta(p,'group')}
+function siblingsOf(p){
+ const g=groupOf(p); if(!g) return [p];
+ return products.filter(x=>groupOf(x)===g&&stateOf(x)===stateOf(p)).sort((a,b)=>Number(b.salePrice||0)-Number(a.salePrice||0));
+}
+function leaderOf(p){return siblingsOf(p)[0]||p}
+function optionLabelOf(p){return productMeta(p,'optionLabel')||s(p.productName)}
+function hasContentBlocks(p){return parseDetailBlocks(p).some(b=>['image','text','price','emphasis','highlight'].includes(s(b.type).toLowerCase()))}
+function optionPricesHtml(p){
+ const sib=siblingsOf(p); if(sib.length<2) return '';
+ return `<div class="option-prices">${sib.map(x=>`<span>${e(optionLabelOf(x))} <b>${money(x.salePrice)}</b></span>`).join('')}</div>`;
+}
+function renderOptionBox(p){
+ const box=document.getElementById('optionBox'); if(!box) return;
+ const sib=siblingsOf(p);
+ if(sib.length<2){box.innerHTML='';box.style.display='none';return}
+ box.style.display='block';
+ box.innerHTML='<div class="option-title">옵션 선택</div>'+sib.map(x=>{
+  const on=s(x.productCode)===s(p.productCode);
+  return `<button type="button" class="option-btn${on?' on':''}" onclick="selectOption('${e(x.productCode)}')"><span>${e(optionLabelOf(x))}</span><b>${money(x.salePrice)}</b></button>`;
+ }).join('');
+}
+function selectOption(code){
+ const dd=document.getElementById('deliveryDate'), keep=dd?dd.value:'';
+ openProduct(code);
+ if(dd&&keep&&[...dd.options].some(o=>o.value===keep)) dd.value=keep;
+}
 function cardDescOf(p){return productMeta(p,'cardDesc')||s(p.description).trim()||'해남에서 준비한 공동구매 상품입니다.'}
 function priceNoteHtml(p){const n=productMeta(p,'priceNote');return n?`<span class="price-note">${e(n)}</span>`:''}
 function renderDetailBlocks(p){
@@ -641,12 +674,14 @@ function openProduct(code){
  const doneBox=document.getElementById('orderDoneBox'); if(doneBox)doneBox.style.display='none';
  try{trackProductView(p);}catch(err){console.log('상품조회 기록 오류:',err);}
  modalTitle.textContent='공동구매 주문';
- modalProductName.textContent=p.productName||'상품';
- modalDescription.textContent=productMeta(p,'cardDesc')||p.description||'';
+ const lead=leaderOf(p);
+ modalProductName.textContent=groupOf(p)||p.productName||'상품';
+ modalDescription.textContent=productMeta(p,'cardDesc')||productMeta(lead,'cardDesc')||p.description||'';
+ renderOptionBox(p);
  modalPrice.innerHTML=`<span class="price-row">${money(p.salePrice)}${priceNoteHtml(p)}</span>`;
  modalTimer.textContent=remainText(p);
- const img=imageUrl(p.image); modalImage.style.display=img?'block':'none'; if(img)modalImage.src=img;
- try { renderDetailBlocks(p); } catch(e) { console.error('상세페이지 오류:', e); }
+ const img=imageUrl(p.image||lead.image); modalImage.style.display=img?'block':'none'; if(img)modalImage.src=img;
+ try { renderDetailBlocks(hasContentBlocks(p)?p:lead); } catch(e) { console.error('상세페이지 오류:', e); }
  let pay='<b>결제 안내</b><br>';
  if(p.paymentMethod)pay+='결제방식: '+e(p.paymentMethod)+'<br>';
  if(p.bankName||p.accountNumber){

@@ -177,6 +177,8 @@ async function saveSupplierApplication(btn){
       <div class="field full"><label>대표이미지 주소</label><input id="productImage" placeholder="대표 이미지 URL"></div>
       <div class="field full"><label>상품 한 줄 설명 <span class="muted" id="productDescriptionCount">0/40자</span></label><textarea id="productDescription" maxlength="40" rows="2" placeholder="예: 신안 천일염으로 절인 해남 절임배추 20kg · 원하는 도착일 선택" oninput="updateMetaCount()"></textarea><span class="muted">상품 카드와 주문창의 상품명 바로 아래에 보입니다. 40자 이내(휴대폰에서 2줄)로 써 주세요.</span></div>
       <div class="field full"><label>가격 옆 문구 <span class="muted" id="priceNoteCount">0/12자</span></label><input id="priceNote" maxlength="12" placeholder="예: 택배비 포함" oninput="updateMetaCount()"><span class="muted">가격 바로 옆에 작은 표시로 보입니다. 12자 이내. 비워 두면 보이지 않습니다.</span></div>
+      <div class="field"><label>옵션 묶음 이름</label><input id="optionGroup" maxlength="20" placeholder="예: 골드키위"><span class="muted">같은 묶음 이름을 쓴 상품끼리 손님 화면에서 상품 1개 + 옵션 선택으로 묶입니다. 묶지 않으려면 비워 두세요.</span></div>
+      <div class="field"><label>옵션 이름</label><input id="optionLabel" maxlength="30" placeholder="예: 5kg (44과 내외)"><span class="muted">옵션 선택 칸에 보이는 이름입니다. 비우면 상품명이 보입니다.</span></div>
       <div class="field full"><label>공구 연결 링크</label><input id="productLink" placeholder="예: https://.../product.html?id=..."></div>
     </div>
 
@@ -899,9 +901,9 @@ async function apiPost(data){
 
 /* ---------- 상품 카드 설명 · 가격 옆 문구 ---------- */
 // 앱스스크립트가 상품설명 칸을 저장하지 못해서, 상세페이지 블록(저장이 되는 곳)에 함께 담아 저장합니다.
-const PRODUCT_META_TYPES=['cardDesc','priceNote'];
+const PRODUCT_META_TYPES=['cardDesc','priceNote','group','optionLabel'];
 // 저장 스크립트가 이미지·글·강조문구 블록만 남기므로, 특수 블록은 '글' 블록 앞에 표시를 붙여 저장합니다.
-const BLOCK_MARKERS={cardDesc:'[[카드설명]]',priceNote:'[[가격옆문구]]',fold:'[[접기]]'};
+const BLOCK_MARKERS={cardDesc:'[[카드설명]]',priceNote:'[[가격옆문구]]',fold:'[[접기]]',group:'[[묶음]]',optionLabel:'[[옵션명]]'};
 function decodeBlock(b){
   if(b&&b.type==='text'){
     const v=String(b.value||'');
@@ -924,6 +926,9 @@ function detailBlocksForSave(){
   const note=$('priceNote').value.trim().slice(0,12);
   if(desc) meta.push({type:'cardDesc',value:desc,imageUrl:''});
   if(note) meta.push({type:'priceNote',value:note,imageUrl:''});
+  const grp=$('optionGroup').value.trim().slice(0,20), opt=$('optionLabel').value.trim().slice(0,30);
+  if(grp) meta.push({type:'group',value:grp,imageUrl:''});
+  if(opt) meta.push({type:'optionLabel',value:opt,imageUrl:''});
   return meta.concat(productDetailBlocks.filter(b=>!PRODUCT_META_TYPES.includes(b.type))).map(encodeBlock);
 }
 
@@ -1030,7 +1035,7 @@ $('productImageFile').addEventListener('change', async e=>{
 
 /* ---------- 상품 ---------- */
 function newProduct(){
-  ['productCode','productName','salePrice','normalPrice','startDate','endDate','targetCount','productImage','productDescription','priceNote','productLink','bankName','accountNumber','accountHolder','paymentGuide'].forEach(id=>$(id).value='');updateMetaCount();
+  ['productCode','productName','salePrice','normalPrice','startDate','endDate','targetCount','productImage','productDescription','priceNote','optionGroup','optionLabel','productLink','bankName','accountNumber','accountHolder','paymentGuide'].forEach(id=>$(id).value='');updateMetaCount();
 
   $('deliveryDateEnabled').value='사용안함';
   $('deliveryDates').value='';
@@ -1078,6 +1083,7 @@ async function editProduct(code){
     $('productImage').value=p.productImage||p.image||'';
     $('productDescription').value=p.productDescription||p.description||'';
     $('priceNote').value='';
+    $('optionGroup').value=''; $('optionLabel').value='';
     $('productLink').value=p.productLink||p.link||p.linkUrl||'';
     $('bankName').value=p.bankName||'';
     $('accountNumber').value=p.accountNumber||'';
@@ -1100,6 +1106,8 @@ async function editProduct(code){
     productDetailBlocks.forEach(b=>{
       if(b.type==='cardDesc'&&b.value) $('productDescription').value=b.value;
       if(b.type==='priceNote') $('priceNote').value=b.value||'';
+      if(b.type==='group') $('optionGroup').value=b.value||'';
+      if(b.type==='optionLabel') $('optionLabel').value=b.value||'';
     });
     productDetailBlocks=productDetailBlocks.filter(b=>!PRODUCT_META_TYPES.includes(b.type));
     updateMetaCount();
