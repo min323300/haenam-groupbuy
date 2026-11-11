@@ -706,7 +706,18 @@ function renderDetailBlocks(p){
  }
  box.innerHTML=html;
 }
+// 주문 단계 기록: order_click(주문하기 누름) / form_start(주문서 첫 입력) / order_submit(주문 접수 완료)
+var formStartSent=false;
+function trackOrderEvent(name){
+ try{ if(window.trackOrderStep) window.trackOrderStep(name, currentProduct); }catch(err){console.log('주문단계 기록 오류:',err)}
+}
+(function(){
+ const form=document.getElementById('orderForm'); if(!form)return;
+ const onStart=function(){ if(formStartSent||!currentProduct)return; formStartSent=true; trackOrderEvent('form_start'); };
+ form.addEventListener('input',onStart); form.addEventListener('change',onStart);
+})();
 function jumpToOrderForm(){
+ trackOrderEvent('order_click');
  const form=document.getElementById('orderForm');
  if(form){form.style.display='block';form.scrollIntoView({behavior:'smooth',block:'start'});}
 }
@@ -718,6 +729,7 @@ function jumpToOrderForm(){
  new IntersectionObserver(es=>{es.forEach(en=>btn.classList.toggle('hide',en.isIntersecting||en.boundingClientRect.top<0))}).observe(form);
 })();
 function showOrderForm(){
+ trackOrderEvent('order_click');
  const form=document.getElementById('orderForm');
  form.style.display='block';
  const sob=document.getElementById('showOrderFormButton'); if(sob)sob.style.display='none';
@@ -726,7 +738,7 @@ function showOrderForm(){
 function openProduct(code){
  const p=products.find(x=>s(x.productCode)===s(code)); if(!p)return;
  if(p.linkUrl){window.location.href=p.linkUrl;return}
- currentProduct=p;
+ currentProduct=p; formStartSent=false;
  const doneBox=document.getElementById('orderDoneBox'); if(doneBox)doneBox.style.display='none';
  try{trackProductView(p);}catch(err){console.log('상품조회 기록 오류:',err);}
  modalTitle.textContent='공동구매 주문';
@@ -990,6 +1002,7 @@ orderForm.addEventListener('submit',async ev=>{
   const data=await r.json(); if(data.success===false)throw new Error(data.message||'주문 접수 실패');
   showMsg('주문이 정상적으로 접수되었습니다. 결제 안내에 따라 입금해 주세요.',false);
   showOrderDone(data, payload, total);
+  trackOrderEvent('order_submit');
   orderForm.reset(); resetOrderFormExtras(); currentProduct.orderCount=Number(currentProduct.orderCount||0)+1; renderProducts();
  }catch(err){showMsg('주문 오류: '+err.message,true)}
  finally{orderButton.disabled=false;orderButton.textContent='공동구매 주문하기'}
@@ -1168,6 +1181,15 @@ window.trackProductView = function(product) {
   }
 };
  
+// 주문 단계 통계용 전역 함수
+window.trackOrderStep = function(eventName, product) {
+  try {
+    sendVisit(eventName, product);
+  } catch (err) {
+    console.log('주문 단계 기록 오류:', err);
+  }
+};
+
 // 공구 참여 클릭 통계용 전역 함수
 window.trackGroupBuyClick = function(product) {
   try {
