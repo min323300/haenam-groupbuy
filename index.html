@@ -55,6 +55,7 @@ main{max-width:1180px;margin:45px auto;padding:0 20px 70px}
 #optionBox{margin:14px 0 6px}.option-title{font-weight:800;margin-bottom:8px}.option-btn{display:flex;justify-content:space-between;align-items:center;width:100%;padding:13px 14px;margin:0 0 8px;border:2px solid #d8ddd8;border-radius:12px;background:#fff;font-size:15px;cursor:pointer;text-align:left}.option-btn.on{border-color:var(--green);background:#f1f8f3}.option-btn span{flex:1;padding-right:10px}.option-btn b{font-size:16px;white-space:nowrap}
 .price-note{display:inline-block;padding:4px 10px;border-radius:999px;background:#e8f5ec;color:var(--green);font-size:13px;font-weight:800;line-height:1.4;white-space:nowrap}
 .price{font-size:27px;font-weight:900;margin:13px 0 5px} .normal{font-size:13px;color:#999;text-decoration:line-through}
+.arrive-box{margin:10px 0 6px;padding:11px 13px;border-radius:10px;background:#eef6ff;color:#174a7c;font-size:14px;line-height:1.5}.arrive-box b{font-weight:900}
 .timer{margin:14px 0 8px;background:#f5f8f5;border-radius:10px;padding:11px;font-weight:800;color:#b45618}
 .progress-line{display:flex;justify-content:space-between;font-size:13px;margin-top:8px}
 .progress{height:9px;background:#edf0ed;border-radius:999px;overflow:hidden;margin:7px 0 16px} .bar{height:100%;background:var(--green2);width:0}
@@ -170,7 +171,7 @@ footer{background:#203028;color:#dbe4df;text-align:center;padding:30px 20px;font
    <img id="modalImage" class="detail-img" alt="상품 이미지" style="display:none">
    <h2 id="modalProductName"></h2><div id="modalDescription" class="desc"></div>
    <div id="optionBox" style="display:none"></div>
-   <div class="price" id="modalPrice"></div><div id="modalTimer" class="timer"></div>
+   <div class="price" id="modalPrice"></div><div id="modalTimer" class="timer"></div><div id="modalArrive" class="arrive-box" style="display:none"></div>
    <div id="detailBlocks" class="detail-blocks"></div>
    <div id="paymentBox" class="payment"></div>
    <div id="orderAmountBox" class="payment" style="display:none; margin-top:8px;">
@@ -742,6 +743,23 @@ function showOrderForm(){
  const sob=document.getElementById('showOrderFormButton'); if(sob)sob.style.display='none';
  form.scrollIntoView({behavior:'smooth',block:'start'});
 }
+// 받는 날: 지난 날짜·오늘 날짜는 빼고 보여줍니다.
+function parseYmd(v){const m=String(v||'').match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);return m?new Date(+m[1],+m[2]-1,+m[3]):null}
+function upcomingDeliveryDates(p){
+ if(!p||p.deliveryDateEnabled!=='사용'||!Array.isArray(p.deliveryDates))return [];
+ const today=new Date();today.setHours(0,0,0,0);
+ return p.deliveryDates.filter(d=>{const x=parseYmd(d);return x&&x>today});
+}
+function renderArriveBox(dates){
+ const box=document.getElementById('modalArrive'), jump=document.getElementById('jumpToOrderBtn');
+ if(!box)return;
+ if(!dates.length){box.style.display='none';box.innerHTML='';if(jump)jump.textContent='주문하기 ↓';return}
+ const wd='일월화수목금토';
+ const show=dates.slice(0,3).map(d=>{const x=parseYmd(d);return (x.getMonth()+1)+'/'+x.getDate()+'('+wd[x.getDay()]+')'});
+ box.innerHTML='🚚 <b>받는 날을 직접 고르세요</b><br>'+show.join(' · ')+(dates.length>3?' 외 '+(dates.length-3)+'일':'')+' 중 원하는 날 도착';
+ box.style.display='block';
+ if(jump)jump.textContent='받는 날 고르고 주문하기 ↓';
+}
 function openProduct(code){
  const p=products.find(x=>s(x.productCode)===s(code)); if(!p)return;
  if(p.linkUrl){window.location.href=p.linkUrl;return}
@@ -776,12 +794,10 @@ const deliveryDate = document.getElementById('deliveryDate');
 
 deliveryDate.innerHTML = '<option value="">희망 도착일을 선택해 주세요</option>';
 
-if (
-  p.deliveryDateEnabled === '사용' &&
-  Array.isArray(p.deliveryDates) &&
-  p.deliveryDates.length > 0
-) {
-  p.deliveryDates.forEach(function(date) {
+const futureDates = upcomingDeliveryDates(p);
+renderArriveBox(futureDates);
+if (futureDates.length > 0) {
+  futureDates.forEach(function(date) {
     const option = document.createElement('option');
     option.value = date;
     option.textContent = date;
