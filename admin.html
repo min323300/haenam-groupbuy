@@ -198,6 +198,8 @@ async function saveSupplierApplication(btn){
       <button class="secondary" type="button" onclick="addProductDetailBlock('text')">+ 글 추가</button>
       <button class="secondary" type="button" onclick="addProductDetailBlock('price')">+ 강조문구 추가</button>
       <button class="secondary" type="button" onclick="addProductDetailBlock('fold')">+ 접기 구분선</button>
+      <button class="secondary" type="button" onclick="addProductDetailBlock('video')">+ 움짤(5초 영상) 추가</button>
+      <button class="secondary" type="button" onclick="setupGithubToken()">움짤 업로드 설정</button>
     </div>
     <div id="productDetailBuilder" class="detail-builder" style="margin-top:10px"></div>
     <div class="toolbar" style="margin-top:14px">
@@ -904,7 +906,7 @@ async function apiPost(data){
 // 앱스스크립트가 상품설명 칸을 저장하지 못해서, 상세페이지 블록(저장이 되는 곳)에 함께 담아 저장합니다.
 const PRODUCT_META_TYPES=['cardDesc','priceNote','group','optionLabel','displayOrder'];
 // 저장 스크립트가 이미지·글·강조문구 블록만 남기므로, 특수 블록은 '글' 블록 앞에 표시를 붙여 저장합니다.
-const BLOCK_MARKERS={cardDesc:'[[카드설명]]',priceNote:'[[가격옆문구]]',fold:'[[접기]]',group:'[[묶음]]',optionLabel:'[[옵션명]]',displayOrder:'[[순서]]'};
+const BLOCK_MARKERS={cardDesc:'[[카드설명]]',priceNote:'[[가격옆문구]]',fold:'[[접기]]',group:'[[묶음]]',optionLabel:'[[옵션명]]',displayOrder:'[[순서]]',video:'[[움짤]]'};
 function decodeBlock(b){
   if(b&&b.type==='text'){
     const v=String(b.value||'');
@@ -958,7 +960,7 @@ function renderProductDetailBuilder(){
     return;
   }
   box.innerHTML=productDetailBlocks.map((b,i)=>{
-    const label=b.type==='image'?'이미지':b.type==='price'?'강조문구':b.type==='fold'?'접기 구분선':'글';
+    const label=b.type==='image'?'이미지':b.type==='video'?'움짤(5초 영상)':b.type==='price'?'강조문구':b.type==='fold'?'접기 구분선':'글';
     let body='';
     if(b.type==='image'){
       const imageSrc=normalizeDriveImageUrl(b.imageUrl||b.value||'');
@@ -979,6 +981,28 @@ function renderProductDetailBuilder(){
             <summary style="cursor:pointer;color:#68736b;font-size:12px">이미지 주소 보기/직접 수정</summary>
             <input style="margin-top:8px" value="${esc(imageSrc)}" placeholder="이미지 URL"
               oninput="updateProductBlock(${i},'imageUrl',this.value);updateProductBlock(${i},'value',this.value)">
+          </details>
+        </div>`;
+    }else if(b.type==='video'){
+      const vsrc=b.previewUrl||b.value||'';
+      const isGif=/\.gif(\?|$)/i.test(b.value||'')||/^data:image\/gif|gif$/i.test(b.previewType||'');
+      body=`
+        <div style="background:#f5f7f5;border:1px solid #e0e5e0;border-radius:12px;padding:12px">
+          ${vsrc
+            ? (isGif
+               ? `<img src="${esc(vsrc)}" alt="움짤 미리보기" style="width:100%;max-width:520px;max-height:420px;object-fit:contain;background:#fff;border:1px solid #e1e1e1">`
+               : `<video src="${esc(vsrc)}" autoplay muted loop playsinline style="width:100%;max-width:520px;max-height:420px;background:#000;border-radius:8px"></video>`)
+            : `<div style="padding:28px 12px;text-align:center;color:#777;background:#fff;border:2px dashed #c7cec7;border-radius:10px">
+                 아직 올린 움짤이 없습니다.<br>mp4·mov·gif 파일, 10MB 이하 (5초 영상은 보통 1~3MB)
+               </div>`}
+          ${b.previewUrl?`<div style="margin-top:8px;font-size:12px;color:#1f6b3a">업로드 완료. 사이트에 보이기까지 1~2분 걸립니다. <b>상세페이지 전체 저장</b>을 꼭 눌러 주세요.</div>`:''}
+          <div class="toolbar" style="justify-content:center">
+            <button class="primary" type="button" onclick="chooseDetailVideo(${i})">${vsrc?'움짤 변경':'움짤 선택/업로드'}</button>
+          </div>
+          <details style="margin-top:10px">
+            <summary style="cursor:pointer;color:#68736b;font-size:12px">움짤 주소 보기/직접 수정</summary>
+            <input style="margin-top:8px" value="${esc(b.value||'')}" placeholder="https://haenamgonggu.kr/videos/....mp4"
+              oninput="updateProductBlock(${i},'value',this.value);updateProductBlock(${i},'previewUrl','')">
           </details>
         </div>`;
     }else if(b.type==='fold'){
@@ -1021,6 +1045,57 @@ async function uploadDetailImage(file,i){
     renderProductDetailBuilder();
     showMessage('productMessage','상세 이미지 업로드 완료');
   }catch(e){showMessage('productMessage','이미지 업로드 오류: '+e.message,true)}
+}
+
+/* ---------- 움짤(5초 영상) 업로드: 깃허브 저장소 videos 폴더에 저장 ---------- */
+// 토큰은 코드에 넣지 않고 이 기기의 브라우저에만 저장합니다 (기기마다 한 번 입력).
+const GH_REPO='min323300/haenam-groupbuy', GH_BRANCH='main', GH_TOKEN_KEY='hgb_github_token', SITE_ORIGIN='https://haenamgonggu.kr';
+const VIDEO_MAX_MB=10;
+function getGithubToken(){ try{return localStorage.getItem(GH_TOKEN_KEY)||''}catch(_){return ''} }
+function setupGithubToken(){
+  const now=getGithubToken();
+  const v=prompt((now?'이 기기에 토큰이 저장되어 있습니다. 바꾸려면 새 토큰을 붙여넣으세요.\n(지우려면 "삭제" 입력)':'깃허브 토큰을 붙여넣으세요.\n(haenam-groupbuy 저장소, Contents 읽기/쓰기 권한)')+'\n\n토큰은 이 기기 브라우저에만 저장됩니다.','');
+  if(v==null) return false;
+  const t=v.trim();
+  try{
+    if(t==='삭제'){localStorage.removeItem(GH_TOKEN_KEY);showMessage('productMessage','이 기기에서 움짤 업로드 토큰을 지웠습니다.');return false}
+    if(!t) return !!now;
+    localStorage.setItem(GH_TOKEN_KEY,t);
+  }catch(_){alert('이 브라우저에는 토큰을 저장할 수 없습니다.');return false}
+  showMessage('productMessage','움짤 업로드 토큰을 이 기기에 저장했습니다.');
+  return true;
+}
+function chooseDetailVideo(i){
+  const inp=document.createElement('input');
+  inp.type='file'; inp.accept='video/mp4,video/quicktime,video/webm,image/gif,.mp4,.mov,.webm,.gif';
+  inp.onchange=()=>{ if(inp.files[0]) uploadDetailVideo(inp.files[0],i); };
+  inp.click();
+}
+async function uploadDetailVideo(file,i){
+  try{
+    if(file.size>VIDEO_MAX_MB*1024*1024) throw new Error(`파일이 ${(file.size/1048576).toFixed(1)}MB입니다. ${VIDEO_MAX_MB}MB 이하로 줄여 주세요. (5초로 자르거나 화질을 낮추면 됩니다)`);
+    const ext=((file.name.match(/\.([a-z0-9]+)$/i)||[])[1]||(file.type==='image/gif'?'gif':'mp4')).toLowerCase();
+    if(!['mp4','mov','webm','gif'].includes(ext)) throw new Error('mp4·mov·webm·gif 파일만 올릴 수 있습니다.');
+    if(!getGithubToken() && !setupGithubToken()) throw new Error('먼저 움짤 업로드 설정에서 토큰을 넣어 주세요.');
+    showMessage('productMessage',`움짤을 올리고 있습니다... (${(file.size/1048576).toFixed(1)}MB)`);
+    const dataUrl=await fileToDataUrl(file);
+    const code=String($('productCode').value||'new').replace(/[^A-Za-z0-9_-]/g,'')||'new';
+    const path=`videos/${code}-${Date.now()}.${ext}`;
+    const res=await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${path}`,{
+      method:'PUT',
+      headers:{'Authorization':'Bearer '+getGithubToken(),'Accept':'application/vnd.github+json'},
+      body:JSON.stringify({message:`움짤 업로드: ${path}`,content:String(dataUrl).split(',')[1],branch:GH_BRANCH})
+    });
+    if(res.status===401||res.status===403){
+      throw new Error('토큰이 만료됐거나 권한이 없습니다. "움짤 업로드 설정"에서 새 토큰을 넣어 주세요.');
+    }
+    if(!res.ok){ let m=''; try{m=(await res.json()).message||''}catch(_){}; throw new Error('깃허브 저장 실패 ('+res.status+') '+m); }
+    productDetailBlocks[i].value=`${SITE_ORIGIN}/${path}`;
+    productDetailBlocks[i].previewUrl=URL.createObjectURL(file);
+    productDetailBlocks[i].previewType=file.type;
+    renderProductDetailBuilder();
+    showMessage('productMessage','움짤 업로드 완료 — "상세페이지 전체 저장"을 눌러야 상품에 반영됩니다. 사이트에는 1~2분 뒤 보입니다.');
+  }catch(e){showMessage('productMessage','움짤 업로드 오류: '+e.message,true)}
 }
 
 /* ---------- 대표이미지 ---------- */
