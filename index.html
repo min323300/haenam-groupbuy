@@ -1483,6 +1483,8 @@ document.getElementById('customerRequestForm').addEventListener('submit',async f
 // ==========================================
 // 파트너 신청
 // ==========================================
+// haenamgonggu.kr/#partner 로 들어오면 파트너 신청 창을 바로 연다 (모집 홍보용 링크)
+window.addEventListener('load',()=>{if(location.hash==='#partner'){try{openPartnerApplyModal();}catch(e){}}});
 function openPartnerApplyModal(){
  document.getElementById('partnerApplyForm').style.display='';
  document.getElementById('partnerApplyDone').style.display='none';
