@@ -279,9 +279,15 @@ async function shareCard(){
     // 휴대폰: 이미지 파일만 공유 (제목·문구를 같이 넣으면 카카오톡이 받다가 닫히는 경우가 있음)
     const file=new File([cardBlob],'haenam-partner-card.png',{type:'image/png'});
     if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file]});return message('cardMessage','공유 창에서 카카오톡 → 채팅방을 골라 보내세요.');}catch(e){if(e&&e.name==='AbortError')return;}}
-  }else if(navigator.clipboard&&window.ClipboardItem){
-    // PC: 윈도우 공유창의 카카오톡은 이미지를 못 받고 바로 닫혀서, 클립보드 복사 → 채팅방에 붙여넣기로 처리
-    try{await navigator.clipboard.write([new ClipboardItem({'image/png':cardBlob})]);return message('cardMessage','✅ 이미지가 복사되었습니다. PC 카카오톡 채팅방을 열고 Ctrl+V (붙여넣기) 후 전송하세요.');}catch(e){}
+  }else{
+    // PC: 먼저 이미지를 복사해 두고, 공유창(카카오톡)도 그대로 띄움 → 카톡이 이미지를 못 받고 닫혀도 채팅방에 Ctrl+V로 바로 붙여넣기 가능
+    let copied=false;
+    if(navigator.clipboard&&window.ClipboardItem){try{await navigator.clipboard.write([new ClipboardItem({'image/png':cardBlob})]);copied=true;}catch(e){}}
+    const file=new File([cardBlob],'haenam-partner-card.png',{type:'image/png'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      try{await navigator.share({files:[file]});}catch(e){}
+      if(copied)return message('cardMessage','✅ 카카오톡 채팅방에 이미지가 안 들어갔다면, 그 채팅방에서 Ctrl+V (붙여넣기) 하세요. 이미지는 이미 복사되어 있습니다.');
+    }else if(copied)return message('cardMessage','✅ 이미지가 복사되었습니다. PC 카카오톡 채팅방에서 Ctrl+V (붙여넣기) 후 전송하세요.');
   }
   saveCard(); message('cardMessage','이미지로 저장했습니다. 카카오톡 채팅방에서 사진 첨부로 올려 주세요.');
 }
