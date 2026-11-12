@@ -274,9 +274,16 @@ function drawCard(){
 }
 async function shareCard(){
   if(!cardBlob)return;
-  const file=new File([cardBlob],'haenam-partner-card.png',{type:'image/png'});
-  if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:'해남공구마켓 파트너 실적'});return message('cardMessage','공유 창에서 카카오톡 채팅방을 골라 보내세요.');}catch(e){if(e&&e.name==='AbortError')return;}}
-  saveCard(); message('cardMessage','이 기기에서는 바로 공유가 안 되어 이미지로 저장했습니다. 카카오톡에서 사진으로 올려 주세요.');
+  const mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  if(mobile){
+    // 휴대폰: 이미지 파일만 공유 (제목·문구를 같이 넣으면 카카오톡이 받다가 닫히는 경우가 있음)
+    const file=new File([cardBlob],'haenam-partner-card.png',{type:'image/png'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file]});return message('cardMessage','공유 창에서 카카오톡 → 채팅방을 골라 보내세요.');}catch(e){if(e&&e.name==='AbortError')return;}}
+  }else if(navigator.clipboard&&window.ClipboardItem){
+    // PC: 윈도우 공유창의 카카오톡은 이미지를 못 받고 바로 닫혀서, 클립보드 복사 → 채팅방에 붙여넣기로 처리
+    try{await navigator.clipboard.write([new ClipboardItem({'image/png':cardBlob})]);return message('cardMessage','✅ 이미지가 복사되었습니다. PC 카카오톡 채팅방을 열고 Ctrl+V (붙여넣기) 후 전송하세요.');}catch(e){}
+  }
+  saveCard(); message('cardMessage','이미지로 저장했습니다. 카카오톡 채팅방에서 사진 첨부로 올려 주세요.');
 }
 function saveCard(){if(!cardBlob)return;const a=document.createElement('a');a.href=URL.createObjectURL(cardBlob);a.download='해남공구마켓_실적카드.png';document.body.appendChild(a);a.click();a.remove();}
 
