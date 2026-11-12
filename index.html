@@ -515,6 +515,8 @@ async function loadProducts(){
   if(data.success===false)throw new Error(data.message||'상품 조회 실패');
   products=Array.isArray(data.products)?data.products:[];
   renderProducts(); openProductFromUrl(); deepLinkDone=true;
+  // 저장본으로 먼저 연 팝업이 있으면 최신 상품 정보로 바꾸고 네이버페이 버튼을 다시 그립니다.
+  if(currentProduct){const fresh=products.find(x=>s(x.productCode)===s(currentProduct.productCode));if(fresh){currentProduct=fresh;try{renderNpayBox(fresh)}catch(_){}}}
   try{localStorage.setItem(PRODUCTS_LOCAL_KEY,JSON.stringify({at:Date.now(),products}));}catch(_){}
  }catch(err){
   if(!shownFromCache) document.getElementById('productGrid').innerHTML='<div class="empty">상품을 불러오지 못했습니다.<br>'+e(err.message)+'</div>';
