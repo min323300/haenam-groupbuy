@@ -270,25 +270,36 @@ function drawCard(){
     c.font='600 32px '+F;c.fillStyle='#333';evs.forEach(x=>{c.fillText(x.productName+'  '+x.baseCommission.toLocaleString('ko-KR')+' + '+x.eventCommission.toLocaleString('ko-KR')+' = '+x.totalCommission.toLocaleString('ko-KR')+'원 ('+endLabel(x.eventEndAt)+')',W/2,y);y+=50;});}
   else{c.fillStyle='#555';c.font='600 34px '+F;c.fillText('해남 산지 공동구매, 같이 알려요!',W/2,y+20);}
   c.fillStyle='#16875a';c.font='700 30px '+F;c.fillText('haenamgonggu.kr',W/2,H-100);
-  cv.toBlob(b=>{cardBlob=b;$('cardImg').src=URL.createObjectURL(b);},'image/png');
+  cv.toBlob(b=>{cardBlob=b;$('cardImg').src=URL.createObjectURL(b);uploadCardToKakao_(b);},'image/png');
+}
+let cardUploadPromise=null; // 카드 이미지를 카카오 서버에 미리 올려 두어 공유 버튼을 누르면 바로 창이 뜨게 함
+function uploadCardToKakao_(blob){
+  cardUploadPromise=(async()=>{
+    if(!blob||!(await loadKakaoSdk_()))return '';
+    try{const file=new File([blob],'haenam-partner-card.png',{type:'image/png'});const r=await window.Kakao.Share.uploadImage({file:[file]});return (r&&r.infos&&r.infos.original&&r.infos.original.url)||'';}catch(e){return '';}
+  })();
+  return cardUploadPromise;
 }
 async function shareCard(){
   if(!cardBlob)return;
-  const mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-  if(mobile){
-    // 휴대폰: 이미지 파일만 공유 (제목·문구를 같이 넣으면 카카오톡이 받다가 닫히는 경우가 있음)
-    const file=new File([cardBlob],'haenam-partner-card.png',{type:'image/png'});
-    if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file]});return message('cardMessage','공유 창에서 카카오톡 → 채팅방을 골라 보내세요.');}catch(e){if(e&&e.name==='AbortError')return;}}
-  }else{
-    // PC: 먼저 이미지를 복사해 두고, 공유창(카카오톡)도 그대로 띄움 → 카톡이 이미지를 못 받고 닫혀도 채팅방에 Ctrl+V로 바로 붙여넣기 가능
-    let copied=false;
-    if(navigator.clipboard&&window.ClipboardItem){try{await navigator.clipboard.write([new ClipboardItem({'image/png':cardBlob})]);copied=true;}catch(e){}}
-    const file=new File([cardBlob],'haenam-partner-card.png',{type:'image/png'});
-    if(navigator.canShare&&navigator.canShare({files:[file]})){
-      try{await navigator.share({files:[file]});}catch(e){}
-      if(copied)return message('cardMessage','✅ 카카오톡 채팅방에 이미지가 안 들어갔다면, 그 채팅방에서 Ctrl+V (붙여넣기) 하세요. 이미지는 이미 복사되어 있습니다.');
-    }else if(copied)return message('cardMessage','✅ 이미지가 복사되었습니다. PC 카카오톡 채팅방에서 Ctrl+V (붙여넣기) 후 전송하세요.');
+  // ① 카카오 공식 공유 (상품 홍보 공유와 같은 방식) — PC·휴대폰 모두 카카오톡 친구/채팅방 선택 창이 뜸
+  const imgUrl=await (cardUploadPromise||uploadCardToKakao_(cardBlob));
+  if(imgUrl){
+    try{
+      window.Kakao.Share.sendDefault({
+        objectType:'feed',
+        content:{title:'🏆 해남공구마켓 파트너 실적',description:'해남 산지 공동구매, 같이 알려요!',imageUrl:imgUrl,imageWidth:800,imageHeight:800,link:{mobileWebUrl:MARKET_URL,webUrl:MARKET_URL}},
+        buttons:[{title:'해남공구마켓 보기',link:{mobileWebUrl:MARKET_URL,webUrl:MARKET_URL}}]
+      });
+      return message('cardMessage','카카오톡 공유 창이 열렸습니다. "채팅" 탭에서 파트너 단톡방을 골라 보내세요. (창이 안 보이면 브라우저 팝업 차단을 해제해 주세요.)');
+    }catch(e){/* 아래 방식으로 계속 */}
   }
+  // ② 휴대폰 기본 공유 창
+  const mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const file=new File([cardBlob],'haenam-partner-card.png',{type:'image/png'});
+  if(mobile&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file]});return message('cardMessage','공유 창에서 카카오톡 → 채팅방을 골라 보내세요.');}catch(e){if(e&&e.name==='AbortError')return;}}
+  // ③ 이미지 복사 → 채팅방에 붙여넣기
+  if(navigator.clipboard&&window.ClipboardItem){try{await navigator.clipboard.write([new ClipboardItem({'image/png':cardBlob})]);return message('cardMessage','✅ 이미지가 복사되었습니다. 카카오톡 채팅방에서 Ctrl+V (붙여넣기) 후 전송하세요.');}catch(e){}}
   saveCard(); message('cardMessage','이미지로 저장했습니다. 카카오톡 채팅방에서 사진 첨부로 올려 주세요.');
 }
 function saveCard(){if(!cardBlob)return;const a=document.createElement('a');a.href=URL.createObjectURL(cardBlob);a.download='해남공구마켓_실적카드.png';document.body.appendChild(a);a.click();a.remove();}
