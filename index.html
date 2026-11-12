@@ -64,6 +64,7 @@ main{max-width:1180px;margin:45px auto;padding:0 20px 70px}
 .loading,.empty{grid-column:1/-1;text-align:center;padding:55px;background:#fff;border-radius:18px;color:#777}
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;padding:20px;overflow:auto}
 .modal.open{display:block} .modal-card{max-width:720px;margin:20px auto;background:#fff;border-radius:22px;overflow:hidden;overflow:clip}
+.npay-box{margin:10px 0 4px}.npay-btn{display:block;width:100%;padding:13px;border:0;border-radius:10px;background:#03c75a;color:#fff;font-size:16px;font-weight:900;cursor:pointer}.npay-btn .n{display:inline-block;margin-right:6px;padding:0 6px;border-radius:4px;background:#fff;color:#03c75a;font-weight:900}.npay-sub{margin-top:5px;color:#666;font-size:12.5px;text-align:center}
 .jump-order-btn{position:sticky;bottom:12px;display:block;width:100%;margin-top:14px;padding:15px;font-size:17px;box-shadow:0 6px 18px rgba(0,0,0,.18);z-index:5}.jump-order-btn.hide{display:none}
 .detail-fold{margin:6px 0 22px;border:1px solid #e1e8e4;border-radius:14px;background:#fafcfb}.detail-fold>summary{cursor:pointer;padding:14px 16px;font-weight:800;color:var(--green);list-style:none;text-align:center}.detail-fold>summary::-webkit-details-marker{display:none}.detail-fold>summary:after{content:" ▼";font-size:12px}.detail-fold[open]>summary:after{content:" ▲"}.detail-fold-body{padding:0 12px 4px}
 .detail-block.image+.detail-block.emphasis{margin-top:-12px;font-size:18px;padding:14px 16px}.detail-block.emphasis+.detail-block.text{margin-top:-14px;text-align:center;font-size:15px;color:#4a564e}
@@ -171,7 +172,7 @@ footer{background:#203028;color:#dbe4df;text-align:center;padding:30px 20px;font
    <img id="modalImage" class="detail-img" alt="상품 이미지" style="display:none">
    <h2 id="modalProductName"></h2><div id="modalDescription" class="desc"></div>
    <div id="optionBox" style="display:none"></div>
-   <div class="price" id="modalPrice"></div><div id="modalTimer" class="timer"></div><div id="modalArrive" class="arrive-box" style="display:none"></div>
+   <div class="price" id="modalPrice"></div><div id="modalTimer" class="timer"></div><div id="modalArrive" class="arrive-box" style="display:none"></div><div id="npayBox" class="npay-box" style="display:none"></div>
    <div id="detailBlocks" class="detail-blocks"></div>
    <div id="paymentBox" class="payment"></div>
    <div id="orderAmountBox" class="payment" style="display:none; margin-top:8px;">
@@ -615,7 +616,7 @@ function tick(){
  if(currentProduct)document.getElementById('modalTimer').textContent=remainText(currentProduct);
 }
 // 관리자 저장 스크립트가 '글' 블록만 남기므로 특수 블록은 [[표시]]를 붙인 글로 저장됩니다.
-const BLOCK_MARKERS={cardDesc:'[[카드설명]]',priceNote:'[[가격옆문구]]',fold:'[[접기]]',group:'[[묶음]]',optionLabel:'[[옵션명]]',displayOrder:'[[순서]]',video:'[[움짤]]'};
+const BLOCK_MARKERS={cardDesc:'[[카드설명]]',priceNote:'[[가격옆문구]]',fold:'[[접기]]',group:'[[묶음]]',optionLabel:'[[옵션명]]',displayOrder:'[[순서]]',video:'[[움짤]]',npay:'[[네이버페이]]'};
 function decodeDetailBlock(b){
  if(b&&s(b.type).toLowerCase()==='text'){
   const v=s(b.value||b.text||b.content);
@@ -760,6 +761,24 @@ function renderArriveBox(dates){
  box.style.display='block';
  if(jump)jump.textContent='받는 날 고르고 주문하기 ↓';
 }
+// 네이버페이 주문: 상세페이지에 [[네이버페이]]스마트스토어 마케팅 링크 글 블록이 있으면 버튼을 보여 줍니다.
+// 파트너 링크로 들어온 손님에게는 보여 주지 않습니다 (스마트스토어 주문에는 파트너 수당 기록이 따라가지 않음).
+function npayLinkOf(p){
+ const v=productMeta(p,'npay')||siblingsOf(p).map(x=>productMeta(x,'npay')).find(Boolean)||'';
+ return /^https:\/\/(mkt\.shopping\.naver\.com|smartstore\.naver\.com|m\.smartstore\.naver\.com)\//i.test(v)?v:'';
+}
+function renderNpayBox(p){
+ const box=document.getElementById('npayBox'); if(!box)return;
+ const link=npayLinkOf(p);
+ if(!link||getPartnerRef()){box.style.display='none';box.innerHTML='';return}
+ box.innerHTML='<button type="button" class="npay-btn" onclick="goNpay()"><span class="n">N</span>네이버페이로 바로 주문</button><div class="npay-sub">카드·네이버페이 포인트 결제 · 도착 희망일은 네이버 주문 화면에서 선택</div>';
+ box.style.display='block';
+}
+function goNpay(){
+ const link=currentProduct?npayLinkOf(currentProduct):''; if(!link)return;
+ trackOrderEvent('npay_click');
+ setTimeout(function(){window.location.href=link},150);
+}
 function openProduct(code){
  const p=products.find(x=>s(x.productCode)===s(code)); if(!p)return;
  if(p.linkUrl){window.location.href=p.linkUrl;return}
@@ -796,6 +815,7 @@ deliveryDate.innerHTML = '<option value="">희망 도착일을 선택해 주세�
 
 const futureDates = upcomingDeliveryDates(p);
 renderArriveBox(futureDates);
+renderNpayBox(p);
 if (futureDates.length > 0) {
   futureDates.forEach(function(date) {
     const option = document.createElement('option');
@@ -1147,6 +1167,7 @@ function showMsg(text,isErr){msg.textContent=text;msg.className='msg '+(isErr?'e
 
     fetch(API_URL, {
       method: 'POST',
+      keepalive: true,
       headers: {
         'Content-Type': 'text/plain;charset=utf-8'
       },
