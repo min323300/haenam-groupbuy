@@ -57,7 +57,9 @@
     .review-actions{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
     .review-status{font-weight:700}
     @media(max-width:800px){.grid,.grid3{grid-template-columns:1fr}.full{grid-column:auto}}
-  </style>
+  .detail-sticky{position:sticky;top:0;z-index:20;background:#fff;padding:10px 0;margin:0;border-bottom:1px solid #e5e7eb;box-shadow:0 6px 10px -8px rgba(0,0,0,.25)}
+.detail-block-new{outline:3px solid #16875a;outline-offset:2px;transition:outline-color 1.5s}
+</style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 
@@ -193,18 +195,21 @@ async function saveSupplierApplication(btn){
 
     <h3>상품별 상세페이지 편집</h3>
     <p class="muted">아래 블록은 현재 선택한 상품에만 저장됩니다. 이미지 → 글 → 이미지 → 강조문구처럼 자유롭게 구성할 수 있습니다.</p>
-    <div class="toolbar">
+    <div class="detail-edit-wrap">
+    <div class="toolbar detail-sticky">
       <button class="secondary" type="button" onclick="addProductDetailBlock('image')">+ 이미지 추가</button>
       <button class="secondary" type="button" onclick="addProductDetailBlock('text')">+ 글 추가</button>
       <button class="secondary" type="button" onclick="addProductDetailBlock('price')">+ 강조문구 추가</button>
       <button class="secondary" type="button" onclick="addProductDetailBlock('fold')">+ 접기 구분선</button>
       <button class="secondary" type="button" onclick="addProductDetailBlock('video')">+ 움짤(5초 영상) 추가</button>
+      <button class="blue" type="button" onclick="saveDetailPage()">💾 상세페이지 저장</button>
       <button class="secondary" type="button" onclick="setupGithubToken()">움짤 업로드 설정</button>
     </div>
     <div id="productDetailBuilder" class="detail-builder" style="margin-top:10px"></div>
     <div class="toolbar" style="margin-top:14px">
       <button class="blue" type="button" onclick="saveDetailPage()">상세페이지 전체 저장</button>
       <span class="muted">이미지·글·강조문구를 모두 구성한 뒤 이 버튼을 눌러 저장하세요.</span>
+    </div>
     </div>
 
     <div class="toolbar">
@@ -979,6 +984,9 @@ function detailBlocksForSave(){
 function addProductDetailBlock(type){
   productDetailBlocks.push({id:blockId(),type,value:'',imageUrl:''});
   renderProductDetailBuilder();
+  // 방금 추가한 블록으로 화면 이동 (버튼은 위에 붙어 따라다님)
+  const box=document.getElementById('productDetailBuilder'); const last=box&&box.lastElementChild;
+  if(last){last.classList.add('detail-block-new');last.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>last.classList.remove('detail-block-new'),1600);const f=last.querySelector('textarea,input[type=text]');if(f)setTimeout(()=>f.focus({preventScroll:true}),400);}
 }
 function moveProductDetailBlock(i,dir){
   const j=i+dir; if(j<0||j>=productDetailBlocks.length) return;
