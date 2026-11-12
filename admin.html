@@ -897,6 +897,15 @@ async function apiGet(params){
   const u=new URL(API_URL); Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,v ?? ''));
   const r=await fetch(u); return r.json();
 }
+// 관리자 비밀번호: 화면의 비밀번호 칸 중 입력된 값을 쓰고, 비어 있으면 한 번 물어봅니다.
+function adminPw(){
+  for(const id of ['adminPassword','partnerAdminPassword','partnerAppPassword','customerRequestAdminPassword','supplierAdminPassword']){
+    const el=document.getElementById(id); const v=el&&String(el.value||'').trim(); if(v) return v;
+  }
+  const v=String(prompt('관리자 비밀번호를 입력해 주세요.')||'').trim();
+  const el=document.getElementById('adminPassword'); if(el&&v) el.value=v;
+  return v;
+}
 async function apiPost(data){
   const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(data)});
   return r.json();
@@ -1038,7 +1047,7 @@ async function uploadDetailImage(file,i){
   try{
     showMessage('productMessage','상세 이미지를 업로드하고 있습니다...');
     const base64=await fileToDataUrl(file);
-    const res=await apiPost({action:'uploadImage',base64Data:base64,fileName:file.name,mimeType:file.type});
+    const res=await apiPost({action:'uploadImage',password:adminPw(),base64Data:base64,fileName:file.name,mimeType:file.type});
     if(!res.success) throw new Error(res.message||'이미지 업로드 실패');
     productDetailBlocks[i].imageUrl = normalizeDriveImageUrl(res.imageUrl || res.url || res.fileUrl || res.thumbnailUrl || '');
     productDetailBlocks[i].value = productDetailBlocks[i].imageUrl;
@@ -1104,7 +1113,7 @@ $('productImageFile').addEventListener('change', async e=>{
   try{
     showMessage('productMessage','대표이미지를 업로드하고 있습니다...');
     const base64=await fileToDataUrl(file);
-    const res=await apiPost({action:'uploadImage',base64Data:base64,fileName:file.name,mimeType:file.type});
+    const res=await apiPost({action:'uploadImage',password:adminPw(),base64Data:base64,fileName:file.name,mimeType:file.type});
     if(!res.success) throw new Error(res.message||'업로드 실패');
     $('productImage').value=res.imageUrl||res.url||'';
     showMessage('productMessage','대표이미지 업로드 완료');
@@ -1204,6 +1213,7 @@ async function saveDetailPage(){
 
     const payload={
       action:'saveProduct',
+      password:adminPw(),
       productCode:code,
       productName:$('productName').value.trim(),
       salePrice:$('salePrice').value,
@@ -1241,6 +1251,7 @@ async function saveProduct(){
     if(!$('productName').value.trim()) return showMessage('productMessage','상품명을 입력해 주세요.',true);
     const payload={
       action:'saveProduct',
+      password:adminPw(),
       productCode:$('productCode').value.trim(),
       productName:$('productName').value.trim(),
       salePrice:$('salePrice').value,
@@ -2188,6 +2199,7 @@ async function previewPartnerSettlement() {
     const url =
       API_URL +
       '?action=adminPartnerSettlementPreview' +
+      '&password=' + encodeURIComponent(adminPw()) +
       '&partnerCode=' + encodeURIComponent(partnerCode) +
       '&startDate=' + encodeURIComponent(startDate) +
       '&endDate=' + encodeURIComponent(endDate) +
@@ -2364,6 +2376,7 @@ async function savePartnerSettlement() {
 
     const result = await apiPost({
       action: 'adminSavePartnerSettlement',
+      password: adminPw(),
 
       partnerCode:
         currentSettlementPreview.partnerCode,
