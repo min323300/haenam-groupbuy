@@ -7,6 +7,14 @@
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans KR",sans-serif;background:#f4f6f4;color:#222}.wrap{max-width:1080px;margin:auto;padding:24px 16px 60px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}.brand{font-size:25px;font-weight:800;color:#176c46}.sub{font-size:13px;color:#68736c;margin-top:4px}.card{background:#fff;border-radius:16px;padding:22px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,.04)}.login{max-width:460px;margin:60px auto}.field{margin:12px 0}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}.field input{width:100%;padding:12px;border:1px solid #ccd3cc;border-radius:9px;font-size:15px}button{border:0;border-radius:9px;padding:11px 15px;font-weight:700;cursor:pointer}.primary{background:#16875a;color:#fff}.secondary{background:#eef1ee;color:#222}.danger{background:#d9534f;color:#fff}.notice{display:none;margin-top:12px;padding:11px 13px;border-radius:9px;background:#eef8f2;color:#17623f}.notice.error{background:#fdeaea;color:#a32121}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.stat{background:#fff;border-radius:14px;padding:18px;box-shadow:0 2px 10px rgba(0,0,0,.04)}.stat span{display:block;font-size:12px;color:#777}.stat strong{display:block;font-size:25px;margin-top:5px}.linkbox{display:flex;gap:8px;align-items:center}.linkbox input{flex:1;min-width:0;padding:11px;border:1px solid #ccd3cc;border-radius:8px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:720px}th,td{border:1px solid #dde2dd;padding:10px;text-align:center;font-size:13px}th{background:#eef4ef}.muted{color:#6c756f;font-size:13px}.hidden{display:none!important}@media(max-width:700px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.top{align-items:flex-start}.card{padding:16px}.stat strong{font-size:21px}.linkbox{display:block}.linkbox button{margin-top:8px;width:100%}}
 .pp-input{width:100%;padding:12px;border:1px solid #ccd3cc;border-radius:9px;font-size:15px;font-family:inherit;background:#fff}.pp-wrap{display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:start;margin-top:12px}.pp-wrap img{width:200px;height:190px;object-fit:cover;border-radius:12px;background:#f0f3f0}.pp-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.kakao{background:#fee500;color:#191919}@media(max-width:700px){.pp-wrap{grid-template-columns:1fr}.pp-wrap img{width:100%;height:auto;max-height:260px}.pp-actions button{flex:1 1 100%}}
+
+.period{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.period input[type=date]{padding:9px;border:1px solid #ccd3cc;border-radius:8px;font-family:inherit}.chip{background:#eef1ee;color:#222;padding:8px 12px;border-radius:999px;font-size:13px}.chip.on{background:#16875a;color:#fff}
+.stfilter{display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center;margin:12px 0;padding:10px 12px;background:#f6f8f6;border:1px solid #e1e8e3;border-radius:10px;font-size:14px}.stfilter label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.sel-sum{font-size:14px;margin:6px 0 10px}.sel-sum b{font-size:18px;color:#16875a}
+.st{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700}.st-paid{background:#e3f4ea;color:#17623f}.st-conf{background:#e8f0fb;color:#1d4f91}.st-exp{background:#f3f3f3;color:#555}
+.ev{display:inline-block;padding:3px 9px;border-radius:999px;background:#fff1e0;color:#b45309;font-size:12px;font-weight:800}
+.stat.paid strong{color:#16875a}
+.cardmodal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;display:none;align-items:center;justify-content:center;padding:14px}.cardmodal.open{display:flex}.cardmodal .box{background:#fff;border-radius:16px;padding:16px;max-width:520px;width:100%;max-height:94vh;overflow:auto}.cardmodal img{width:100%;border-radius:12px;display:block}
 </style>
 </head>
 <body>
@@ -42,20 +50,52 @@
       <div id="ppMessage" class="notice"></div>
     </section>
 
+    <section class="card" id="commissionCard">
+      <h2 style="margin:0 0 6px">💰 상품별 수당</h2>
+      <p class="muted">지금 주문이 들어오면 받는 박스(개)당 수당입니다. 🔥 이벤트 기간에는 기본수당에 이벤트 수당이 더해집니다. 주문이 들어온 순간의 수당으로 고정됩니다.</p>
+      <div class="table-wrap"><table style="min-width:560px"><thead><tr><th>상품</th><th>기본수당</th><th>이벤트수당</th><th>합계수당</th><th>이벤트 기간</th></tr></thead><tbody id="commissionRows"><tr><td colspan="5">수당을 불러오는 중입니다.</td></tr></tbody></table></div>
+    </section>
+
+    <section class="card">
+      <h2 style="margin:0 0 8px">📅 조회 기간</h2>
+      <div class="period">
+        <button class="chip" data-range="all" onclick="setRange('all')">전체</button>
+        <button class="chip" data-range="week" onclick="setRange('week')">이번 주</button>
+        <button class="chip" data-range="month" onclick="setRange('month')">이번 달</button>
+        <button class="chip" data-range="prev" onclick="setRange('prev')">지난달</button>
+        <input type="date" id="fromDate" aria-label="시작일"> ~ <input type="date" id="toDate" aria-label="종료일">
+        <button class="primary" onclick="setRange('custom')">조회</button>
+      </div>
+      <p class="muted" id="periodLabel" style="margin:8px 0 0">전체 기간 (주문 접수일 기준)</p>
+    </section>
+
     <section class="grid" style="margin-bottom:16px">
       <div class="stat"><span>방문자</span><strong id="visitors">0명</strong></div>
       <div class="stat"><span>주문</span><strong id="orders">0건</strong></div>
       <div class="stat"><span>판매수량</span><strong id="quantity">0개</strong></div>
       <div class="stat"><span>판매금액</span><strong id="sales">0원</strong></div>
       <div class="stat"><span>배송완료</span><strong id="shipping">0건</strong></div>
-      <div class="stat"><span>예상수당</span><strong id="expected">0원</strong></div>
-      <div class="stat"><span>확정수당</span><strong id="confirmed">0원</strong></div>
+      <div class="stat"><span>예상수당 (배송 전)</span><strong id="expected">0원</strong></div>
+      <div class="stat"><span>확정수당 (지급 예정)</span><strong id="confirmed">0원</strong></div>
+      <div class="stat paid"><span>지급완료 수당</span><strong id="paid">0원</strong></div>
     </section>
 
     <section class="card">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><div><h2 style="margin:0">상품별 판매 실적</h2><p class="muted">고객 이름·전화번호·주소는 표시하지 않습니다.</p></div><button class="secondary" onclick="loadDashboard()">새로고침</button></div>
       <div id="dashMessage" class="notice"></div>
-      <div class="table-wrap"><table><thead><tr><th>상품</th><th>주문</th><th>판매수량</th><th>판매금액</th><th>예상수당</th><th>확정수당</th></tr></thead><tbody id="productRows"><tr><td colspan="6">실적을 불러오는 중입니다.</td></tr></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>상품</th><th>주문</th><th>판매수량</th><th>판매금액</th><th>예상수당</th><th>확정수당</th><th>지급완료</th></tr></thead><tbody id="productRows"><tr><td colspan="7">실적을 불러오는 중입니다.</td></tr></tbody></table></div>
+    </section>
+
+    <section class="card">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><h2 style="margin:0">주문별 수당</h2><p class="muted">체크한 상태만 목록과 합계에 보입니다. 고객 정보는 표시하지 않습니다.</p></div><button class="kakao" type="button" onclick="openCard()">📸 실적 카드 만들기</button></div>
+      <div class="stfilter">
+        <span style="font-weight:700;color:#555">상태</span>
+        <label><input type="checkbox" class="stf" value="지급완료" checked> 지급완료</label>
+        <label><input type="checkbox" class="stf" value="확정" checked> 확정 (지급 예정)</label>
+        <label><input type="checkbox" class="stf" value="예상" checked> 예상 (배송 전)</label>
+      </div>
+      <div class="sel-sum" id="selSum"></div>
+      <div class="table-wrap"><table style="min-width:640px"><thead><tr><th>주문일</th><th>상품</th><th>수량</th><th>개당 수당</th><th>수당</th><th>상태</th><th>지급일</th></tr></thead><tbody id="orderRows"><tr><td colspan="7">불러오는 중입니다.</td></tr></tbody></table></div>
     </section>
         <!-- 내 정산내역 -->
     <section class="card">
@@ -99,6 +139,16 @@
     </section>
   </main>
 </div>
+<div id="cardModal" class="cardmodal" onclick="if(event.target===this)closeCard()">
+  <div class="box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><b>📸 실적 카드</b><button class="secondary" onclick="closeCard()">닫기</button></div>
+    <label style="display:flex;gap:6px;align-items:center;font-size:14px;margin-bottom:10px"><input type="checkbox" id="hideMoney" onchange="drawCard()"> 금액 숨기기 (수량만 표시)</label>
+    <img id="cardImg" alt="실적 카드 미리보기">
+    <p class="muted" style="margin:8px 0">이름은 가려지고, 파트너코드·홍보 링크는 들어가지 않습니다. 위 '조회 기간'과 '상태' 체크가 그대로 반영됩니다.</p>
+    <div class="pp-actions"><button class="kakao" onclick="shareCard()">💬 공유하기</button><button class="secondary" onclick="saveCard()">이미지 저장</button></div>
+    <div id="cardMessage" class="notice"></div>
+  </div>
+</div>
 <script>
 const API_URL='https://script.google.com/macros/s/AKfycbz9-pk6kkPk01Lh11agNKxeV1Gjo_kzAPYOXyJ9kXUVY7r8t3ptrLurCjOwdTf31f00ug/exec';
 const TOKEN_KEY='haenamPartnerSession';
@@ -111,10 +161,125 @@ async function apiGet(params){const u=new URL(API_URL);Object.entries(params).fo
 async function login(){
   try{const loginId=$('loginId').value.trim(),loginPassword=$('loginPassword').value;if(!loginId||!loginPassword)return message('loginMessage','로그인 ID와 비밀번호를 입력해 주세요.',true);message('loginMessage','로그인 중입니다...');const res=await apiPost({action:'partnerLogin',loginId,loginPassword});if(!res.success)throw new Error(res.message||'로그인 실패');sessionStorage.setItem(TOKEN_KEY,res.token);$('loginPassword').value='';await loadDashboard()}catch(e){message('loginMessage',e.message,true)}
 }
+/* ---------- 조회 기간 · 실적 ---------- */
+let dash=null, commissionItems=[], rangeKey='all';
+const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+function rangeDates(key){
+  const t=new Date(); t.setHours(0,0,0,0);
+  if(key==='week'){const s=new Date(t);s.setDate(t.getDate()-((t.getDay()+6)%7));return [ymd(s),ymd(t)];}
+  if(key==='month'){return [ymd(new Date(t.getFullYear(),t.getMonth(),1)),ymd(t)];}
+  if(key==='prev'){return [ymd(new Date(t.getFullYear(),t.getMonth()-1,1)),ymd(new Date(t.getFullYear(),t.getMonth(),0))];}
+  if(key==='custom'){return [$('fromDate').value,$('toDate').value];}
+  return ['',''];
+}
+function periodText(){
+  const [f,t]=rangeDates(rangeKey);
+  if(!f&&!t) return '전체 기간';
+  const md=v=>v?(+v.slice(5,7))+'/'+(+v.slice(8,10)):'';
+  if(rangeKey==='month'||rangeKey==='prev'){const m=+(f||t).slice(5,7);return m+'월'+(rangeKey==='month'?' (오늘까지)':'');}
+  if(rangeKey==='week') return '이번 주 ('+md(f)+'~'+md(t)+')';
+  return md(f)+' ~ '+md(t);
+}
+function setRange(key){
+  if(key==='custom'){const f=$('fromDate').value,t=$('toDate').value;if(!f||!t)return message('dashMessage','시작일과 종료일을 모두 골라 주세요.',true);if(f>t)return message('dashMessage','시작일이 종료일보다 늦습니다.',true);}
+  rangeKey=key; const [f,t]=rangeDates(key); if(key!=='custom'){$('fromDate').value=f;$('toDate').value=t;}
+  document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.range===key));
+  loadDashboard();
+}
 async function loadDashboard(){
   const token=sessionStorage.getItem(TOKEN_KEY);if(!token)return showLogin();
-  try{const res=await apiGet({action:'partnerDashboard',token});if(!res.success)throw new Error(res.message||'실적 조회 실패');$('loginCard').classList.add('hidden');$('dashboard').classList.remove('hidden');$('logoutBtn').classList.remove('hidden');$('partnerTitle').textContent=(res.partner.name||'파트너')+'님 실적';$('partnerCode').textContent='파트너코드 '+(res.partner.partnerCode||'');$('partnerUrl').value=res.partner.partnerUrl||'';$('visitors').textContent=Number(res.visitors||0).toLocaleString('ko-KR')+'명';const s=res.summary||{};$('orders').textContent=Number(s.orders||0).toLocaleString('ko-KR')+'건';$('quantity').textContent=Number(s.quantity||0).toLocaleString('ko-KR')+'개';$('sales').textContent=money(s.salesAmount);$('shipping').textContent=Number(s.shippingCompleted||0).toLocaleString('ko-KR')+'건';$('expected').textContent=money(s.expectedCommission);$('confirmed').textContent=money(s.confirmedCommission);const rows=Array.isArray(res.products)?res.products:[];$('productRows').innerHTML=rows.length?rows.map(x=>`<tr><td>${esc(x.productName||x.productCode)}</td><td>${Number(x.orders||0).toLocaleString('ko-KR')}건</td><td>${Number(x.quantity||0).toLocaleString('ko-KR')}개</td><td>${money(x.salesAmount)}</td><td>${money(x.expectedCommission)}</td><td><b>${money(x.confirmedCommission)}</b></td></tr>`).join(''):'<tr><td colspan="6">아직 파트너 주문 실적이 없습니다.</td></tr>';message('dashMessage','최신 실적을 불러왔습니다.');loadPromoProducts();await loadSettlements();}catch(e){sessionStorage.removeItem(TOKEN_KEY);showLogin();message('loginMessage',e.message,true)}
+  try{
+    const [startDate,endDate]=rangeDates(rangeKey);
+    const res=await apiGet({action:'partnerDashboard',token,startDate,endDate});
+    if(!res.success)throw new Error(res.message||'실적 조회 실패');
+    dash=res;
+    $('loginCard').classList.add('hidden');$('dashboard').classList.remove('hidden');$('logoutBtn').classList.remove('hidden');
+    $('partnerTitle').textContent=(res.partner.name||'파트너')+'님 실적';$('partnerCode').textContent='파트너코드 '+(res.partner.partnerCode||'');$('partnerUrl').value=res.partner.partnerUrl||'';
+    $('periodLabel').textContent=periodText()+' (주문 접수일 기준)';
+    $('visitors').textContent=Number(res.visitors||0).toLocaleString('ko-KR')+'명';
+    const s=res.summary||{};
+    $('orders').textContent=Number(s.orders||0).toLocaleString('ko-KR')+'건';$('quantity').textContent=Number(s.quantity||0).toLocaleString('ko-KR')+'개';$('sales').textContent=money(s.salesAmount);$('shipping').textContent=Number(s.shippingCompleted||0).toLocaleString('ko-KR')+'건';
+    $('expected').textContent=money(s.expectedCommission);$('confirmed').textContent=money(s.confirmedCommission);$('paid').textContent=money(s.paidCommission);
+    const rows=Array.isArray(res.products)?res.products:[];
+    $('productRows').innerHTML=rows.length?rows.map(x=>`<tr><td>${esc(x.productName||x.productCode)}</td><td>${Number(x.orders||0).toLocaleString('ko-KR')}건</td><td>${Number(x.quantity||0).toLocaleString('ko-KR')}개</td><td>${money(x.salesAmount)}</td><td>${money(x.expectedCommission)}</td><td>${money(x.confirmedCommission)}</td><td><b>${money(x.paidCommission)}</b></td></tr>`).join(''):'<tr><td colspan="7">이 기간에는 파트너 주문 실적이 없습니다.</td></tr>';
+    renderOrders();
+    message('dashMessage','최신 실적을 불러왔습니다.');
+    loadPromoProducts(); loadCommissions(); await loadSettlements();
+  }catch(e){
+    if(/로그인|만료|계정/.test(e.message||'')){sessionStorage.removeItem(TOKEN_KEY);showLogin();message('loginMessage',e.message,true);}
+    else message('dashMessage',e.message,true);
+  }
 }
+function checkedStatuses(){return [...document.querySelectorAll('.stf:checked')].map(x=>x.value);}
+const stClass={'지급완료':'st-paid','확정':'st-conf','예상':'st-exp'};
+function renderOrders(){
+  const list=(dash&&dash.orders)||[], on=checkedStatuses();
+  const shown=list.filter(o=>on.includes(o.status));
+  const sum={지급완료:0,확정:0,예상:0}; let qty=0;
+  shown.forEach(o=>{sum[o.status]+=Number(o.commission||0);qty+=Number(o.quantity||0);});
+  const total=on.reduce((t,k)=>t+sum[k],0);
+  $('selSum').innerHTML=`선택한 상태 합계 <b>${money(total)}</b> · ${shown.length}건 · ${qty.toLocaleString('ko-KR')}개`;
+  $('orderRows').innerHTML=shown.length?shown.map(o=>{
+    const unit=o.unitEventCommission>0?`${money(o.unitBaseCommission)} + <span class="ev">🔥 ${money(o.unitEventCommission)}</span>`:money(o.unitCommission);
+    return `<tr><td>${esc(o.orderDate)}</td><td>${esc(o.productName)}</td><td>${Number(o.quantity||0)}개</td><td>${unit}</td><td><b>${money(o.commission)}</b></td><td><span class="st ${stClass[o.status]||''}">${esc(o.status)}</span></td><td>${esc(o.paymentDate||'-')}</td></tr>`;
+  }).join(''):'<tr><td colspan="7">체크한 상태의 주문이 없습니다.</td></tr>';
+}
+document.addEventListener('change',e=>{if(e.target&&e.target.classList&&e.target.classList.contains('stf'))renderOrders();});
+function parseLocal(v){const m=String(v||'').match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);return m?new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]):null;}
+function remainText(v){const d=parseLocal(v);if(!d)return'';const ms=d-new Date();if(ms<=0)return'곧 종료';const h=Math.floor(ms/3600000);return h>=24?Math.floor(h/24)+'일 남음':(h>0?h+'시간 남음':'1시간 이내');}
+function endLabel(v){const d=parseLocal(v);return d?(d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+'까지':'';}
+async function loadCommissions(){
+  const token=sessionStorage.getItem(TOKEN_KEY);if(!token)return;
+  try{
+    const res=await apiGet({action:'partnerCommissionList',token});
+    if(!res.success)throw new Error(res.message||'수당 조회 실패');
+    commissionItems=res.items||[];
+    $('commissionRows').innerHTML=commissionItems.length?commissionItems.map(x=>`<tr><td>${esc(x.productName)}</td><td>${money(x.baseCommission)}</td><td>${x.eventCommission>0?`<span class="ev">🔥 +${money(x.eventCommission)}</span>`:'-'}</td><td><b>${money(x.totalCommission)}</b></td><td>${x.eventCommission>0?esc(endLabel(x.eventEndAt))+' · '+esc(remainText(x.eventEndAt)):'-'}</td></tr>`).join(''):'<tr><td colspan="5">지금 수당이 설정된 상품이 없습니다.</td></tr>';
+  }catch(e){$('commissionRows').innerHTML=`<tr><td colspan="5">${esc(e.message)}</td></tr>`;}
+}
+
+/* ---------- 📸 실적 카드 (이름 가림 · 코드/링크 제외) ---------- */
+let cardBlob=null;
+function maskName(n){n=String(n||'파트너').trim();return n.length<=1?n+'*':n.charAt(0)+'*'.repeat(n.length-1);}
+function openCard(){if(!dash)return;$('cardModal').classList.add('open');drawCard();}
+function closeCard(){$('cardModal').classList.remove('open');}
+function roundRect(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
+function drawCard(){
+  const W=1080,H=1080,cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');
+  const F='"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+  const g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,'#16875a');g.addColorStop(1,'#0f5e3f');c.fillStyle=g;c.fillRect(0,0,W,H);
+  c.fillStyle='#fff';roundRect(c,60,60,W-120,H-120,40);c.fill();
+  c.textAlign='center';c.fillStyle='#16875a';c.font='800 46px '+F;c.fillText('🧺 해남공구마켓 파트너 실적',W/2,150);
+  c.fillStyle='#555';c.font='600 36px '+F;c.fillText(maskName(dash.partner.name)+' 파트너 · '+periodText(),W/2,215);
+  const on=checkedStatuses(), list=(dash.orders||[]).filter(o=>on.includes(o.status));
+  const sum={지급완료:0,확정:0,예상:0};let qty=0;list.forEach(o=>{sum[o.status]+=Number(o.commission||0);qty+=Number(o.quantity||0);});
+  c.fillStyle='#222';c.font='700 44px '+F;c.fillText('판매 '+qty.toLocaleString('ko-KR')+'개 · 주문 '+list.length+'건',W/2,310);
+  const hide=$('hideMoney').checked;
+  c.fillStyle='#f3f8f5';roundRect(c,120,350,W-240,300,28);c.fill();
+  if(hide){c.fillStyle='#16875a';c.font='900 120px '+F;c.fillText(qty.toLocaleString('ko-KR')+'개',W/2,520);c.fillStyle='#555';c.font='600 34px '+F;c.fillText('판매 수량',W/2,590);}
+  else{
+    const big=on.includes('지급완료')?['지급받은 수당',sum['지급완료']]:['수당 합계',on.reduce((t,k)=>t+sum[k],0)];
+    c.fillStyle='#555';c.font='600 36px '+F;c.fillText(big[0],W/2,420);
+    c.fillStyle='#16875a';c.font='900 112px '+F;c.fillText(big[1].toLocaleString('ko-KR')+'원',W/2,545);
+    const small=[];if(on.includes('지급완료')&&on.includes('확정'))small.push('지급 예정 '+sum['확정'].toLocaleString('ko-KR')+'원');if(on.includes('지급완료')&&on.includes('예상'))small.push('배송 전 '+sum['예상'].toLocaleString('ko-KR')+'원');
+    c.fillStyle='#666';c.font='600 32px '+F;c.fillText(small.join('  ·  '),W/2,612);
+  }
+  const evs=commissionItems.filter(x=>x.eventCommission>0).slice(0,3);
+  let y=720;
+  if(evs.length){c.fillStyle='#b45309';c.font='800 38px '+F;c.fillText('🔥 지금 이벤트 수당',W/2,y);y+=58;
+    c.font='600 32px '+F;c.fillStyle='#333';evs.forEach(x=>{c.fillText(x.productName+'  '+x.baseCommission.toLocaleString('ko-KR')+' + '+x.eventCommission.toLocaleString('ko-KR')+' = '+x.totalCommission.toLocaleString('ko-KR')+'원 ('+endLabel(x.eventEndAt)+')',W/2,y);y+=50;});}
+  else{c.fillStyle='#555';c.font='600 34px '+F;c.fillText('해남 산지 공동구매, 같이 알려요!',W/2,y+20);}
+  c.fillStyle='#16875a';c.font='700 30px '+F;c.fillText('haenamgonggu.kr',W/2,H-100);
+  cv.toBlob(b=>{cardBlob=b;$('cardImg').src=URL.createObjectURL(b);},'image/png');
+}
+async function shareCard(){
+  if(!cardBlob)return;
+  const file=new File([cardBlob],'haenam-partner-card.png',{type:'image/png'});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:'해남공구마켓 파트너 실적'});return message('cardMessage','공유 창에서 카카오톡 채팅방을 골라 보내세요.');}catch(e){if(e&&e.name==='AbortError')return;}}
+  saveCard(); message('cardMessage','이 기기에서는 바로 공유가 안 되어 이미지로 저장했습니다. 카카오톡에서 사진으로 올려 주세요.');
+}
+function saveCard(){if(!cardBlob)return;const a=document.createElement('a');a.href=URL.createObjectURL(cardBlob);a.download='해남공구마켓_실적카드.png';document.body.appendChild(a);a.click();a.remove();}
+
 /* ---------- 내 정산내역 ---------- */
 async function loadSettlements() {
   const token = sessionStorage.getItem(TOKEN_KEY);
@@ -200,6 +365,7 @@ function showLogin(){$('loginCard').classList.remove('hidden');$('dashboard').cl
 function logout(){sessionStorage.removeItem(TOKEN_KEY);showLogin()}
 async function copyUrl(){const v=$('partnerUrl').value;try{await navigator.clipboard.writeText(v);alert('전용 홍보 URL이 복사되었습니다.')}catch(e){$('partnerUrl').select();document.execCommand('copy');alert('전용 홍보 URL이 복사되었습니다.')}}
 $('loginPassword').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
+document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.range==='all'));
 if(sessionStorage.getItem(TOKEN_KEY))loadDashboard();
 </script>
 <script>

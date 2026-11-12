@@ -593,11 +593,12 @@ async function saveSupplierApplication(btn){
       <div class="card" style="padding:14px"><div class="muted">배송완료</div><strong id="perfShipping" style="font-size:24px">0건</strong></div>
       <div class="card" style="padding:14px"><div class="muted">예상수당</div><strong id="perfExpected" style="font-size:24px">0원</strong></div>
       <div class="card" style="padding:14px"><div class="muted">확정수당</div><strong id="perfConfirmed" style="font-size:24px">0원</strong></div>
+      <div class="card" style="padding:14px"><div class="muted">지급완료</div><strong id="perfPaid" style="font-size:24px">0원</strong></div>
     </div>
     <div class="table-wrap" style="margin-top:12px">
       <table>
-        <thead><tr><th>파트너</th><th>상태</th><th>주문</th><th>판매수량</th><th>판매금액</th><th>배송완료</th><th>예상수당</th><th>확정수당</th></tr></thead>
-        <tbody id="partnerPerformanceRows"><tr><td colspan="8">전체 실적 불러오기를 눌러 주세요.</td></tr></tbody>
+        <thead><tr><th>파트너</th><th>상태</th><th>주문</th><th>판매수량</th><th>판매금액</th><th>배송완료</th><th>예상수당</th><th>확정수당</th><th>지급완료</th></tr></thead>
+        <tbody id="partnerPerformanceRows"><tr><td colspan="9">전체 실적 불러오기를 눌러 주세요.</td></tr></tbody>
       </table>
     </div>
 
@@ -647,6 +648,34 @@ async function saveSupplierApplication(btn){
     </tbody>
   </table>
 </div>
+<hr style="border:0;border-top:1px solid #e3e7e3;margin:24px 0">
+<h3>🔥 이벤트(특별) 수당</h3>
+<p class="muted">정한 기간 동안 상품의 기본수당에 추가 금액을 더해 줍니다. <b>전체 파트너</b> 또는 <b>특정 파트너</b>만 지정할 수 있고, 기간이 끝나면 자동으로 기본수당으로 돌아갑니다. 같은 시간에 이벤트가 겹치면 <b>가장 큰 금액 하나만</b> 적용됩니다. 주문이 들어온 순간의 합계수당이 주문에 고정 기록됩니다.</p>
+<div class="toolbar"><button class="primary" type="button" onclick="loadEventCommissions()">이벤트 수당 불러오기</button></div>
+<div id="eventMessage" class="notice"></div>
+<div id="eventForm" style="display:none;margin-top:12px;padding:14px;border:1px solid #f1d9b5;border-radius:12px;background:#fffaf2">
+  <div class="grid">
+    <div class="field"><label>상품 *</label><select id="evProduct" onchange="evPreview()"></select></div>
+    <div class="field"><label>추가 수당 (박스·개당) *</label><input id="evBonus" type="number" min="100" step="100" placeholder="예: 1500" oninput="evPreview()"></div>
+    <div class="field full"><label>대상</label>
+      <div style="display:flex;gap:16px;flex-wrap:wrap"><label><input type="radio" name="evTarget" value="전체" checked onchange="evTargetChange()"> 전체 파트너</label><label><input type="radio" name="evTarget" value="선택" onchange="evTargetChange()"> 특정 파트너만</label></div>
+      <div id="evPartners" style="display:none;margin-top:8px;display:none;gap:6px 16px;flex-wrap:wrap"></div>
+    </div>
+    <div class="field"><label>시작 *</label><input id="evStart" type="datetime-local"></div>
+    <div class="field"><label>종료 *</label><input id="evEnd" type="datetime-local">
+      <div style="display:flex;gap:6px;margin-top:6px"><button class="secondary" type="button" onclick="evDays(3)">3일</button><button class="secondary" type="button" onclick="evDays(5)">5일</button><button class="secondary" type="button" onclick="evDays(7)">7일</button></div></div>
+    <div class="field full"><label>메모 (관리자만 보임)</label><input id="evMemo" maxlength="200" placeholder="예: 김장 마감 전 집중 홍보"></div>
+  </div>
+  <div id="evPreviewBox" class="muted" style="margin-top:10px;font-size:14px"></div>
+  <div class="toolbar"><button class="primary" type="button" onclick="saveEventCommission()">이벤트 수당 등록</button></div>
+</div>
+<div class="table-wrap" style="margin-top:12px">
+  <table>
+    <thead><tr><th>상태</th><th>상품</th><th>대상</th><th>추가수당</th><th>기간</th><th>메모</th><th>관리</th></tr></thead>
+    <tbody id="eventRows"><tr><td colspan="7">이벤트 수당 불러오기를 눌러 주세요.</td></tr></tbody>
+  </table>
+</div>
+
 <!-- 파트너 정산관리 -->
 <section class="card" style="margin-top:18px;">
   <h2>파트너 정산관리</h2>
@@ -1817,6 +1846,7 @@ async function loadPartnerPerformance(){
     $('perfShipping').textContent=Number(t.shippingCompleted||0).toLocaleString('ko-KR')+'건';
     $('perfExpected').textContent=Number(t.expectedCommission||0).toLocaleString('ko-KR')+'원';
     $('perfConfirmed').textContent=Number(t.confirmedCommission||0).toLocaleString('ko-KR')+'원';
+    $('perfPaid').textContent=Number(t.paidCommission||0).toLocaleString('ko-KR')+'원';
     const rows=Array.isArray(res.partners)?res.partners:[];
     $('partnerPerformanceRows').innerHTML=rows.length?rows.map(r=>`<tr>
       <td>${esc(r.name||'')}<br><span class="muted">${esc(r.partnerCode||'')}</span></td>
@@ -1824,7 +1854,8 @@ async function loadPartnerPerformance(){
       <td>${Number(r.quantity||0).toLocaleString('ko-KR')}개</td><td>${Number(r.salesAmount||0).toLocaleString('ko-KR')}원</td>
       <td>${Number(r.shippingCompleted||0).toLocaleString('ko-KR')}건</td>
       <td>${Number(r.expectedCommission||0).toLocaleString('ko-KR')}원</td>
-      <td><strong>${Number(r.confirmedCommission||0).toLocaleString('ko-KR')}원</strong></td></tr>`).join(''):'<tr><td colspan="8">등록된 파트너가 없습니다.</td></tr>';
+      <td><strong>${Number(r.confirmedCommission||0).toLocaleString('ko-KR')}원</strong></td>
+      <td>${Number(r.paidCommission||0).toLocaleString('ko-KR')}원</td></tr>`).join(''):'<tr><td colspan="9">등록된 파트너가 없습니다.</td></tr>';
     showMessage('partnerPerformanceMessage','전체 파트너 실적을 불러왔습니다.');
   }catch(e){ showMessage('partnerPerformanceMessage','파트너 실적 조회 오류: '+e.message,true); }
 }
@@ -1837,7 +1868,7 @@ async function downloadPartnerPerformanceExcel(){
     const rows=(res.partners||[]).map(r=>({
       '파트너코드':r.partnerCode||'','파트너명':r.name||'','상태':r.status||'',
       '주문건수':Number(r.orders||0),'판매수량':Number(r.quantity||0),'판매금액':Number(r.salesAmount||0),
-      '배송완료':Number(r.shippingCompleted||0),'예상수당':Number(r.expectedCommission||0),'확정수당':Number(r.confirmedCommission||0)
+      '배송완료':Number(r.shippingCompleted||0),'예상수당':Number(r.expectedCommission||0),'확정수당':Number(r.confirmedCommission||0),'지급완료':Number(r.paidCommission||0)
     }));
     if(!rows.length) throw new Error('다운로드할 파트너 실적이 없습니다.');
     const ws=XLSX.utils.json_to_sheet(rows); ws['!cols']=[{wch:14},{wch:16},{wch:10},{wch:12},{wch:12},{wch:16},{wch:12},{wch:16},{wch:16}];
@@ -1876,6 +1907,75 @@ async function loadPartnerCommissions(){
 }
 /* ---------- 상품별 공통 수당 관리 ---------- */
 
+/* ---------- 🔥 이벤트(특별) 수당 ---------- */
+let eventData=null;
+const won=v=>Number(v||0).toLocaleString('ko-KR')+'원';
+function dtLocal(d){const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes());}
+function evDays(n){const s=$('evStart').value?new Date($('evStart').value):new Date();const e=new Date(s.getTime()+n*86400000);e.setHours(23,59,0,0);e.setDate(e.getDate()-1);$('evEnd').value=dtLocal(e);evPreview();}
+function evTargetChange(){const sel=document.querySelector('input[name=evTarget]:checked').value==='선택';$('evPartners').style.display=sel?'flex':'none';}
+function evProductInfo(){return eventData?eventData.products.find(p=>p.productCode===$('evProduct').value):null;}
+function evPreview(){
+  const p=evProductInfo(), bonus=Number($('evBonus').value||0); if(!p){$('evPreviewBox').textContent='';return;}
+  const total=Number(p.baseCommission||0)+bonus;
+  let html=`기본 ${won(p.baseCommission)} + 이벤트 ${won(bonus)} = <b>합계 ${won(total)}</b> (박스·개당)`;
+  if(p.commissionStatus!=='활성') html+=` <span style="color:#a32121">· 이 상품은 기본수당이 '${esc(p.commissionStatus)}' 상태라 이벤트 수당도 적용되지 않습니다.</span>`;
+  if(p.margin!==null&&p.margin!==undefined){
+    const left=p.margin-total, color=left<=0?'#a32121':(total>p.margin*0.5?'#b45309':'#17623f');
+    html+=`<br>상품세부정보 기준 박스당 마진 약 ${won(p.margin)} → 수당 뒤 <b style="color:${color}">${won(left)}</b>`+(left<=0?' ⚠️ 팔수록 손해입니다':(total>p.margin*0.5?' ⚠️ 마진의 절반 이상을 수당으로 씁니다':''));
+  } else html+='<br>이 상품은 상품세부정보에 매입단가가 없어 마진을 계산하지 못했습니다.';
+  $('evPreviewBox').innerHTML=html;
+}
+async function loadEventCommissions(){
+  try{
+    const password=partnerPassword(); if(!password) return showMessage('eventMessage','관리자 비밀번호를 입력해 주세요.',true);
+    showMessage('eventMessage','이벤트 수당을 불러오고 있습니다...');
+    const res=await apiGet({action:'eventCommissionList',password}); if(!res.success) throw new Error(res.message||'조회 실패');
+    eventData=res;
+    $('evProduct').innerHTML=res.products.map(p=>`<option value="${esc(p.productCode)}">${esc(p.productName)} (기본 ${won(p.baseCommission)})</option>`).join('');
+    $('evPartners').innerHTML=res.partners.filter(p=>p.status==='활성').map(p=>`<label><input type="checkbox" class="ev-partner" value="${esc(p.partnerCode)}"> ${esc(p.name)} (${esc(p.partnerCode)})</label>`).join('')||'<span class="muted">활성 파트너가 없습니다.</span>';
+    if(!$('evStart').value){$('evStart').value=dtLocal(new Date());evDays(5);}
+    $('eventForm').style.display='block'; evTargetChange(); evPreview();
+    const names={}; res.partners.forEach(p=>names[p.partnerCode]=p.name);
+    const stColor={'진행중':'#17623f','예정':'#1d4f91','종료':'#888'};
+    $('eventRows').innerHTML=res.events.length?res.events.map(e=>`<tr>
+      <td><b style="color:${stColor[e.state]||'#333'}">${esc(e.state)}</b></td>
+      <td class="left">${esc(e.productName)}</td>
+      <td class="left">${e.target==='전체'?'전체 파트너':e.partnerCodes.map(c=>esc((names[c]||'')+' '+c)).join('<br>')}</td>
+      <td><b>+${won(e.bonus)}</b></td>
+      <td>${esc(String(e.startAt).replace('T',' ').slice(0,16))}<br>~ ${esc(String(e.endAt).replace('T',' ').slice(0,16))}</td>
+      <td class="left">${esc(e.memo)}</td>
+      <td>${e.state==='종료'?'-':`<button class="danger" type="button" onclick="stopEventCommission('${esc(e.eventId)}')">지금 종료</button>`}</td></tr>`).join(''):'<tr><td colspan="7">등록된 이벤트 수당이 없습니다.</td></tr>';
+    showMessage('eventMessage','이벤트 수당을 불러왔습니다.');
+  }catch(e){showMessage('eventMessage','이벤트 수당 오류: '+e.message,true);}
+}
+async function saveEventCommission(){
+  try{
+    const password=partnerPassword(); if(!password) return showMessage('eventMessage','관리자 비밀번호를 입력해 주세요.',true);
+    const p=evProductInfo(), bonus=Number($('evBonus').value||0);
+    if(!p) return showMessage('eventMessage','상품을 선택해 주세요.',true);
+    if(!(bonus>0)) return showMessage('eventMessage','추가 수당을 입력해 주세요.',true);
+    const target=document.querySelector('input[name=evTarget]:checked').value;
+    const partnerCodes=[...document.querySelectorAll('.ev-partner:checked')].map(x=>x.value);
+    if(target==='선택'&&!partnerCodes.length) return showMessage('eventMessage','이벤트를 줄 파트너를 한 명 이상 체크해 주세요.',true);
+    const total=Number(p.baseCommission||0)+bonus;
+    if(p.margin!==null&&p.margin!==undefined&&total>=p.margin&&!confirm('합계수당('+won(total)+')이 박스당 마진(약 '+won(p.margin)+') 이상입니다. 팔수록 손해일 수 있습니다. 그래도 등록할까요?')) return;
+    const who=target==='전체'?'전체 파트너':partnerCodes.join(', ');
+    if(!confirm(`${p.productName}\n대상: ${who}\n기본 ${won(p.baseCommission)} + 이벤트 ${won(bonus)} = ${won(total)}\n기간: ${$('evStart').value.replace('T',' ')} ~ ${$('evEnd').value.replace('T',' ')}\n\n이대로 등록할까요?`)) return;
+    showMessage('eventMessage','등록하고 있습니다...');
+    const res=await apiPost({action:'eventCommissionSave',password,productCode:p.productCode,bonus,target,partnerCodes,startAt:$('evStart').value,endAt:$('evEnd').value,memo:$('evMemo').value});
+    if(!res.success) throw new Error(res.message||'등록 실패');
+    $('evBonus').value='';$('evMemo').value='';
+    await loadEventCommissions(); showMessage('eventMessage',res.message||'등록했습니다.');
+  }catch(e){showMessage('eventMessage','이벤트 수당 등록 오류: '+e.message,true);}
+}
+async function stopEventCommission(id){
+  if(!confirm('이 이벤트를 지금 종료할까요? 지금부터 들어오는 주문은 기본수당만 적용됩니다. (이미 들어온 주문의 수당은 바뀌지 않습니다)')) return;
+  try{
+    const res=await apiPost({action:'eventCommissionStop',password:partnerPassword(),eventId:id});
+    if(!res.success) throw new Error(res.message||'종료 실패');
+    await loadEventCommissions(); showMessage('eventMessage',res.message);
+  }catch(e){showMessage('eventMessage','이벤트 종료 오류: '+e.message,true);}
+}
 async function loadProductCommissions(){
   try{
     const password = partnerPassword();
