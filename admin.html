@@ -959,9 +959,17 @@ function adminPw(){
   const el=document.getElementById('adminPassword'); if(el&&v) el.value=v;
   return v;
 }
+const ADMIN_PW_FIELDS=['adminPassword','partnerAdminPassword','partnerAppPassword','customerRequestAdminPassword','supplierAdminPassword'];
 async function apiPost(data){
-  const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(data)});
-  return r.json();
+  const send=async d=>{const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(d)});return r.json();};
+  let res=await send(data);
+  // 비밀번호가 틀리면(브라우저 자동완성 등) 칸을 비우고 한 번 다시 물어봅니다.
+  if(data&&('password' in data)&&res&&res.success===false&&/비밀번호/.test(String(res.message||''))){
+    ADMIN_PW_FIELDS.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    const v=String(prompt('관리자 비밀번호가 맞지 않습니다. 다시 입력해 주세요.')||'').trim();
+    if(v){const el=document.getElementById('adminPassword');if(el)el.value=v;res=await send({...data,password:v});}
+  }
+  return res;
 }
 
 /* ---------- 상품 카드 설명 · 가격 옆 문구 ---------- */
