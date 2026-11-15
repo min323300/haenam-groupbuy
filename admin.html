@@ -460,7 +460,7 @@ async function saveSupplierApplication(btn){
     <!-- 2026-11-16 벤더(공급처 연결 파트너) 수수료 -->
     <details id="vfManage" style="margin-top:12px;border:1px solid #e5e7eb;border-radius:12px;padding:10px 14px">
       <summary style="font-weight:700;cursor:pointer">🤝 벤더 수수료 (공급처를 연결한 파트너)</summary>
-      <p class="muted" style="margin:8px 0">파트너가 농가·업체를 연결해 온 상품에 박스당 수수료를 정합니다. 주문 접수일에 적용 중이던 조건으로 계산하고, 배송완료되면 '확정' → 파트너 정산관리에서 말일 또는 공구마감 때 지급합니다. 판매수당과 별도로 지급됩니다. 이전 조건은 지워지지 않고 이력으로 남습니다.</p>
+      <p class="muted" style="margin:8px 0">파트너가 농가·업체를 연결해 온 상품에 박스당 수수료를 정합니다. 주문 접수일에 적용 중이던 조건으로 계산하고, 배송완료되면 '확정' → 파트너 정산관리에서 말일 또는 공구마감 때 지급합니다. 판매수당과 별도로 지급됩니다. <b>벤더 본인(가족 포함) 공급처의 상품에는 벤더 수수료를 주지 않습니다</b> — 공급처명·대표자명이 파트너 이름과 같으면 등록이 막힙니다. 이전 조건은 지워지지 않고 이력으로 남습니다.</p>
       <div class="grid">
         <div class="field"><label>상품 *</label><select id="vfProduct" onchange="vfRender(true)"><option value="">상품·공급처를 먼저 불러와 주세요</option></select></div>
         <div class="field"><label>공급처 (농가·업체)</label><select id="vfSupplier"><option value="">선택 안 함</option></select></div>
