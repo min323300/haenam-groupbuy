@@ -106,6 +106,21 @@
       <div class="sel-sum" id="selSum"></div>
       <div class="table-wrap"><table style="min-width:640px"><thead><tr><th>주문일</th><th>상품</th><th>수량</th><th>개당 수당</th><th>수당</th><th>상태</th><th>지급일</th></tr></thead><tbody id="orderRows"><tr><td colspan="7">불러오는 중입니다.</td></tr></tbody></table></div>
     </section>
+    <!-- 2026-11-16 내가 연결한 공급처 (벤더 수수료) — 연결한 공급처가 있는 파트너에게만 보임 -->
+    <section class="card hidden" id="vendorCard">
+      <h2 style="margin:0">🤝 내가 연결한 공급처</h2>
+      <p class="muted">파트너님이 연결해 주신 농가·업체 상품이 팔리면 박스당 수수료가 쌓입니다. 배송완료되면 '확정', 말일 또는 공구마감 때 지급됩니다. 판매수당과 별도이며, 위 기간 선택이 같이 적용됩니다.</p>
+      <div class="grid" style="margin-top:10px">
+        <div class="stat"><span>판매수량 (연결 상품)</span><strong id="vQty">0개</strong></div>
+        <div class="stat"><span>예상 수수료 (배송 전)</span><strong id="vExpected">0원</strong></div>
+        <div class="stat"><span>확정 수수료 (지급 예정)</span><strong id="vConfirmed">0원</strong></div>
+        <div class="stat paid"><span>지급완료 수수료</span><strong id="vPaid">0원</strong></div>
+      </div>
+      <div class="table-wrap" style="margin-top:12px"><table style="min-width:620px"><thead><tr><th>공급처</th><th>상품</th><th>박스당 수수료</th><th>정산</th><th>다음 정산일</th><th>기간</th></tr></thead><tbody id="vSupplierRows"></tbody></table></div>
+      <div class="table-wrap" style="margin-top:12px"><table style="min-width:560px"><thead><tr><th>주문일</th><th>상품</th><th>수량</th><th>수수료</th><th>상태</th><th>지급일</th></tr></thead><tbody id="vOrderRows"></tbody></table></div>
+      <p class="muted" style="font-size:12px;margin-top:8px">손님 정보와 매입 단가는 표시하지 않습니다. 최근 50건까지 보입니다.</p>
+    </section>
+
         <!-- 내 정산내역 -->
     <section class="card">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
@@ -212,12 +227,23 @@ async function loadDashboard(){
     const rows=Array.isArray(res.products)?res.products:[];
     $('productRows').innerHTML=rows.length?rows.map(x=>`<tr><td>${esc(x.productName||x.productCode)}</td><td>${Number(x.orders||0).toLocaleString('ko-KR')}건</td><td>${Number(x.quantity||0).toLocaleString('ko-KR')}개</td><td>${money(x.salesAmount)}</td><td>${money(x.expectedCommission)}</td><td>${money(x.confirmedCommission)}</td><td><b>${money(x.paidCommission)}</b></td></tr>`).join(''):'<tr><td colspan="7">이 기간에는 파트너 주문 실적이 없습니다.</td></tr>';
     renderOrders();
+    renderVendor(res.vendor);
     message('dashMessage','최신 실적을 불러왔습니다.');
     loadPromoProducts(); loadCommissions(); await loadSettlements();
   }catch(e){
     if(/로그인|만료|계정/.test(e.message||'')){sessionStorage.removeItem(TOKEN_KEY);showLogin();message('loginMessage',e.message,true);}
     else message('dashMessage',e.message,true);
   }
+}
+/* 2026-11-16 내가 연결한 공급처 (벤더 수수료) */
+function renderVendor(v){
+  const card=$('vendorCard'); if(!v){card.classList.add('hidden');return;}
+  card.classList.remove('hidden');
+  const s=v.summary||{}, md=d=>d?String(d).slice(5).replace('-','/'):'';
+  $('vQty').textContent=Number(s.quantity||0).toLocaleString('ko-KR')+'개';
+  $('vExpected').textContent=money(s.expected);$('vConfirmed').textContent=money(s.confirmed);$('vPaid').textContent=money(s.paid);
+  $('vSupplierRows').innerHTML=(v.suppliers||[]).map(x=>`<tr${x.active?'':' style="color:#999"'}><td>${esc(x.supplierName)}</td><td>${esc(x.productName)}</td><td><b>${money(x.feePerBox)}</b></td><td>${esc(x.cycle)}</td><td>${x.active?esc(/^\d{4}-/.test(x.nextSettlement)?md(x.nextSettlement):x.nextSettlement):'종료'}</td><td>${md(x.startDate)} ~ ${x.endDate?md(x.endDate):''}</td></tr>`).join('')||'<tr><td colspan="6">연결된 공급처가 없습니다.</td></tr>';
+  $('vOrderRows').innerHTML=(v.orders||[]).map(o=>`<tr><td>${esc(o.orderDate)}</td><td>${esc(o.productName)}</td><td>${Number(o.quantity||0).toLocaleString('ko-KR')}개</td><td><b>${money(o.fee)}</b></td><td><span class="${stClass[o.status]||''}">${esc(o.status)}</span></td><td>${esc(o.paymentDate||'-')}</td></tr>`).join('')||'<tr><td colspan="6">이 기간에는 연결 상품 판매가 없습니다.</td></tr>';
 }
 function checkedStatuses(){return [...document.querySelectorAll('.stf:checked')].map(x=>x.value);}
 const stClass={'지급완료':'st-paid','확정':'st-conf','예상':'st-exp'};
