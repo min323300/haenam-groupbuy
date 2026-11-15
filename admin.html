@@ -773,7 +773,7 @@ async function saveSupplierApplication(btn){
     <summary style="font-weight:700;cursor:pointer">🤝 벤더수수료 정산 대기 <span id="vendorWaitBadge" style="color:#b45309"></span></summary>
     <p class="muted" style="font-size:12px;margin:6px 0">공급처를 연결한 파트너(벤더)별로 지급할 수수료입니다. '확정' = 배송완료된 주문. 말일 정산은 그달 말일, 공구마감 정산은 상품 공구마감일에 지급합니다.</p>
     <button type="button" class="secondary" onclick="loadVendorWait()">정산 대기 불러오기</button>
-    <div class="table-wrap" style="margin-top:8px"><table><thead><tr><th>벤더(파트너)</th><th>상품</th><th>정산주기</th><th>다음 정산일</th><th>확정(지급대기)</th><th>예상(배송 전)</th><th>지급완료</th><th>정산</th></tr></thead><tbody id="vendorWaitRows"><tr><td colspan="8">「정산 대기 불러오기」를 누르세요.</td></tr></tbody></table></div>
+    <div class="table-wrap" style="margin-top:8px"><table><thead><tr><th>벤더(파트너)</th><th>상품</th><th>정산주기</th><th>다음 정산일</th><th>확정(지급대기)</th><th>예상(배송 전)</th><th>지급완료</th><th>약정</th><th>정산</th></tr></thead><tbody id="vendorWaitRows"><tr><td colspan="9">「정산 대기 불러오기」를 누르세요.</td></tr></tbody></table></div>
   </details>
 
   <div class="st-grid">
@@ -2459,7 +2459,10 @@ async function previewPartnerSettlement() {
         : `${basis === '말일' ? $('settleMonth').value.replace('-', '년 ') + '월 말일' : d.getFullYear() + '년 ' + (d.getMonth() + 1) + '월'} ${kind} 정산 (${result.partnerName || ''} ${partnerCode}, 판매 ${result.orderCount || 0}건·벤더 ${result.vendorCount || 0}건)`;
     }
     updateSettlementActualPayment();
-    if (result.orderCount > 0 || result.vendorCount > 0) showMessage('settlementMessage', `${result.partnerName} 파트너: 판매수당 ${result.orderCount || 0}건 · 벤더수수료 ${result.vendorCount || 0}건 (지급 안 된 확정분)을 불러왔습니다.`);
+    if (Number(result.vendorHeldTotal || 0) > 0) {
+      const ag = result.vendorAgreement || {};
+      showMessage('settlementMessage', `⚠️ 벤더 약정 ${ag.termsOk ? '이해관계 미확인(' + (ag.pending || []).join(', ') + ')' : '미동의'}로 벤더수수료 ${Number(result.vendorHeldTotal).toLocaleString('ko-KR')}원(${result.vendorHeldCount}건)은 지급 보류되어 이번 정산에서 빠졌습니다. 파트너가 파트너센터에서 동의하면 다음 정산에 들어갑니다.`, true);
+    } else if (result.orderCount > 0 || result.vendorCount > 0) showMessage('settlementMessage', `${result.partnerName} 파트너: 판매수당 ${result.orderCount || 0}건 · 벤더수수료 ${result.vendorCount || 0}건 (지급 안 된 확정분)을 불러왔습니다.`);
     else showMessage('settlementMessage', '선택한 조건에 지급할 확정수당이 없습니다.', true);
   } catch (err) {
     resetSettlementPreview();
@@ -2508,7 +2511,7 @@ async function loadSettleProducts() {
 }
 async function loadVendorWait() {
   try {
-    $('vendorWaitRows').innerHTML = '<tr><td colspan="8">불러오는 중...</td></tr>';
+    $('vendorWaitRows').innerHTML = '<tr><td colspan="9">불러오는 중...</td></tr>';
     const res = await apiGet({ action: 'adminVendorFeeSummary', password: adminPw() });
     if (!res.success) throw new Error(res.message || '조회 실패');
     const won = v => Number(v || 0).toLocaleString('ko-KR') + '원';
@@ -2518,11 +2521,11 @@ async function loadVendorWait() {
       const isDue = p.confirmed > 0 && p.nextSettlement && p.nextSettlement <= res.today;
       const soon = p.confirmed > 0 && p.nextSettlement && !isDue && (new Date(p.nextSettlement) - new Date(res.today)) / 86400000 <= 5;
       if (isDue || soon) due++;
-      rows.push(`<tr${isDue ? ' style="background:#fff7ed"' : ''}><td class="left"><b>${esc(v.vendorName || '')}</b><br><small>${esc(v.vendorCode)}</small></td><td class="left">${esc(p.productName)}</td><td>${esc(p.cycle)}</td><td>${p.nextSettlement ? esc(p.nextSettlement.slice(5).replace('-', '/')) : '<span class="muted">마감일 없음</span>'}${isDue ? ' ⚠️' : soon ? ' ⏰' : ''}</td><td><b>${won(p.confirmed)}</b></td><td>${won(p.expected)}</td><td>${won(p.paid)}</td><td>${p.confirmed > 0 ? `<button type="button" class="primary" onclick="startVendorSettle('${esc(v.vendorCode)}','${esc(p.cycle)}','${esc(p.productCode)}')">정산하기</button>` : '-'}</td></tr>`);
+      rows.push(`<tr${isDue ? ' style="background:#fff7ed"' : ''}><td class="left"><b>${esc(v.vendorName || '')}</b><br><small>${esc(v.vendorCode)}</small></td><td class="left">${esc(p.productName)}</td><td>${esc(p.cycle)}</td><td>${p.nextSettlement ? esc(p.nextSettlement.slice(5).replace('-', '/')) : '<span class="muted">마감일 없음</span>'}${isDue ? ' ⚠️' : soon ? ' ⏰' : ''}</td><td><b>${won(p.confirmed)}</b></td><td>${won(p.expected)}</td><td>${won(p.paid)}</td><td>${(() => { const a = v.agreement || {}; return a.ok ? `<span title="${esc(a.agreedAt || '')}">✅</span>` : !a.termsOk ? '<b style="color:#b45309">⚠️ 미동의</b><br><small>지급 보류</small>' : `<b style="color:#b45309">⚠️ 이해관계 미확인</b><br><small>${esc((a.pending || []).join(', '))}</small>`; })()}</td><td>${p.confirmed > 0 ? `<button type="button" class="primary" onclick="startVendorSettle('${esc(v.vendorCode)}','${esc(p.cycle)}','${esc(p.productCode)}')">정산하기</button>` : '-'}</td></tr>`);
     }));
-    $('vendorWaitRows').innerHTML = rows.join('') || '<tr><td colspan="8">등록된 벤더수수료 조건이 없습니다. ⑦ 매입관리 「🤝 벤더 수수료」에서 등록하세요.</td></tr>';
+    $('vendorWaitRows').innerHTML = rows.join('') || '<tr><td colspan="9">등록된 벤더수수료 조건이 없습니다. ⑦ 매입관리 「🤝 벤더 수수료」에서 등록하세요.</td></tr>';
     $('vendorWaitBadge').textContent = due ? `⚠️ 정산할 때 ${due}건` : '';
-  } catch (e) { $('vendorWaitRows').innerHTML = `<tr><td colspan="8">오류: ${esc(e.message)}</td></tr>`; }
+  } catch (e) { $('vendorWaitRows').innerHTML = `<tr><td colspan="9">오류: ${esc(e.message)}</td></tr>`; }
 }
 async function startVendorSettle(vendorCode, cycle, productCode) {
   if (!(partnerCache || []).length) await loadSettlementPartners();

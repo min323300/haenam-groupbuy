@@ -14,7 +14,8 @@
 .st{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700}.st-paid{background:#e3f4ea;color:#17623f}.st-conf{background:#e8f0fb;color:#1d4f91}.st-exp{background:#f3f3f3;color:#555}
 .ev{display:inline-block;padding:3px 9px;border-radius:999px;background:#fff1e0;color:#b45309;font-size:12px;font-weight:800}
 .stat.paid strong{color:#16875a}
-.vgrid{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:700px){.vgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.vgrid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.vagree{margin-top:12px;border:2px solid #f59e0b;border-radius:12px;padding:12px 14px;background:#fffbeb}.vagree.ok{border-color:#cfe7d8;background:#f4faf6}.vagree summary{cursor:pointer;font-weight:700;list-style:none;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.vagree summary::-webkit-details-marker{display:none}.vagree-more{color:#6c756f;font-size:13px;font-weight:600}.vagree[open] .vagree-more{display:none}.vagree-body{margin-top:10px;border-top:1px dashed #e5c97a;padding-top:10px}.vagree-terms{padding-left:0;list-style:none;margin:0;max-height:300px;overflow:auto;background:#fff;border:1px solid #eee;border-radius:9px;padding:10px 12px}.vagree-terms li{font-size:13.5px;line-height:1.6;margin:0 0 6px}.vagree-chk{display:flex;gap:8px;align-items:flex-start;margin:6px 0;font-size:14px;cursor:pointer}.vagree-chk input{margin-top:3px;width:auto}@media(max-width:700px){.vgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .cardmodal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;display:none;align-items:center;justify-content:center;padding:14px}.cardmodal.open{display:flex}.cardmodal .box{background:#fff;border-radius:16px;padding:16px;max-width:520px;width:100%;max-height:94vh;overflow:auto}.cardmodal img{width:100%;border-radius:12px;display:block}
 </style>
 </head>
@@ -111,6 +112,23 @@
     <section class="card hidden" id="vendorCard">
       <h2 style="margin:0">🤝 내가 연결한 공급처</h2>
       <p class="muted">파트너님이 연결해 주신 농가·업체 상품이 팔리면 박스당 수수료가 쌓입니다. 배송완료되면 '확정', 말일 또는 공구마감 때 지급됩니다. 판매수당과 별도이며, 위 기간 선택이 같이 적용됩니다.</p>
+      <!-- 2026-11-16 벤더 약정서 -->
+      <details id="vAgree" class="vagree">
+        <summary><span id="vAgreeHead">📜 벤더 약정서</span> <span class="vagree-more">펼치기 ▼</span></summary>
+        <div class="vagree-body">
+          <h3 id="vAgreeTitle" style="margin:4px 0 8px;font-size:16px"></h3>
+          <ol id="vAgreeTerms" class="vagree-terms"></ol>
+          <p class="muted" id="vAgreeVersion" style="font-size:12px"></p>
+          <div id="vAgreeForm">
+            <label class="vagree-chk"><input type="checkbox" id="vAgreeAll"> <b>위 약정서 내용을 모두 읽고 동의합니다.</b></label>
+            <div class="muted" style="margin:10px 0 4px;font-weight:700;color:#333">연결한 공급처와 이해관계(가족·친인척, 지분·동업 등)가 없음을 확인합니다</div>
+            <div id="vAgreeSuppliers"></div>
+            <p class="muted" style="font-size:12px;margin:6px 0">이해관계가 있는 공급처는 체크하지 말고 본사에 먼저 알려 주세요. 확인 전 수수료는 쌓이지만 지급이 보류됩니다.</p>
+            <button class="primary" type="button" id="vAgreeBtn" onclick="agreeVendorTerms()">동의하기</button>
+          </div>
+          <div id="vAgreeMessage" class="notice"></div>
+        </div>
+      </details>
       <div class="grid vgrid" style="margin-top:10px">
         <div class="stat"><span>판매수량 (연결 상품)</span><strong id="vQty">0개</strong></div>
         <div class="stat"><span>예상 수수료 (배송 전)</span><strong id="vExpected">0원</strong></div>
@@ -240,11 +258,53 @@ async function loadDashboard(){
 function renderVendor(v){
   const card=$('vendorCard'); if(!v){card.classList.add('hidden');return;}
   card.classList.remove('hidden');
+  renderVendorAgreement(v.agreement);
   const s=v.summary||{}, md=d=>d?String(d).slice(5).replace('-','/'):'';
   $('vQty').textContent=Number(s.quantity||0).toLocaleString('ko-KR')+'개';
   $('vExpected').textContent=money(s.expected);$('vConfirmed').textContent=money(s.confirmed);$('vPaid').textContent=money(s.paid);
   $('vSupplierRows').innerHTML=(v.suppliers||[]).map(x=>`<tr${x.active?'':' style="color:#999"'}><td>${esc(x.supplierName)}</td><td>${esc(x.productName)}</td><td><b>${money(x.feePerBox)}</b></td><td>${esc(x.cycle)}</td><td>${x.active?esc(/^\d{4}-/.test(x.nextSettlement)?md(x.nextSettlement):x.nextSettlement):'종료'}</td><td>${md(x.startDate)} ~ ${x.endDate?md(x.endDate):''}</td></tr>`).join('')||'<tr><td colspan="6">연결된 공급처가 없습니다.</td></tr>';
   $('vOrderRows').innerHTML=(v.orders||[]).map(o=>`<tr><td>${esc(o.orderDate)}</td><td>${esc(o.productName)}</td><td>${Number(o.quantity||0).toLocaleString('ko-KR')}개</td><td><b>${money(o.fee)}</b></td><td><span class="${stClass[o.status]||''}">${esc(o.status)}</span></td><td>${esc(o.paymentDate||'-')}</td></tr>`).join('')||'<tr><td colspan="6">이 기간에는 연결 상품 판매가 없습니다.</td></tr>';
+}
+/* 2026-11-16 벤더 약정서: 펼쳐 읽고 체크 → 동의 */
+let vAgreeData=null;
+function renderVendorAgreement(a){
+  vAgreeData=a; const box=$('vAgree'); if(!a){box.classList.add('hidden');return;}
+  box.classList.remove('hidden');
+  $('vAgreeTitle').textContent=a.title||'벤더 약정서';
+  $('vAgreeTerms').innerHTML=(a.terms||[]).map(t=>`<li>${esc(t)}</li>`).join('');
+  $('vAgreeVersion').textContent='약정 버전 '+(a.version||'');
+  const pend=(a.suppliers||[]).filter(x=>!x.confirmed);
+  const held=Number(a.heldConfirmed||0);
+  if(a.ok){
+    box.classList.add('ok'); box.open=false;
+    $('vAgreeHead').textContent=`✅ 벤더 약정 동의 완료 (${a.agreedAt||''}, ${a.version||''})`;
+    $('vAgreeForm').classList.add('hidden');
+  }else{
+    box.classList.remove('ok'); box.open=true;
+    $('vAgreeHead').textContent=!a.termsOk
+      ? (a.agreedVersion?'⚠️ 약정서가 바뀌었습니다. 다시 확인하고 동의해 주세요':'⚠️ 벤더 약정서 동의가 필요합니다 (필수)')
+      : `⚠️ 새로 연결된 공급처 ${pend.length}곳의 이해관계 확인이 필요합니다`;
+    if(held>0) $('vAgreeHead').textContent+=` · 지급 보류 ${money(held)}`;
+    $('vAgreeForm').classList.remove('hidden');
+    $('vAgreeAll').checked=false;
+    $('vAgreeSuppliers').innerHTML=(a.suppliers||[]).map(x=>`<label class="vagree-chk"><input type="checkbox" class="vAgreeSup" value="${esc(x.key)}"${x.confirmed?' checked':''}> ${esc(x.label)}${x.confirmed?' <span class="muted">(확인함)</span>':''}</label>`).join('');
+  }
+}
+async function agreeVendorTerms(){
+  const a=vAgreeData; if(!a) return;
+  if(!$('vAgreeAll').checked) return message('vAgreeMessage','약정서 내용에 동의한다는 칸을 체크해 주세요.',true);
+  const keys=[...document.querySelectorAll('.vAgreeSup:checked')].map(x=>x.value);
+  const missing=(a.suppliers||[]).filter(x=>keys.indexOf(x.key)<0);
+  if(missing.length) return message('vAgreeMessage','이해관계 확인이 안 된 공급처가 있습니다: '+missing.map(x=>x.label).join(', ')+'. 이해관계가 있으면 본사에 먼저 알려 주세요.',true);
+  const btn=$('vAgreeBtn');
+  try{
+    btn.disabled=true; btn.textContent='저장 중...';
+    const res=await apiPost({action:'partnerVendorAgree',token:sessionStorage.getItem(TOKEN_KEY),agree:true,version:a.version,keys,device:navigator.userAgent});
+    if(!res.success) throw new Error(res.message||'동의 저장 실패');
+    message('vAgreeMessage',res.message);
+    await loadDashboard();
+  }catch(e){ message('vAgreeMessage',e.message,true); }
+  finally{ btn.disabled=false; btn.textContent='동의하기'; }
 }
 function checkedStatuses(){return [...document.querySelectorAll('.stf:checked')].map(x=>x.value);}
 const stClass={'지급완료':'st-paid','확정':'st-conf','예상':'st-exp'};
