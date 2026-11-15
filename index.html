@@ -471,13 +471,23 @@ function imageUrl(url, size){
   }
 
   if(id){
-    return 'https://drive.google.com/thumbnail?id='
+    // 구글 사진 서버 직접 주소: 카톡 안 브라우저·비로그인 휴대폰에서도 잘 열림 (실패 시 아래 imgFallback_ 이 대체 주소로 다시 시도)
+    return 'https://lh3.googleusercontent.com/d/'
       + encodeURIComponent(id)
-      + '&sz=' + (size || 'w1600');
+      + '=' + (size || 'w1600');
   }
 
   return u;
 }
+// 사진이 안 열리면 대체 주소로 한 번씩 다시 시도 (lh3 → 드라이브 썸네일 → 드라이브 원본)
+window.addEventListener('error',function(ev){
+ const img=ev.target; if(!img||img.tagName!=='IMG') return;
+ const src=img.currentSrc||img.src||'';
+ let m=src.match(/lh3\.googleusercontent\.com\/d\/([^=?&\/]+)(?:=([a-z0-9-]+))?/i);
+ if(m){img.src='https://drive.google.com/thumbnail?id='+m[1]+'&sz='+(m[2]||'w1600');return;}
+ m=src.match(/drive\.google\.com\/thumbnail\?id=([^&]+)/);
+ if(m&&!img.dataset.fb){img.dataset.fb='1';img.src='https://drive.google.com/uc?export=view&id='+m[1];}
+},true);
 function dateOf(v){if(!v)return null;const d=new Date(v);return isNaN(d.getTime())?null:d}
 function stateOf(p){
  const now=Date.now(),start=dateOf(p.startAt),end=dateOf(p.endAt);
