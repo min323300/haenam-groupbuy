@@ -11,6 +11,13 @@
 <meta property="og:description" content="전국 생산자와 함께하는 농·수·축산물 공동구매를 한곳에서 확인하세요.">
 <meta property="og:url" content="https://haenamgonggu.kr/">
 <meta property="og:image" content="https://haenamgonggu.kr/share.png?v=2">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#176c46">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="해남공구">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
@@ -117,11 +124,14 @@ footer{background:#203028;color:#dbe4df;text-align:center;padding:30px 20px;font
 .partner-modal-card{max-width:480px}.partner-modal-card .notice{margin-top:12px;padding:11px 13px;border-radius:10px;background:#eef6f0;color:var(--green);font-size:14px}.partner-modal-card .notice:empty{display:none}.partner-modal-card .notice.error{background:#fdecec;color:#c62828}.partner-hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}.partner-done{text-align:center;padding:18px 6px 6px}.partner-done .check{width:56px;height:56px;border-radius:50%;background:#e8f5ec;color:var(--green);font-size:30px;font-weight:900;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}.partner-done strong{display:block;font-size:19px;margin-bottom:8px}.partner-done p{color:#5f6b61;margin:0 0 18px;line-height:1.7}.partner-privacy-box{font-size:12px;color:#6c756d;line-height:1.7;background:#f6f7f6;padding:12px;border-radius:10px;margin-top:14px}
 @media(max-width:580px){.partner-join{padding:22px 16px}.partner-join h3{font-size:19px}}
 .pick-banner{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 16px;border-radius:14px;background:#fffbe6;border:1px solid #f3e2a0;font-size:15px}.pick-banner b{color:#176c46}.pick-banner button{border:0;background:#16875a;color:#fff;padding:9px 14px;border-radius:999px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit}
+.header-right{display:flex;align-items:center;gap:12px}.a2hs-head{border:1px solid var(--green);background:#fff;color:var(--green);font-weight:700;font-size:13px;padding:7px 10px;border-radius:999px;font-family:inherit;cursor:pointer}.a2hs-bar{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:40;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px 10px 10px 12px;box-shadow:0 6px 24px rgba(0,0,0,.16);max-width:520px;margin:auto}.a2hs-bar[hidden],.a2hs-head[hidden]{display:none}.a2hs-bar img{width:42px;height:42px;border-radius:10px}.a2hs-bar div{flex:1;min-width:0}.a2hs-bar b{display:block;font-size:14px}.a2hs-bar small{display:block;font-size:12px;color:var(--muted);margin-top:2px}.a2hs-bar .go{border:0;background:var(--green);color:#fff;font-weight:800;padding:10px 14px;border-radius:999px;font-family:inherit;font-size:14px;cursor:pointer;white-space:nowrap}.a2hs-bar .x{border:0;background:none;color:#999;font-size:16px;padding:6px;cursor:pointer}.a2hs-modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:60;display:none;align-items:flex-end;justify-content:center;padding:12px}.a2hs-modal.open{display:flex}.a2hs-modal .box{position:relative;background:#fff;border-radius:20px;padding:22px 20px 20px;max-width:440px;width:100%;text-align:center;margin-bottom:env(safe-area-inset-bottom)}.a2hs-modal .ic{width:64px;height:64px;border-radius:14px}.a2hs-modal h3{margin:10px 0 12px;font-size:19px}.a2hs-modal .x{position:absolute;right:12px;top:10px;border:0;background:none;font-size:18px;color:#999;cursor:pointer}.a2hs-modal ol{text-align:left;margin:0;padding-left:22px;line-height:1.9;font-size:15px}.a2hs-modal .hint{font-size:13px;color:var(--muted);margin-top:10px}.a2hs-modal .big{display:block;width:100%;border:0;background:var(--green);color:#fff;font-weight:800;font-size:16px;padding:14px;border-radius:12px;margin-top:12px;font-family:inherit;cursor:pointer}.a2hs-modal .big.kakao{background:#fee500;color:#191919}@media(min-width:900px){.a2hs-head{display:none}}@media(max-width:600px){.header-right{gap:8px;flex-shrink:0}.a2hs-head{white-space:nowrap;padding:6px 9px;font-size:12px}.header-right .header-link{white-space:nowrap;font-size:13px}}
 </style>
 <link rel="preconnect" href="https://drive.google.com"><link rel="preconnect" href="https://lh3.googleusercontent.com" crossorigin>
 </head>
 <body>
-<header><div class="header-in"><div class="logo">해남공구마켓<small>전국 생산자와 함께하는 농·수·축산물 공동구매</small></div><a class="header-link" href="#products">진행 공구 보기</a></div></header>
+<header><div class="header-in"><div class="logo">해남공구마켓<small>전국 생산자와 함께하는 농·수·축산물 공동구매</small></div><div class="header-right"><button type="button" id="a2hsHead" class="a2hs-head" onclick="a2hsOpen()" hidden>📲 바로가기</button><a class="header-link" href="#products">진행 공구 보기</a></div></div></header>
+<div id="a2hsBar" class="a2hs-bar" hidden><img src="/icon-192.png" alt=""><div><b>해남공구마켓 바로가기</b><small>홈 화면에 추가하면 다음 공구도 한 번에!</small></div><button type="button" class="go" onclick="a2hsOpen()">추가하기</button><button type="button" class="x" onclick="a2hsLater()" aria-label="닫기">✕</button></div>
+<div id="a2hsModal" class="a2hs-modal" onclick="if(event.target===this)a2hsClose()"><div class="box"><button type="button" class="x" onclick="a2hsClose()" aria-label="닫기">✕</button><img src="/icon-192.png" alt="" class="ic"><h3>홈 화면에 바로가기 추가</h3><div id="a2hsGuide"></div></div></div>
 <section class="hero"><div class="hero-in"><div><div class="eyebrow">HAENAM GROUP BUY MARKET</div><h1>전국 생산자의 좋은 상품을<br>함께 더 합리적으로</h1><p>농산물·수산물·축산물까지 전국 생산자가 직접 준비한 공동구매를 한곳에서 확인하세요.<br>남은 기간과 현재 주문 현황도 실시간으로 확인할 수 있습니다.</p></div><div class="hero-box"><strong>🌾 지금 진행 중인 공구</strong><span>상품마다 마감일과 현재 주문 현황이 표시됩니다. 마감 전에 주문해 주세요.</span></div></div></section>
 <div class="stats"><div class="stats-in"><div class="stat"><span>진행 중 공구</span><b id="activeCount">-</b></div><div class="stat"><span>전체 주문</span><b id="totalOrders">-</b></div><div class="stat"><span>등록 상품</span><b id="totalProducts">-</b></div></div></div>
 <main id="products"><div class="section-head"><div><div class="eyebrow">NOW OPEN</div><h2>진행 중인 공동구매</h2></div><p>상품을 눌러 주문과 결제계좌를 확인하세요.</p></div><div class="search-wrap"><input id="productSearch" type="search" autocomplete="off" placeholder="🔍 상품 찾기 (예: 키위, ㄱㄷ)" oninput="onProductSearch()" onfocus="onProductSearch()"><div id="searchSuggest" class="search-suggest"></div></div><div id="productGrid" class="grid"><div class="loading">공구상품을 불러오는 중입니다.</div></div>
@@ -1575,6 +1585,58 @@ async function loadBusinessFooter() {
 }
 
 loadBusinessFooter(); 
+</script>
+<script>
+/* ---------- 📲 홈 화면 바로가기 (모바일) ---------- */
+(function(){
+ const ua=navigator.userAgent;
+ const isIOS=/iPhone|iPad|iPod/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
+ const isAndroid=/Android/i.test(ua);
+ const isMobile=isIOS||isAndroid;
+ const inKakao=/KAKAOTALK/i.test(ua);
+ const inApp=inKakao||/NAVER\(|Instagram|FBAN|FBAV|Line\//i.test(ua);
+ const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+ const LATER_KEY='haenamA2hsLater';
+ let deferred=null;
+ if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}
+ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;show();});
+ window.addEventListener('appinstalled',()=>{deferred=null;hideAll();try{localStorage.setItem(LATER_KEY,String(Date.now()+3650*86400000))}catch(_){}});
+ function laterUntil(){try{return Number(localStorage.getItem(LATER_KEY)||0)}catch(_){return 0}}
+ function hideAll(){document.getElementById('a2hsBar').hidden=true;document.getElementById('a2hsHead').hidden=true;}
+ function show(){
+  if(standalone||!isMobile) return;
+  document.getElementById('a2hsHead').hidden=false;
+  if(Date.now()>laterUntil()) setTimeout(()=>{document.getElementById('a2hsBar').hidden=false;},2500);
+ }
+ window.a2hsLater=function(){document.getElementById('a2hsBar').hidden=true;try{localStorage.setItem(LATER_KEY,String(Date.now()+7*86400000))}catch(_){}};
+ window.a2hsClose=function(){document.getElementById('a2hsModal').classList.remove('open');};
+ window.a2hsOpenExternal=function(){
+  const url=location.href;
+  if(inKakao){location.href='kakaotalk://web/openExternal?url='+encodeURIComponent(url);return;}
+  if(isAndroid){location.href='intent://'+url.replace(/^https?:\/\//,'')+'#Intent;scheme=https;package=com.android.chrome;end';return;}
+  navigator.clipboard&&navigator.clipboard.writeText(url).then(()=>alert('주소를 복사했어요. 사파리에서 붙여넣어 열어 주세요.'),()=>{});
+ };
+ window.a2hsOpen=async function(){
+  if(deferred){
+   deferred.prompt();
+   try{const r=await deferred.userChoice; if(r&&r.outcome==='accepted') hideAll();}catch(_){}
+   deferred=null; return;
+  }
+  const g=document.getElementById('a2hsGuide');
+  if(inApp){
+   g.innerHTML='<p>지금은 '+(inKakao?'카카오톡':'앱')+' 안에서 열려 있어서 바로 추가할 수 없어요.<br><b>'+(isIOS?'사파리로':'크롬으로')+'</b> 열어서 추가해 주세요.</p>'
+    +'<button type="button" class="big kakao" onclick="a2hsOpenExternal()">'+(isIOS?'사파리로':'크롬으로')+' 열기</button>'
+    +'<div class="hint">'+(isIOS?'안 열리면 오른쪽 아래 ⋯ 또는 공유 버튼 → "Safari로 열기"를 눌러 주세요.':'안 열리면 오른쪽 위 ⋮ → "다른 브라우저로 열기"를 눌러 주세요.')+'</div>';
+  }else if(isIOS){
+   g.innerHTML='<ol><li>화면 아래(또는 위)의 <b>공유 버튼</b> <span style="font-size:18px">⬆️</span> 을 누르세요</li><li>목록을 내려 <b>"홈 화면에 추가"</b>를 누르세요</li><li>오른쪽 위 <b>"추가"</b>를 누르면 끝!</li></ol><div class="hint">사파리에서 가장 잘 됩니다.</div>';
+  }else{
+   g.innerHTML='<ol><li>오른쪽 위 <b>⋮ 메뉴</b>를 누르세요<br><span class="hint">(삼성 인터넷은 아래쪽 ☰ 메뉴)</span></li><li><b>"홈 화면에 추가"</b> 또는 <b>"앱 설치"</b>를 누르세요</li><li><b>"추가"</b>를 누르면 끝!</li></ol>';
+  }
+  document.getElementById('a2hsModal').classList.add('open');
+ };
+ // 크롬 설치창이 안 오는 경우(아이폰·삼성인터넷·카톡 등)에도 안내 버튼은 보여줌
+ if(isMobile&&!standalone) setTimeout(show,1200);
+})();
 </script>
 </body>
 </html>
