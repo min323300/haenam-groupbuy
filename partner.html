@@ -14,6 +14,7 @@
 .st{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700}.st-paid{background:#e3f4ea;color:#17623f}.st-conf{background:#e8f0fb;color:#1d4f91}.st-exp{background:#f3f3f3;color:#555}
 .ev{display:inline-block;padding:3px 9px;border-radius:999px;background:#fff1e0;color:#b45309;font-size:12px;font-weight:800}
 .stat.paid strong{color:#16875a}
+.vgrid{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:700px){.vgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .cardmodal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;display:none;align-items:center;justify-content:center;padding:14px}.cardmodal.open{display:flex}.cardmodal .box{background:#fff;border-radius:16px;padding:16px;max-width:520px;width:100%;max-height:94vh;overflow:auto}.cardmodal img{width:100%;border-radius:12px;display:block}
 </style>
 </head>
@@ -110,7 +111,7 @@
     <section class="card hidden" id="vendorCard">
       <h2 style="margin:0">🤝 내가 연결한 공급처</h2>
       <p class="muted">파트너님이 연결해 주신 농가·업체 상품이 팔리면 박스당 수수료가 쌓입니다. 배송완료되면 '확정', 말일 또는 공구마감 때 지급됩니다. 판매수당과 별도이며, 위 기간 선택이 같이 적용됩니다.</p>
-      <div class="grid" style="margin-top:10px">
+      <div class="grid vgrid" style="margin-top:10px">
         <div class="stat"><span>판매수량 (연결 상품)</span><strong id="vQty">0개</strong></div>
         <div class="stat"><span>예상 수수료 (배송 전)</span><strong id="vExpected">0원</strong></div>
         <div class="stat"><span>확정 수수료 (지급 예정)</span><strong id="vConfirmed">0원</strong></div>
