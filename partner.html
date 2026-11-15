@@ -413,7 +413,7 @@ const MARKET_URL = 'https://haenamgonggu.kr/';
 function promoText_(v){ return v===null||v===undefined ? '' : String(v); }
 function promoEmoji(name){
   const n = promoText_(name);
-  const map = [['문어','🐙'],['고구마','🍠'],['절임배추','🥬'],['배추','🥬'],['김치','🥬'],['쌀','🍚'],['감자','🥔'],['귤','🍊'],['사과','🍎'],['양파','🧅'],['마늘','🧄'],['전복','🐚'],['베이글','🥯'],['빵','🍞'],['떡','🍡'],['꿀','🍯']];
+  const map = [['문어','🐙'],['장어','🐟'],['꽃게','🦀'],['게','🦀'],['새우','🦐'],['굴','🦪'],['고구마','🍠'],['절임배추','🥬'],['배추','🥬'],['김치','🥬'],['쌀','🍚'],['감자','🥔'],['귤','🍊'],['사과','🍎'],['양파','🧅'],['마늘','🧄'],['전복','🐚'],['베이글','🥯'],['빵','🍞'],['떡','🍡'],['꿀','🍯']];
   for (const [k, v] of map) if (n.includes(k)) return v;
   return '🌾';
 }
@@ -491,7 +491,7 @@ async function sharePromo(p, text, link){
         objectType: 'feed',
         content: {
           title: promoEmoji(p.productName) + ' ' + promoText_(p.productName) + ' 공동구매',
-          description: (sale ? '공구가격 ' + sale.toLocaleString('ko-KR') + '원' : '') + (promoDeadline(p) ? ' · ' + promoDeadline(p) : ''),
+          description: ((typeof ppName === 'function' && ppName()) ? ppName() + '님 추천 · ' : '') + (sale ? '공구가격 ' + sale.toLocaleString('ko-KR') + '원' : '') + (promoDeadline(p) ? ' · ' + promoDeadline(p) : ''),
           imageUrl: promoImage(p.image, 'w800') || (MARKET_URL + 'share.png'),
           link: { mobileWebUrl: link, webUrl: link }
         },
@@ -573,17 +573,19 @@ document.addEventListener('change', e => {
 });
 
 /* --- 링크 --- */
+function ppName(){ return promoText_(dash && dash.partner && dash.partner.name).trim().slice(0, 12); }
+function ppHeader(){ return ppName() ? ppName() + '님이 추천하는 해남 공동구매' : '해남공구마켓 추천 공동구매'; }
 function ppBase(){ return $('partnerUrl').value || MARKET_URL; }
-function ppLinkOne(p){ const u = new URL(promoLink(ppBase(), promoText_(p.productCode))); u.searchParams.set('product', promoText_(p.productCode)); return u.toString(); }
+function ppLinkOne(p){ const u = new URL(promoLink(ppBase(), promoText_(p.productCode))); u.searchParams.set('product', promoText_(p.productCode)); if (ppName()) u.searchParams.set('by', ppName()); return u.toString(); }
 function ppLinkPick(list){
   if (list.length === 1) return ppLinkOne(list[0]);
   const codes = list.map(p => promoText_(p.productCode)).join(',');
-  const u = new URL(promoLink(ppBase(), codes)); u.searchParams.set('pick', codes); return u.toString();
+  const u = new URL(promoLink(ppBase(), codes)); u.searchParams.set('pick', codes); if (ppName()) u.searchParams.set('by', ppName()); return u.toString();
 }
 
 /* --- 홍보 문구 --- */
 function ppMultiText(list, link){
-  const lines = ['🌾 해남공구마켓 추천 공동구매', ''];
+  const lines = ['🌾 ' + ppHeader(), ''];
   list.forEach(p => {
     const sale = Number(p.salePrice || 0), dl = promoDeadline(p);
     lines.push(promoEmoji(p.productName) + ' ' + promoText_(p.productName) + (sale ? ' ' + sale.toLocaleString('ko-KR') + '원' : '') + (dl ? ' (' + dl + ')' : ''));
@@ -600,7 +602,7 @@ function ppRender(force){
   $('ppThumbs').innerHTML = list.slice(0, 4).map(p => { const img = promoImage(p.image, 'w600'); return img ? `<img src="${esc(img)}" alt="${esc(p.productName)}">` : ''; }).join('');
   if (!force && ppEdited) { ppRenderTrack(); return; }
   const link = ppLinkPick(list);
-  $('ppText').value = list.length === 1 ? buildPromoText(list[0], link) : ppMultiText(list, link);
+  $('ppText').value = list.length === 1 ? (ppName() ? buildPromoText(list[0], link).replace('\n', '\n👤 ' + ppName() + '님 추천\n') : buildPromoText(list[0], link)) : ppMultiText(list, link);
   ppEdited = false; ppRenderTrack();
   if (!$('partnerUrl').value) message('ppMessage', '내 전용 URL을 확인하지 못해 공식 URL이 들어갔습니다. 새로고침 후 다시 시도해 주세요.', true);
 }
@@ -678,7 +680,7 @@ async function sharePromoList(list, text, link){
       });
       window.Kakao.Share.sendDefault({
         objectType: 'list',
-        headerTitle: '🌾 해남공구마켓 추천 공동구매',
+        headerTitle: '🌾 ' + ppHeader(),
         headerLink: { mobileWebUrl: link, webUrl: link },
         contents: items,
         buttons: [{ title: list.length > 3 ? '추천 상품 ' + list.length + '개 모두 보기' : '추천 상품 모두 보기', link: { mobileWebUrl: link, webUrl: link } }]
@@ -688,7 +690,7 @@ async function sharePromoList(list, text, link){
   }
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
   if (isMobile && navigator.share) {
-    try { await navigator.share({ title: '해남공구마켓 추천 공동구매', text: text }); return 'shared'; }
+    try { await navigator.share({ title: ppHeader(), text: text }); return 'shared'; }
     catch (e) { if (e && e.name === 'AbortError') return 'cancel'; }
   }
   return (await promoCopy(text)) ? 'copied' : 'fail';

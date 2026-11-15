@@ -554,6 +554,7 @@ let searchQuery='';
 // 파트너 추천 묶음 링크(?pick=코드1,코드2): 고른 상품만 먼저 보여주고, 버튼으로 전체 보기
 const PICK_CODES=String(new URLSearchParams(location.search).get('pick')||'').split(',').map(x=>x.trim()).filter(Boolean).slice(0,20);
 let pickShowAll=false, pickScrolled=false;
+const PICK_BY=String(new URLSearchParams(location.search).get('by')||'').trim().slice(0,12);
 function inPick(p){return siblingsOf(p).some(x=>PICK_CODES.includes(s(x.productCode)))||PICK_CODES.includes(s(p.productCode))}
 function togglePickAll(v){pickShowAll=v;renderProducts();document.getElementById('products').scrollIntoView({behavior:'smooth'})}
 function onProductSearch(){
@@ -586,7 +587,7 @@ function renderProducts(){
  let pickBanner='', list=sorted;
  if(PICK_CODES.length&&!searchQuery.trim()){
    const picked=sorted.filter(inPick).filter(p=>stateOf(p)!=='종료');
-   if(picked.length&&!pickShowAll){list=picked;pickBanner=`<div class="pick-banner"><span>⭐ 추천받은 공동구매 <b>${picked.length}개</b>예요</span><button type="button" onclick="togglePickAll(true)">전체 공구 상품 보기 ›</button></div>`;}
+   if(picked.length&&!pickShowAll){list=picked;pickBanner=`<div class="pick-banner"><span>⭐ ${PICK_BY?'<b>'+e(PICK_BY)+'님</b>이 추천한':'추천받은'} 공동구매 <b>${picked.length}개</b>예요</span><button type="button" onclick="togglePickAll(true)">전체 공구 상품 보기 ›</button></div>`;}
    else if(picked.length){pickBanner=`<div class="pick-banner"><span>전체 공구 상품을 보고 있어요</span><button type="button" onclick="togglePickAll(false)">‹ 추천 상품만 보기</button></div>`;}
    else pickBanner='<div class="pick-banner">추천받은 상품이 마감되었어요. 지금 진행 중인 다른 공구를 확인해 보세요.</div>';
    if(!pickScrolled){pickScrolled=true;setTimeout(()=>{if(!new URLSearchParams(location.search).get('product'))document.getElementById('products').scrollIntoView()},200)}
