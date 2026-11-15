@@ -2825,7 +2825,7 @@ function spRenderAlerts(){
     return days>=Number(x.checkDays)?{x,days}:null; }).filter(Boolean);
   $('spAlertBadge').textContent=alerts.length?`⚠️ 시세 확인 ${alerts.length}건`:'';
   $('spAlerts').innerHTML=alerts.length?`<div class="notice" style="display:block;background:#fff7ed;color:#9a3412">`+alerts.map(({x,days})=>
-    `⚠️ <b>${esc(x.productName||x.productCode)}</b>${x.supplierName?' / '+esc(x.supplierName):''}: 현재 단가 ${money(x.unitPrice)}를 ${spShort(x.startDate)}부터 ${days}일째 쓰고 있습니다 (확인주기 ${x.checkDays}일). 시세가 바뀌었으면 새 단가를 등록하세요.`).join('<br>')+'</div>':'';
+    `⚠️ <b>${esc(x.productName||x.productCode)}</b>${x.supplierName?' / '+esc(x.supplierName):''}: 현재 단가 ${money(x.unitPrice)} · ${spShort(x.startDate)}부터 ${days}일째 사용 중 (확인주기 ${x.checkDays}일). 시세가 바뀌었으면 새 단가를 등록하세요.`).join('<br>')+'</div>':'';
 }
 function spRender(resetForm){
   spRenderAlerts();
