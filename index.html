@@ -666,6 +666,9 @@ function pickSuggest(code){
 }
 document.addEventListener('click',ev=>{if(!ev.target.closest('.search-wrap')){const b=document.getElementById('searchSuggest');if(b)b.classList.remove('open')}});
 function trackAsk(){try{if(window.trackOrderStep)window.trackOrderStep('kakao_ask',null)}catch(err){}}
+// '이번 주 꼭 담으세요' 개수 = 한 줄 칸 수 (PC 3개, 태블릿·휴대폰 2개)
+function topPickCount(){return window.innerWidth>850?3:2}
+(function(){let last=topPickCount(),t;window.addEventListener('resize',()=>{clearTimeout(t);t=setTimeout(()=>{const n=topPickCount();if(n!==last){last=n;try{renderProducts()}catch(_){}}},200)})})();
 function updateTopBanner(list){
  const b=document.getElementById('topBanner'); if(!b) return;
  const p=(list||[]).find(x=>stateOf(x)==='판매중'&&dateOf(x.endAt));
@@ -693,10 +696,10 @@ function renderProducts(){
    else pickBanner='<div class="pick-banner">추천받은 상품이 마감되었어요. 지금 진행 중인 다른 공구를 확인해 보세요.</div>';
    if(!pickScrolled){pickScrolled=true;setTimeout(()=>{if(!new URLSearchParams(location.search).get('product'))document.getElementById('products').scrollIntoView()},200)}
  }
- const useTop=!pickBanner&&!searchQuery.trim()&&list.filter(p=>stateOf(p)==='판매중').length>=3;
+ const topN=topPickCount(); const useTop=!pickBanner&&!searchQuery.trim()&&list.filter(p=>stateOf(p)==='판매중').length>topN;
  updateTopBanner(sorted);
  grid.innerHTML=pickBanner+list.map((p,i)=>{
-   const head=!useTop?'':i===0?'<div class="grid-head"><h2>이번 주 꼭 담으세요</h2><p>산지에서 바로 보내는 공동구매</p></div>':i===2?'<div class="grid-head"><h2>진행 중인 공동구매</h2></div>':'';
+   const head=!useTop?'':i===0?'<div class="grid-head"><h2>이번 주 꼭 담으세요</h2><p>산지에서 바로 보내는 공동구매</p></div>':i===topN?'<div class="grid-head"><h2>진행 중인 공동구매</h2></div>':'';
    const sib=siblingsOf(p);
    const st=stateOf(p),target=Number(p.targetOrders||0),count=sib.reduce((a,x)=>a+Number(x.orderCount||0),0);
    const percent=target>0?Math.min(100,Math.round(count/target*100)):0;
@@ -724,7 +727,7 @@ function renderProducts(){
      :st==='준비중'
        ?`<button class="btn closed" disabled>공구 준비중</button>`
        :reqFold;
-   return head+`<article class="product${useTop&&i<2?' top-pick':''}" data-card="${e(p.productCode)}">
+   return head+`<article class="product${useTop&&i<topN?' top-pick':''}" data-card="${e(p.productCode)}">
     <div class="imgbox"${st==='판매중'?` onclick="openProduct('${e(p.productCode)}')" style="cursor:pointer"`:''}>${img?`<img src="${e(img)}" alt="${e(p.productName)}">`:'<div class="noimg">🌾</div>'}<span class="status ${st==='종료'?'end':st==='준비중'?'ready':''}">${st}</span></div>
     <div class="product-body"><h3${st==='판매중'?` onclick="openProduct('${e(p.productCode)}')" style="cursor:pointer"`:''}>${e(groupOf(p)||p.productName)}</h3><div class="desc">${e(cardDescOf(p))}</div>
     <div class="price-row"><div class="price">${Number(p.salePrice)>0?money(p.salePrice)+(sib.length>1?'~':''):'<span style="font-size:20px;color:#7a847c">가격 준비중</span>'}</div>${Number(p.salePrice)>0?priceNoteHtml(p):''}</div>${optionPricesHtml(p)}
