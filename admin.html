@@ -351,7 +351,7 @@ async function saveSupplierApplication(btn){
     <div class="grid" style="margin-top:14px">
       <div class="field">
         <label>매입일자 *</label>
-        <input id="purchaseDate" type="date">
+        <input id="purchaseDate" type="date" onchange="applyPurchaseSupplyPrice()">
       </div>
       <div class="field">
         <label>상품 *</label>
@@ -362,7 +362,7 @@ async function saveSupplierApplication(btn){
       <div class="field">
         <label>공급처 *</label>
         <div style="display:flex;gap:6px">
-          <select id="purchaseSupplier" style="flex:1;min-width:0">
+          <select id="purchaseSupplier" style="flex:1;min-width:0" onchange="applyPurchaseSupplyPrice()">
             <option value="">공급처를 불러와 주세요</option>
           </select>
           <button type="button" class="secondary" style="white-space:nowrap" onclick="openSupplierRegister()">+ 공급처 등록</button>
@@ -374,7 +374,8 @@ async function saveSupplierApplication(btn){
       </div>
       <div class="field">
         <label>매입단가 *</label>
-        <input id="purchaseUnitPrice" type="number" min="0" step="1" placeholder="원" oninput="calcPurchaseTotal()">
+        <input id="purchaseUnitPrice" type="number" min="0" step="1" placeholder="원" oninput="calcPurchaseTotal();purchaseSpDiffHint()">
+        <div id="purchaseSpHint" class="muted" style="font-size:12px;margin-top:4px"></div>
       </div>
       <div class="field">
         <label>박스당 택배비</label>
@@ -427,6 +428,34 @@ async function saveSupplierApplication(btn){
       <button class="secondary" type="button" onclick="clearPurchaseForm()">입력 초기화</button>
     </div>
     <div id="purchaseSaveMessage" class="notice"></div>
+
+    <!-- 2026-11-16 공급단가 관리 (단가 변경·이력) -->
+    <details id="spManage" style="margin-top:14px;border:1px solid #e5e7eb;border-radius:12px;padding:10px 14px">
+      <summary style="font-weight:700;cursor:pointer">💰 공급단가 관리 (단가 변경·이력) <span id="spAlertBadge" style="color:#b45309"></span></summary>
+      <p class="muted" style="margin:8px 0">단가가 바뀌면 새 단가와 적용 시작일만 넣으세요. 이전 단가는 지워지지 않고 이력으로 남고, 그 전날까지로 자동 마감됩니다. 공급처를 '공통'으로 두면 그 상품의 모든 공급처에 적용됩니다. 판매가는 기록만 하고 사이트 가격은 바꾸지 않습니다.</p>
+      <div id="spAlerts"></div>
+      <div class="grid">
+        <div class="field"><label>상품 *</label><select id="spProduct" onchange="spRender(true)"><option value="">상품·공급처를 먼저 불러와 주세요</option></select></div>
+        <div class="field"><label>공급처</label><select id="spSupplier" onchange="spRender(true)"><option value="">공통 (모든 공급처)</option></select></div>
+        <div class="field"><label>새 공급단가 *</label><input id="spPrice" type="number" min="0" step="1" placeholder="원" oninput="spDiffPreview()"></div>
+        <div class="field"><label>박스당 택배비</label><input id="spShip" type="number" min="0" step="1" placeholder="원"></div>
+        <div class="field"><label>적용 시작일 *</label><input id="spStart" type="date"></div>
+        <div class="field"><label>공구차수</label><input id="spRound" maxlength="20" placeholder="예: 1차, 2차"></div>
+        <div class="field"><label>변경사유</label><select id="spReason"><option>시세변동</option><option>차수변경</option><option>최초입점</option><option>공급처변경</option><option>기타</option></select></div>
+        <div class="field"><label>시세 확인주기(일)</label><input id="spCheck" type="number" min="1" max="365" step="1" placeholder="예: 수산물 10 (비우면 알림 없음)"></div>
+        <div class="field"><label>판매가(참고)</label><input id="spSale" type="number" min="0" step="1" placeholder="기록용 · 사이트 가격은 안 바뀜" oninput="spDiffPreview()"></div>
+        <div class="field"><label>메모</label><input id="spMemo" maxlength="200" placeholder="예: 11/11 위판장 시세 반영"></div>
+      </div>
+      <div id="spCurrent" class="notice"></div>
+      <div class="toolbar"><button class="primary" type="button" id="spSaveBtn" onclick="saveSupplyPrice()">단가 등록</button></div>
+      <div id="spMessage" class="notice"></div>
+      <div class="table-wrap" style="margin-top:8px">
+        <table>
+          <thead><tr><th>적용기간</th><th>공급처</th><th>차수</th><th>공급단가</th><th>변동</th><th>박스당 택배비</th><th>판매가(참고)</th><th>사유</th><th>메모</th><th>관리</th></tr></thead>
+          <tbody id="spRows"><tr><td colspan="10">상품·공급처 불러오기 후 상품을 선택하세요.</td></tr></tbody>
+        </table>
+      </div>
+    </details>
 
     <hr style="border:0;border-top:1px solid #e5e7eb;margin:18px 0">
 
@@ -894,6 +923,13 @@ async function saveSupplierApplication(btn){
       <div class="field"><label for="spRegOwner">대표자명</label><input id="spRegOwner" maxlength="30" placeholder="선택 입력"></div>
       <div class="field"><label for="spRegPhone">연락처</label><input id="spRegPhone" inputmode="tel" placeholder="010-1234-5678"></div>
       <div class="field full"><label for="spRegBiz">사업자등록번호</label><input id="spRegBiz" inputmode="numeric" placeholder="123-45-67890 (농가는 비워 두세요)"></div>
+      <div class="field full" style="margin-top:6px;padding-top:10px;border-top:1px dashed #d1d5db"><label>최초 공급 단가 <span class="muted" style="font-weight:400">(선택 · 넣으면 '공급단가' 이력에 '최초입점'으로 기록)</span></label></div>
+      <div class="field full"><label for="spRegProduct">공급 상품</label><select id="spRegProduct" onchange="spRegProductChange()"><option value="">선택 안 함</option></select></div>
+      <div class="field"><label for="spRegPrice">최초입점단가</label><input id="spRegPrice" type="number" min="0" step="1" placeholder="원"></div>
+      <div class="field"><label for="spRegShip">박스당 택배비</label><input id="spRegShip" type="number" min="0" step="1" placeholder="원"></div>
+      <div class="field"><label for="spRegStart">적용 시작일</label><input id="spRegStart" type="date"></div>
+      <div class="field"><label for="spRegRound">공구차수</label><input id="spRegRound" maxlength="20" placeholder="예: 1차"></div>
+      <div class="field full"><label for="spRegCheck">시세 확인주기(일)</label><input id="spRegCheck" type="number" min="1" max="365" step="1" placeholder="예: 수산물 10 (비우면 알림 없음)"></div>
     </div>
     <div id="spRegMessage" class="notice"></div>
     <div class="toolbar" style="justify-content:flex-end">
@@ -2788,11 +2824,14 @@ async function loadPurchaseFormData(){
 
     purchaseProducts=Array.isArray(res.products)?res.products:[];
     purchaseSuppliers=Array.isArray(res.suppliers)?res.suppliers:[];
+    purchaseSupplyPrices=Array.isArray(res.supplyPrices)?res.supplyPrices:[];
 
     $('purchaseProduct').innerHTML='<option value="">상품 선택</option>'+
       purchaseProducts.map(p=>`<option value="${esc(p.productCode)}">${esc(p.productName)} (${esc(p.productCode)})</option>`).join('');
 
     renderPurchaseSuppliers();
+    spFillProducts();
+    spRender(true);
 
     // 주문 기준 매출·발주수량 자동 계산용 (주문배송관리 데이터)
     try{
@@ -2800,7 +2839,7 @@ async function loadPurchaseFormData(){
       purchaseOrderStats=sr.success?buildPurchaseOrderStats(sr.rows||[]):{};
     }catch(_){ purchaseOrderStats={}; }
 
-    showMessage('purchaseSaveMessage',`상품 ${purchaseProducts.length}개, 공급처 ${purchaseSuppliers.length}개를 불러왔습니다.`);
+    showMessage('purchaseSaveMessage',`상품 ${purchaseProducts.length}개, 공급처 ${purchaseSuppliers.length}개, 공급단가 이력 ${purchaseSupplyPrices.length}건을 불러왔습니다.`);
   }catch(e){
     showMessage('purchaseSaveMessage','불러오기 오류: '+e.message,true);
   }
@@ -2811,10 +2850,18 @@ function renderPurchaseSuppliers(selectName){
   $('purchaseSupplier').innerHTML='<option value="">공급처 선택</option>'+
     purchaseSuppliers.map(s=>`<option value="${esc(s.supplierName)}">${esc(s.supplierName)}${s.supplierType?' / '+esc(s.supplierType):''}</option>`).join('');
   if(selectName!==undefined) $('purchaseSupplier').value=selectName;
+  const spSel=$('spSupplier'); if(spSel){ const keep=spSel.value;
+    spSel.innerHTML='<option value="">공통 (모든 공급처)</option>'+purchaseSuppliers.map(s=>`<option value="${esc(s.supplierName)}">${esc(s.supplierName)}</option>`).join('');
+    spSel.value=keep; }
 }
 function openSupplierRegister(){
   ['spRegName','spRegOwner','spRegPhone','spRegBiz'].forEach(id=>$(id).value='');
   $('spRegType').value='';
+  ['spRegPrice','spRegShip','spRegRound','spRegCheck'].forEach(id=>$(id).value='');
+  $('spRegStart').value=$('purchaseDate').value||todayYmd();
+  $('spRegProduct').innerHTML='<option value="">선택 안 함</option>'+purchaseProducts.map(p=>`<option value="${esc(p.productCode)}">${esc(p.productName)}</option>`).join('');
+  $('spRegProduct').value=$('purchaseProduct').value||'';
+  spRegProductChange();
   $('spRegMessage').style.display='none';
   $('supplierRegisterModal').classList.add('open');
   setTimeout(()=>$('spRegName').focus(),50);
@@ -2838,8 +2885,25 @@ async function saveSupplierRegister(){
     if(!res.success) throw new Error(res.message||'공급처 등록 실패');
     purchaseSuppliers.push(res.supplier);
     renderPurchaseSuppliers(res.supplier.supplierName);
+    let msg=res.message+' 매입 공급처로 선택했습니다.', spErr=false;
+    // 최초 공급 단가 (선택)
+    const spCode=$('spRegProduct').value, spPrice=$('spRegPrice').value.trim();
+    if(spCode && spPrice){
+      try{
+        const r2=await apiPost({action:'adminSupplyPriceSave',password,productCode:spCode,supplierName:res.supplier.supplierName,
+          unitPrice:spPrice,shippingPerBox:$('spRegShip').value.trim(),startDate:$('spRegStart').value||todayYmd(),
+          round:$('spRegRound').value.trim(),reason:'최초입점',checkDays:$('spRegCheck').value.trim(),memo:'공급처 등록 시 최초입점단가'});
+        if(!r2.success) throw new Error(r2.message||'단가 저장 실패');
+        msg+=' '+r2.message;
+        await reloadSupplyPrices();
+        if(!$('purchaseProduct').value){ $('purchaseProduct').value=spCode; onPurchaseProductChange(); }
+        else applyPurchaseSupplyPrice();
+      }catch(e2){ msg+=' (공급처는 등록됐지만 최초 단가 저장 실패: '+e2.message+' — 공급단가 관리에서 다시 등록해 주세요.)'; spErr=true; }
+    } else if(spCode || spPrice){
+      msg+=' (최초 단가는 상품과 단가를 모두 넣어야 저장됩니다 — 공급단가 관리에서 등록해 주세요.)';
+    }
     closeSupplierRegister();
-    showMessage('purchaseSaveMessage',res.message+' 매입 공급처로 선택했습니다.');
+    showMessage('purchaseSaveMessage',msg,spErr);
   }catch(e){ showMessage('spRegMessage',e.message,true); }
   finally{ btn.disabled=false; btn.textContent='공급처 저장'; }
 }
@@ -2857,8 +2921,158 @@ function onPurchaseProductChange(){
   $('purchaseUnitPrice').value=Number(p.defaultPurchaseUnitPrice||0);
   $('purchaseShipping').value=Number(p.defaultShippingFee||0);
   $('purchaseTaxType').value=p.taxType||'';
+  applyPurchaseSupplyPrice();
   applyPurchaseOrderHint(code);
   calcPurchaseTotal();
+}
+
+
+/* ---------- 공급단가 이력 (2026-11-16) ---------- */
+let purchaseSupplyPrices=[];
+const spKey=v=>String(v||'').replace(/\s+/g,'').toLowerCase();
+const spShort=ymd=>ymd?ymd.slice(5).replace('-','/'):'';
+function spSort(a,b){ return a.startDate===b.startDate ? String(b.createdAt).localeCompare(String(a.createdAt)) : (a.startDate<b.startDate?1:-1); }
+/* 그 날짜에 적용되는 단가: 공급처 지정 단가 > 공통 단가. 공급처 없으면 아무 공급처 중 최근 */
+function spFor(code,supplier,ymd){
+  const k=spKey(supplier);
+  const hits=purchaseSupplyPrices.filter(x=>x.productCode===code && x.startDate<=ymd && (!x.endDate||x.endDate>=ymd) && (!k||!x.supplierName||spKey(x.supplierName)===k));
+  hits.sort((a,b)=>{ if(k){const sa=a.supplierName?1:0,sb=b.supplierName?1:0; if(sa!==sb) return sb-sa;} return spSort(a,b); });
+  return hits[0]||null;
+}
+function spLabel(x){ return `${spShort(x.startDate)}~${x.endDate?spShort(x.endDate):''} · ${money(x.unitPrice)}${x.round?' · '+esc(x.round):''}${x.reason?' · '+esc(x.reason):''}${x.supplierName?'':' · 공통'}`; }
+async function reloadSupplyPrices(){
+  const password=$('purchaseAdminPassword').value.trim();
+  const res=await apiGet({action:'adminSupplyPriceList',password});
+  if(!res.success) throw new Error(res.message||'공급단가 조회 실패');
+  purchaseSupplyPrices=res.rows||[];
+  spRender(false);
+}
+
+/* 매입 등록: 상품·공급처·매입일자 기준 단가 자동 입력 */
+function applyPurchaseSupplyPrice(){
+  const code=$('purchaseProduct').value;
+  if(!code){ $('purchaseSpHint').textContent=''; return; }
+  const ymd=$('purchaseDate').value||todayYmd();
+  const x=spFor(code,$('purchaseSupplier').value,ymd);
+  if(x){
+    $('purchaseUnitPrice').value=x.unitPrice;
+    $('purchaseShipping').value=x.shippingPerBox||0;
+  }else{
+    const p=purchaseProducts.find(v=>v.productCode===code);
+    if(p){ $('purchaseUnitPrice').value=Number(p.defaultPurchaseUnitPrice||0); $('purchaseShipping').value=Number(p.defaultShippingFee||0); }
+  }
+  calcPurchaseTotal();
+  purchaseSpDiffHint();
+}
+function purchaseSpDiffHint(){
+  const box=$('purchaseSpHint'); const code=$('purchaseProduct').value;
+  if(!code){ box.textContent=''; return; }
+  const x=spFor(code,$('purchaseSupplier').value,$('purchaseDate').value||todayYmd());
+  if(!x){ box.innerHTML='공급단가 이력 없음 → 상품세부정보 기본단가 사용'; box.style.color=''; return; }
+  const cur=Number($('purchaseUnitPrice').value||0);
+  if(cur===Number(x.unitPrice)){ box.innerHTML='공급단가 이력 적용: '+spLabel(x); box.style.color='#17623f'; }
+  else{ box.innerHTML=`이력 단가(${money(x.unitPrice)})와 다릅니다. 단가가 바뀐 거라면 아래 「💰 공급단가 관리」에서 새 단가를 등록해 주세요.`; box.style.color='#b45309'; }
+}
+
+/* 공급처 등록 창: 상품 고르면 기본 택배비 */
+function spRegProductChange(){
+  const code=$('spRegProduct').value;
+  const p=purchaseProducts.find(v=>v.productCode===code);
+  if(p && !$('spRegShip').value) $('spRegShip').value=Number(p.defaultShippingFee||0);
+}
+
+/* 공급단가 관리 패널 */
+function spFillProducts(){
+  const sel=$('spProduct'); const keep=sel.value;
+  sel.innerHTML='<option value="">상품 선택</option>'+purchaseProducts.map(p=>`<option value="${esc(p.productCode)}">${esc(p.productName)}</option>`).join('');
+  sel.value=keep;
+}
+function spRenderAlerts(){
+  const today=todayYmd(); const groups={};
+  purchaseSupplyPrices.forEach(x=>{ const g=x.productCode+'|'+spKey(x.supplierName); if(!groups[g]||spSort(x,groups[g])<0) groups[g]=x; });
+  const alerts=Object.values(groups).filter(x=>Number(x.checkDays)>0 && x.startDate<=today && !x.endDate).map(x=>{
+    const days=Math.floor((new Date(today)-new Date(x.startDate))/86400000);
+    return days>=Number(x.checkDays)?{x,days}:null; }).filter(Boolean);
+  $('spAlertBadge').textContent=alerts.length?`⚠️ 시세 확인 ${alerts.length}건`:'';
+  $('spAlerts').innerHTML=alerts.length?`<div class="notice" style="display:block;background:#fff7ed;color:#9a3412">`+alerts.map(({x,days})=>
+    `⚠️ <b>${esc(x.productName||x.productCode)}</b>${x.supplierName?' / '+esc(x.supplierName):''}: 현재 단가 ${money(x.unitPrice)}를 ${spShort(x.startDate)}부터 ${days}일째 쓰고 있습니다 (확인주기 ${x.checkDays}일). 시세가 바뀌었으면 새 단가를 등록하세요.`).join('<br>')+'</div>':'';
+}
+function spRender(resetForm){
+  spRenderAlerts();
+  const code=$('spProduct').value, sup=$('spSupplier').value;
+  const p=purchaseProducts.find(v=>v.productCode===code);
+  if(!code){ $('spRows').innerHTML='<tr><td colspan="10">상품을 선택하세요.</td></tr>'; $('spCurrent').style.display='none'; return; }
+  const today=todayYmd();
+  const exact=purchaseSupplyPrices.filter(x=>x.productCode===code && spKey(x.supplierName)===spKey(sup)).sort(spSort);
+  const cur=spFor(code,sup,today);
+  const box=$('spCurrent'); box.style.display='block';
+  box.innerHTML=cur?`오늘(${spShort(today)}) 적용 단가: <b>${money(cur.unitPrice)}</b> (택배 ${money(cur.shippingPerBox)}) — ${spLabel(cur)}`+(cur.supplierName!==sup&&!cur.supplierName&&sup?'<br><span class="muted">이 공급처 전용 단가가 없어 공통 단가를 씁니다.</span>':'')
+    :`공급단가 이력이 없습니다. 지금은 상품세부정보 기본단가 <b>${money(p?p.defaultPurchaseUnitPrice:0)}</b>를 씁니다. 첫 단가는 사유를 '최초입점'으로 등록하세요.`;
+  if(resetForm){
+    const last=exact[0]||cur;
+    $('spPrice').value=''; $('spSale').value=''; $('spMemo').value='';
+    $('spShip').value=last?Number(last.shippingPerBox||0):Number(p?p.defaultShippingFee||0:0);
+    $('spRound').value=last?last.round||'':'';
+    $('spCheck').value=last&&last.checkDays!==''?last.checkDays:'';
+    $('spReason').value=exact.length?'시세변동':'최초입점';
+    const nextDay=exact[0]&&exact[0].startDate>=today?addDaysYmd(exact[0].startDate,1):today;
+    $('spStart').value=nextDay;
+    $('spMessage').style.display='none';
+  }
+  // 이력 표: 선택한 상품의 모든 공급처 단가, 최신순
+  const all=purchaseSupplyPrices.filter(x=>x.productCode===code).sort(spSort);
+  const latestIds=new Set(); const seen=new Set();
+  all.forEach(x=>{ const g=spKey(x.supplierName); if(!seen.has(g)){ seen.add(g); latestIds.add(x.id); } });
+  $('spRows').innerHTML=all.length?all.map(x=>{
+    const prev=all.filter(y=>spKey(y.supplierName)===spKey(x.supplierName) && y.startDate<x.startDate).sort(spSort)[0];
+    const diff=prev?Number(x.unitPrice)-Number(prev.unitPrice):null;
+    const diffTxt=diff===null?'<span class="muted">처음</span>':diff===0?'-':`<b style="color:${diff>0?'#a32121':'#1d4ed8'}">${diff>0?'▲':'▼'} ${Math.abs(diff).toLocaleString('ko-KR')}</b>`;
+    const isCur=x.startDate<=today&&(!x.endDate||x.endDate>=today);
+    return `<tr${isCur?' style="background:#eef8f2"':''}><td>${spShort(x.startDate)} ~ ${x.endDate?spShort(x.endDate):(x.startDate>today?'(예정)':'(현재)')}</td><td>${x.supplierName?esc(x.supplierName):'<span class="muted">공통</span>'}</td><td>${esc(x.round||'-')}</td><td><b>${money(x.unitPrice)}</b></td><td>${diffTxt}</td><td>${money(x.shippingPerBox)}</td><td>${x.salePrice===''||x.salePrice==null?'-':money(x.salePrice)}</td><td>${esc(x.reason||'')}</td><td class="left">${esc(x.memo||'')}</td><td>${latestIds.has(x.id)?`<button class="secondary" type="button" onclick="deleteSupplyPrice('${esc(x.id)}')">삭제</button>`:''}</td></tr>`;
+  }).join(''):'<tr><td colspan="10">이 상품의 단가 이력이 없습니다.</td></tr>';
+  spDiffPreview();
+}
+function addDaysYmd(ymd,n){ const d=new Date(ymd+'T00:00:00'); d.setDate(d.getDate()+n); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function spDiffPreview(){
+  const code=$('spProduct').value; if(!code) return;
+  const price=Number($('spPrice').value||0); if(!price){ return; }
+  const cur=spFor(code,$('spSupplier').value,todayYmd());
+  const ship=Number($('spShip').value||0), sale=Number($('spSale').value||0);
+  let t=cur?`현재 ${money(cur.unitPrice)} → 새 단가 ${money(price)} (${price-cur.unitPrice>=0?'+':''}${(price-cur.unitPrice).toLocaleString('ko-KR')}원)`:`새 단가 ${money(price)}`;
+  if(sale) t+=` · 판매가 ${money(sale)} 기준 박스당 마진 약 <b style="color:${sale-price-ship<=0?'#a32121':'#17623f'}">${money(sale-price-ship)}</b>`+(sale-price-ship<=0?' ⚠️ 팔수록 손해':'');
+  $('spMessage').className='notice'; $('spMessage').style.display='block'; $('spMessage').innerHTML=t;
+}
+async function saveSupplyPrice(){
+  const btn=$('spSaveBtn');
+  try{
+    const password=$('purchaseAdminPassword').value.trim();
+    if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+    if(!$('spProduct').value) throw new Error('상품을 선택해 주세요.');
+    if(!Number($('spPrice').value)) throw new Error('새 공급단가를 입력해 주세요.');
+    if(!$('spStart').value) throw new Error('적용 시작일을 입력해 주세요.');
+    btn.disabled=true; btn.textContent='저장 중...';
+    const res=await apiPost({action:'adminSupplyPriceSave',password,productCode:$('spProduct').value,supplierName:$('spSupplier').value,
+      unitPrice:$('spPrice').value.trim(),shippingPerBox:$('spShip').value.trim(),startDate:$('spStart').value,round:$('spRound').value.trim(),
+      reason:$('spReason').value,checkDays:$('spCheck').value.trim(),salePrice:$('spSale').value.trim(),memo:$('spMemo').value.trim()});
+    if(!res.success) throw new Error(res.message||'단가 저장 실패');
+    await reloadSupplyPrices();
+    spRender(true);
+    showMessage('spMessage',res.message);
+    if($('purchaseProduct').value && !$('purchaseEditNumber').value) applyPurchaseSupplyPrice();
+  }catch(e){ showMessage('spMessage','단가 저장 오류: '+e.message,true); }
+  finally{ btn.disabled=false; btn.textContent='단가 등록'; }
+}
+async function deleteSupplyPrice(id){
+  const x=purchaseSupplyPrices.find(v=>v.id===id); if(!x) return;
+  if(!confirm(`${x.productName} ${x.supplierName||'공통'} ${x.startDate} 단가 ${money(x.unitPrice)}를 삭제할까요?\n잘못 넣은 단가를 지울 때만 쓰세요. 직전 단가가 다시 현재 단가가 됩니다.`)) return;
+  try{
+    const password=$('purchaseAdminPassword').value.trim();
+    const res=await apiPost({action:'adminSupplyPriceDelete',password,id});
+    if(!res.success) throw new Error(res.message||'삭제 실패');
+    await reloadSupplyPrices();
+    spRender(true);
+    showMessage('spMessage',res.message);
+  }catch(e){ showMessage('spMessage','단가 삭제 오류: '+e.message,true); }
 }
 
 /* 주문(입금완료) 기준 발주수량·매출 연결 */
@@ -2919,6 +3133,7 @@ function clearPurchaseForm(){
   $('purchaseEditNumber').value='';
   $('purchaseSaveBtn').textContent='매입 등록';
   $('purchaseOrderHint').style.display='none';
+  $('purchaseSpHint').textContent='';
   calcPurchaseTotal();
   showMessage('purchaseSaveMessage','');
 }
@@ -3056,6 +3271,7 @@ function editPurchase(purchaseNumber){
   $('purchaseEvidenceType').value=r.evidenceType||'';
   $('purchasePaymentStatus').value=r.paymentStatus==='지급완료'?'지급완료':'미지급';
   $('purchaseMemo').value=r.memo||'';
+  purchaseSpDiffHint();
   $('purchaseSaveBtn').textContent='매입 수정 저장';
   calcPurchaseTotal();
   showMessage('purchaseSaveMessage',`매입번호 ${r.purchaseNumber} 수정 중입니다.`);
