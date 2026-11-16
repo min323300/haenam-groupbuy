@@ -202,7 +202,7 @@ function message(id,text,error=false){const el=$(id);el.textContent=text;el.clas
 async function apiPost(data){const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(data)});return r.json()}
 async function apiGet(params){const u=new URL(API_URL);Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,v??''));const r=await fetch(u);return r.json()}
 async function login(){
-  try{const loginId=$('loginId').value.trim(),loginPassword=$('loginPassword').value;if(!loginId||!loginPassword)return message('loginMessage','로그인 ID와 비밀번호를 입력해 주세요.',true);message('loginMessage','로그인 중입니다...');const res=await apiPost({action:'partnerLogin',loginId,loginPassword});if(!res.success)throw new Error(res.message||'로그인 실패');sessionStorage.setItem(TOKEN_KEY,res.token);$('loginPassword').value='';await loadDashboard()}catch(e){message('loginMessage',e.message,true)}
+  try{const loginId=$('loginId').value.trim(),loginPassword=$('loginPassword').value;if(!loginId||!loginPassword)return message('loginMessage','로그인 ID와 비밀번호를 입력해 주세요.',true);message('loginMessage','로그인 중입니다...');const [sd,ed]=rangeDates(rangeKey);const res=await apiPost({action:'partnerLogin',loginId,loginPassword,withDashboard:true,startDate:sd,endDate:ed});if(!res.success)throw new Error(res.message||'로그인 실패');sessionStorage.setItem(TOKEN_KEY,res.token);$('loginPassword').value='';await loadDashboard(res.dashboard&&res.dashboard.success?res.dashboard:null)}catch(e){message('loginMessage',e.message,true)}
 }
 /* ---------- 조회 기간 · 실적 ---------- */
 let dash=null, commissionItems=[], rangeKey='all';
@@ -229,11 +229,12 @@ function setRange(key){
   document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.range===key));
   loadDashboard();
 }
-async function loadDashboard(){
+async function loadDashboard(pre){
   const token=sessionStorage.getItem(TOKEN_KEY);if(!token)return showLogin();
   try{
     const [startDate,endDate]=rangeDates(rangeKey);
-    const res=await apiGet({action:'partnerDashboard',token,startDate,endDate});
+    // 2026-11-16 속도: 로그인 응답에 실적이 같이 오면 다시 부르지 않음
+    const res=pre||await apiGet({action:'partnerDashboard',token,startDate,endDate});
     if(!res.success)throw new Error(res.message||'실적 조회 실패');
     dash=res;
     $('loginCard').classList.add('hidden');$('dashboard').classList.remove('hidden');$('logoutBtn').classList.remove('hidden');
@@ -248,7 +249,7 @@ async function loadDashboard(){
     renderOrders();
     renderVendor(res.vendor);
     message('dashMessage','최신 실적을 불러왔습니다.');
-    loadPromoProducts(); loadCommissions(); await loadSettlements();
+    await Promise.all([loadPromoProducts(), loadCommissions(), loadSettlements()]);
   }catch(e){
     if(/로그인|만료|계정/.test(e.message||'')){sessionStorage.removeItem(TOKEN_KEY);showLogin();message('loginMessage',e.message,true);}
     else message('dashMessage',e.message,true);
