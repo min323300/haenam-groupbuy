@@ -505,6 +505,26 @@ async function saveSupplierApplication(btn){
     </div>
   </div>
 
+  <!-- 2026-11-16 현금영수증 (보기 전용 — 발행 처리는 기장사무실 페이지) -->
+  <div class="card" id="cashReceiptCard">
+    <h2>🧾 현금영수증</h2>
+    <p class="muted">10만원 이상 주문과 현금영수증 신청 주문입니다. 발행과 승인번호 입력은 기장사무실 페이지에서 합니다. <a href="accounting.html" target="_blank" rel="noopener">기장사무실 페이지 열기 ↗</a></p>
+    <div class="toolbar">
+      <input id="crStart" type="date" style="max-width:170px" title="조회 시작일">
+      <input id="crEnd" type="date" style="max-width:170px" title="조회 종료일">
+      <select id="crStatusFilter" style="max-width:170px" onchange="renderAdminCashReceipts()"><option value="">전체</option><option>발행대기</option><option>발행완료</option><option>발행취소</option></select>
+      <button class="primary" type="button" onclick="loadAdminCashReceipts()">현금영수증 불러오기</button>
+    </div>
+    <div id="crAdminSummary" class="muted" style="margin:6px 0"></div>
+    <div id="crAdminMessage" class="notice"></div>
+    <div class="table-wrap" style="margin-top:10px">
+      <table>
+        <thead><tr><th>주문일</th><th>주문번호</th><th>주문자</th><th>상품</th><th>금액</th><th>입금</th><th>구분</th><th>발급번호</th><th>상태</th><th>승인번호</th><th>발행일</th><th>처리자</th></tr></thead>
+        <tbody id="crAdminRows"><tr><td colspan="12">「현금영수증 불러오기」를 누르세요.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- 주문배송관리 -->
   <div class="card">
     <h2>⑧ 주문배송관리</h2>
@@ -2774,6 +2794,28 @@ async function loadAnalytics(){
       true
     );
   }
+}
+
+
+/* ---------- 현금영수증 보기 (2026-11-16) ---------- */
+let adminCashReceipts=null;
+async function loadAdminCashReceipts(){
+  try{
+    showMessage('crAdminMessage','현금영수증 목록을 불러오고 있습니다...');
+    const res=await apiGet({action:'cashReceiptList',password:adminPw(),startDate:$('crStart').value,endDate:$('crEnd').value});
+    if(!res.success) throw new Error(res.message||'조회 실패');
+    adminCashReceipts=res;
+    const s=res.summary||{};
+    $('crAdminSummary').innerHTML=`발행할 것(입금확인·발행대기) <b style="color:#b45309">${s.waitingPaid||0}건 ${money(s.waitingPaidAmount)}</b> · 입금 전 ${s.waitingUnpaid||0}건 · 발행완료 <b style="color:#17623f">${s.issued||0}건 ${money(s.issuedAmount)}</b>`;
+    renderAdminCashReceipts();
+    showMessage('crAdminMessage',`현금영수증 대상 ${res.rows.length}건을 불러왔습니다.`);
+  }catch(e){ showMessage('crAdminMessage','현금영수증 조회 오류: '+e.message,true); }
+}
+function renderAdminCashReceipts(){
+  const d=adminCashReceipts; if(!d) return;
+  const f=$('crStatusFilter').value;
+  const rows=(d.rows||[]).filter(x=>!f||x.status===f);
+  $('crAdminRows').innerHTML=rows.length?rows.map(x=>`<tr><td>${esc(x.orderDate)}</td><td>${esc(x.orderNo)}</td><td>${esc(x.name)}</td><td class="left">${esc(x.productName)} ${x.quantity}개</td><td><b>${money(x.amount)}</b></td><td>${x.paid?'✅':'<span class="muted">입금 전</span>'}</td><td>${esc(x.type)}</td><td>${esc(x.idNumber)}</td><td>${x.status==='발행완료'?'<b style="color:#17623f">발행완료</b>':x.status==='발행취소'?'<span class="muted">발행취소</span>':'<b style="color:#b45309">발행대기</b>'}</td><td>${esc(x.approvalNo||'')}</td><td>${esc(x.issuedAt||'')}</td><td>${esc(x.handler||'')}</td></tr>`).join(''):'<tr><td colspan="12">해당하는 건이 없습니다.</td></tr>';
 }
 
 /* ---------- 매입관리 ---------- */

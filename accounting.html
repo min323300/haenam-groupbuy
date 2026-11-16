@@ -579,6 +579,24 @@ th{
     </section>
 
 
+    <!-- 2026-11-16 현금영수증 발행 -->
+    <section class="card" id="cashReceiptSection">
+      <h2>🧾 현금영수증 발행</h2>
+      <p style="font-size:13px;color:#555;margin:4px 0 10px">10만원 이상 계좌이체 주문과 현금영수증을 신청한 주문입니다. <b>입금확인된 건만</b> 홈택스에서 발행한 뒤 승인번호를 입력하고 「발행완료」를 눌러 주세요. 번호를 안 적은 주문은 국세청 지정번호(<span id="crSelfNo">010-000-1234</span>)로 자진발급합니다.</p>
+      <div id="crSummary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;font-size:13px">
+        <b>보기</b>
+        <label><input type="radio" name="crFilter" value="todo" checked onchange="renderCashReceipts()"> 발행할 것 (입금확인·발행대기)</label>
+        <label><input type="radio" name="crFilter" value="wait" onchange="renderCashReceipts()"> 발행대기 전체</label>
+        <label><input type="radio" name="crFilter" value="all" onchange="renderCashReceipts()"> 전체</label>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>주문일</th><th>주문번호</th><th>주문자</th><th>상품</th><th>금액</th><th>입금</th><th>구분</th><th>발급번호</th><th>상태</th><th>승인번호·발행일</th><th>처리</th></tr></thead>
+          <tbody id="crRows"><tr><td colspan="11">회계자료 조회를 누르면 함께 불러옵니다.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
   </main>
 
 </div>
@@ -645,6 +663,54 @@ async function apiGet(params){
 }
 
 
+
+/* ---------- 현금영수증 발행 (2026-11-16) ---------- */
+let cashReceiptData = null;
+async function loadCashReceipts(){
+  try{
+    const res = await apiGet({action:'cashReceiptList', password:$('password').value, startDate:$('startDate').value, endDate:$('endDate').value});
+    if(!res.success) throw new Error(res.message || '현금영수증 조회 실패');
+    cashReceiptData = res;
+    $('crSelfNo').textContent = res.selfNumber || '010-000-1234';
+    const s = res.summary || {};
+    const chip = (label, v, color) => `<div style="background:#f5f8f5;border-radius:10px;padding:8px 12px;font-size:13px">${label}<br><b style="font-size:17px;color:${color||'#222'}">${v}</b></div>`;
+    $('crSummary').innerHTML = chip('발행할 것 (입금확인)', `${s.waitingPaid||0}건 · ${money(s.waitingPaidAmount)}`, '#b45309') + chip('입금 전 (아직 발행 X)', `${s.waitingUnpaid||0}건`) + chip('발행완료', `${s.issued||0}건 · ${money(s.issuedAmount)}`, '#16875a');
+    renderCashReceipts();
+  }catch(e){ $('crRows').innerHTML = `<tr><td colspan="11">현금영수증 조회 오류: ${esc(e.message)}</td></tr>`; }
+}
+function renderCashReceipts(){
+  const d = cashReceiptData; if(!d) return;
+  const f = (document.querySelector('input[name=crFilter]:checked')||{}).value || 'todo';
+  const rows = (d.rows||[]).filter(x => f==='all' ? true : f==='wait' ? x.status==='발행대기' : (x.status==='발행대기' && x.paid));
+  $('crRows').innerHTML = rows.length ? rows.map(x => {
+    const st = x.status==='발행완료' ? '<b style="color:#16875a">발행완료</b>' : x.status==='발행취소' ? '<span style="color:#999">발행취소</span>' : '<b style="color:#b45309">발행대기</b>';
+    let act = '';
+    if(x.status==='발행대기'){
+      act = x.paid
+        ? `<input id="crAp_${esc(x.orderNo)}" placeholder="승인번호" style="width:120px;padding:6px;border:1px solid #ccd3cc;border-radius:6px"> <button class="primary" type="button" style="padding:6px 10px" onclick="updateCashReceipt('${esc(x.orderNo)}','발행완료')">발행완료</button>`
+        : '<span style="color:#999">입금 후 발행</span>';
+    } else if(x.status==='발행완료'){
+      act = `<button class="secondary" type="button" style="padding:6px 10px" onclick="updateCashReceipt('${esc(x.orderNo)}','발행대기')">되돌리기</button>`;
+    } else {
+      act = `<button class="secondary" type="button" style="padding:6px 10px" onclick="updateCashReceipt('${esc(x.orderNo)}','발행대기')">발행대기로</button>`;
+    }
+    if(x.status!=='발행취소') act += ` <button class="secondary" type="button" style="padding:6px 10px" onclick="updateCashReceipt('${esc(x.orderNo)}','발행취소')">취소</button>`;
+    return `<tr><td>${esc(x.orderDate)}</td><td>${esc(x.orderNo)}</td><td>${esc(x.name)}</td><td>${esc(x.productName)} ${x.quantity}개</td><td><b>${money(x.amount)}</b></td><td>${x.paid?'✅':'<span style="color:#999">입금 전</span>'}</td><td>${esc(x.type)}</td><td>${esc(x.idNumber)}</td><td>${st}</td><td>${esc(x.approvalNo||'')}${x.issuedAt?'<br><small>'+esc(x.issuedAt)+'</small>':''}</td><td style="white-space:nowrap">${act}</td></tr>`;
+  }).join('') : '<tr><td colspan="11">해당하는 현금영수증 건이 없습니다.</td></tr>';
+}
+async function updateCashReceipt(orderNo, status){
+  try{
+    const apEl = document.getElementById('crAp_'+orderNo);
+    const approvalNo = apEl ? apEl.value.trim() : '';
+    if(status==='발행완료' && !approvalNo){ alert('홈택스 발행 후 승인번호를 입력해 주세요.'); return; }
+    if(status==='발행취소' && !confirm(orderNo+' 현금영수증을 발행취소로 표시할까요?\n(홈택스에서의 실제 취소는 따로 해 주세요)')) return;
+    const r = await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'cashReceiptUpdate',password:$('password').value,orderNo,status,approvalNo,handler:'기장사무실'})}).then(x=>x.json());
+    if(!r.success) throw new Error(r.message||'처리 실패');
+    showMessage(r.message);
+    await loadCashReceipts();
+  }catch(e){ showMessage('현금영수증 처리 오류: '+e.message, true); }
+}
+
 async function loadAccounting(){
 
   try{
@@ -709,6 +775,7 @@ async function loadAccounting(){
 
     accountingExcelData = res;
     renderAccounting(res);
+    loadCashReceipts();
 
     $('resultArea')
       .classList

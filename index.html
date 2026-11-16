@@ -87,7 +87,8 @@ textarea{min-height:80px;resize:vertical} .privacy{display:flex;gap:8px;align-it
 /* 주문서 개선: 입금자명·주소검색·교환환불 안내·동의 상세 */
 .of-row{display:flex;gap:8px}.of-row input{flex:1}.of-sub-btn{flex:none;border:0;border-radius:9px;padding:0 16px;background:var(--green);color:#fff;font-weight:800;cursor:pointer;font-size:14px}
 .of-gap{margin-top:8px}.of-inline{display:flex!important;align-items:center;gap:6px;font-size:12px!important;font-weight:500!important;color:#555;margin:6px 0 0!important}.of-inline input{width:auto}
-.of-hint{font-size:12px;color:#777;margin-top:5px}.of-error{font-size:12px;color:#a32121;margin-top:5px;display:none}
+.of-hint{font-size:12px;color:#777;margin-top:5px}
+.cr-box{border:1.5px solid #18794e;background:#f2faf5;border-radius:12px;padding:12px 14px;margin:14px 0 4px}.cr-box>strong{display:block;font-size:15px;color:#18794e}.cr-amt{font-size:12px;color:#5f6b61;font-weight:600}.cr-opt{display:flex;align-items:center;gap:6px;font-weight:600;margin:5px 0;font-size:14px;cursor:pointer}.cr-opt input{width:auto;margin:0}.cr-sub{font-weight:400;color:#777;font-size:12px}.of-error{font-size:12px;color:#a32121;margin-top:5px;display:none}
 .of-notice{background:#f6f8f7;border:1px solid #e1e8e4;border-radius:12px;padding:13px 15px;font-size:13px;line-height:1.7;color:#333;margin:16px 0 12px}.of-notice strong{display:block;font-size:14px;margin-bottom:5px;color:var(--green)}.of-notice ul{margin:0;padding-left:18px}
 .of-all{display:flex!important;align-items:center;gap:8px;font-size:14px!important;font-weight:900!important;padding:12px 14px;border:2px solid var(--green);border-radius:11px;margin:0 0 8px!important;cursor:pointer}.of-all input{width:18px;height:18px}
 .of-consent{border:1px solid #e1e8e4;border-radius:11px;margin-bottom:8px;overflow:hidden}.of-consent-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:#fafbfa}.of-consent-head label{display:flex!important;align-items:flex-start;gap:8px;margin:0!important;font-size:13px!important;cursor:pointer}.of-consent-head input{width:auto;margin-top:2px}
@@ -290,6 +291,17 @@ main>.section-head{display:none}
       <div class="muted">관리자가 지정한 날짜 중에서 선택해 주세요.</div>
     </div>
     <label>요청사항</label><textarea id="memo" placeholder="배송 시 요청사항을 적어주세요."></textarea>
+    <!-- 2026-11-16 현금영수증 (10만원 이상 주문에만 표시) -->
+    <div id="cashReceiptBox" class="cr-box" style="display:none">
+      <strong>🧾 현금영수증 <span class="cr-amt" id="crAmount"></span></strong>
+      <div class="of-hint" style="margin:2px 0 8px">10만원 이상 계좌이체 주문은 현금영수증을 발행합니다. 입금 확인 후 발행됩니다.</div>
+      <label class="cr-opt"><input type="radio" name="crType" value="소득공제" checked> 개인 소득공제용</label>
+      <label class="cr-opt"><input type="radio" name="crType" value="지출증빙"> 사업자 지출증빙용</label>
+      <label class="cr-opt"><input type="radio" name="crType" value=""> 번호 안 적음 <span class="cr-sub">(국세청 지정번호로 발행)</span></label>
+      <input id="crNumber" inputmode="numeric" class="of-gap" placeholder="휴대폰번호 (010-0000-0000)">
+      <label class="of-inline" id="crSameWrap"><input id="crSamePhone" type="checkbox" checked> 주문 연락처와 같음</label>
+      <div id="crError" class="of-error"></div>
+    </div>
     <div class="of-notice">
      <strong>주문 전 꼭 확인해 주세요</strong>
      <ul>
@@ -991,6 +1003,42 @@ function updateOrderAmount(){
     '합계 ' + total.toLocaleString('ko-KR') + '원';
 
   box.style.display = 'block';
+  updateCashReceiptBox(total);
+}
+
+/* ---------- 현금영수증 (2026-11-16): 10만원 이상 주문에만 표시 ---------- */
+const CASH_RECEIPT_MIN = 100000;
+function crTotal(){ return currentProduct ? Number(currentProduct.salePrice||0) * Number(document.getElementById('qty').value||1) : 0; }
+function crType(){ const r=document.querySelector('input[name=crType]:checked'); return r ? r.value : ''; }
+function updateCashReceiptBox(total){
+  const box=document.getElementById('cashReceiptBox'); if(!box) return;
+  total = total ?? crTotal();
+  const on = total >= CASH_RECEIPT_MIN;
+  box.style.display = on ? 'block' : 'none';
+  if(!on) return;
+  document.getElementById('crAmount').textContent = '(주문금액 '+total.toLocaleString('ko-KR')+'원)';
+  updateCashReceiptInput();
+}
+function updateCashReceiptInput(){
+  const t=crType(), num=document.getElementById('crNumber'), wrap=document.getElementById('crSameWrap'), same=document.getElementById('crSamePhone');
+  num.style.display = t ? '' : 'none';
+  wrap.style.display = t==='소득공제' ? '' : 'none';
+  num.placeholder = t==='지출증빙' ? '사업자등록번호 (123-45-67890)' : '휴대폰번호 (010-0000-0000) 또는 현금영수증카드 번호';
+  if(t==='소득공제' && same.checked){ num.value=document.getElementById('phone').value; num.readOnly=true; }
+  else { num.readOnly=false; if(t==='지출증빙' && /^01/.test(num.value.replace(/[^0-9]/g,''))) num.value=''; }
+  document.getElementById('crError').style.display='none';
+}
+document.querySelectorAll('input[name=crType]').forEach(r=>r.addEventListener('change',updateCashReceiptInput));
+document.getElementById('crSamePhone').addEventListener('change',updateCashReceiptInput);
+document.getElementById('phone').addEventListener('input',()=>{ if(crType()==='소득공제'&&document.getElementById('crSamePhone').checked) document.getElementById('crNumber').value=document.getElementById('phone').value; });
+/* 주문 전에 번호 형식 확인. 문제 없으면 {type, idNumber} 또는 null(신청 안 함/10만원 미만) */
+function checkCashReceipt(){
+  if(crTotal() < CASH_RECEIPT_MIN || document.getElementById('cashReceiptBox').style.display==='none') return {ok:true, req:null};
+  const t=crType(); if(!t) return {ok:true, req:null};
+  const d=document.getElementById('crNumber').value.replace(/[^0-9]/g,''), err=document.getElementById('crError');
+  let ok = t==='소득공제' ? (/^01\d{8,9}$/.test(d) || /^\d{13,19}$/.test(d)) : /^\d{10}$/.test(d);
+  if(!ok){ err.textContent = t==='소득공제' ? '휴대폰번호 또는 현금영수증카드 번호를 확인해 주세요.' : '사업자등록번호 10자리를 확인해 주세요.'; err.style.display='block'; }
+  return {ok, req: ok ? {type:t, idNumber:d} : null};
 }
 
 async function copyOrderAmount(){
@@ -1117,6 +1165,9 @@ function showOrderDone(data, payload, total){
 
 function resetOrderFormExtras(){
   document.getElementById('agreeAll').checked = false;
+  const crDefault=document.querySelector('input[name=crType][value="소득공제"]'); if(crDefault) crDefault.checked=true;
+  document.getElementById('crSamePhone').checked=true; document.getElementById('crNumber').value='';
+  updateCashReceiptBox();
   document.querySelectorAll('.of-error').forEach(el => { el.style.display = 'none'; });
   syncDepositor();
 }
@@ -1134,7 +1185,8 @@ orderForm.addEventListener('submit',async ev=>{
  document.getElementById('phoneError').style.display = okPhone ? 'none' : 'block';
  document.getElementById('addressError').style.display = okAddress ? 'none' : 'block';
  document.getElementById('agreeError').style.display = okAgree ? 'none' : 'block';
- if(!okPhone || !okAddress || !okAgree){
+ const cr = checkCashReceipt();
+ if(!okPhone || !okAddress || !okAgree || !cr.ok){
    showMsg('입력 내용을 확인해 주세요.', true);
    return;
  }
@@ -1170,6 +1222,19 @@ orderForm.addEventListener('submit',async ev=>{
   const data=await r.json(); if(data.success===false)throw new Error(data.message||'주문 접수 실패');
   showMsg('주문이 정상적으로 접수되었습니다. 결제 안내에 따라 입금해 주세요.',false);
   showOrderDone(data, payload, total);
+  // 현금영수증 신청 (주문 접수 후 따로 저장 — 실패해도 주문은 그대로)
+  if(total >= CASH_RECEIPT_MIN){
+    const orderNo = data && (data.orderNo || data.orderId || data.orderNumber);
+    const doneBox = document.getElementById('orderDoneBox');
+    if(cr.req && orderNo){
+      try{
+        const rr = await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'cashReceiptRequest',orderNo,phone:payload.phone,type:cr.req.type,idNumber:cr.req.idNumber,channel:'주문서'})}).then(x=>x.json());
+        doneBox.insertAdjacentHTML('beforeend', '<br><span style="font-size:13px">🧾 '+(rr.success ? e(rr.message) : '현금영수증 신청이 저장되지 않았습니다('+e(rr.message||'')+'). 고객센터 010-5478-5289로 알려 주세요.')+'</span>');
+      }catch(_){ doneBox.insertAdjacentHTML('beforeend','<br><span style="font-size:13px">🧾 현금영수증 신청이 저장되지 않았습니다. 고객센터 010-5478-5289로 알려 주세요.</span>'); }
+    } else {
+      doneBox.insertAdjacentHTML('beforeend','<br><span style="font-size:13px">🧾 현금영수증은 국세청 지정번호로 발행됩니다. 본인 번호로 받으시려면 고객센터 010-5478-5289로 알려 주세요.</span>');
+    }
+  }
   trackOrderEvent('order_submit');
   orderForm.reset(); resetOrderFormExtras(); currentProduct.orderCount=Number(currentProduct.orderCount||0)+1; renderProducts();
  }catch(err){showMsg('주문 오류: '+err.message,true)}
