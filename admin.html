@@ -338,6 +338,47 @@ async function saveSupplierApplication(btn){
   </div>
 
 
+
+  <!-- 2026-11-17 네이버(스마트스토어) 주문 -->
+  <div class="card" id="naverOrderCard">
+    <h2>🟢 네이버 주문 <span id="nvBadge" class="badge" style="display:none;background:#fdecec;color:#c62828"></span></h2>
+    <p class="muted">스마트스토어 주문을 붙여넣어 보관합니다. 배송 달력에 도착희망일로 함께 표시되고, 업체 출고 요청에도 들어갑니다. (주문관리·파트너 수당·현금영수증과는 따로 관리)</p>
+    <div class="toolbar">
+      <a class="primary" href="https://sell.smartstore.naver.com/#/naverpay/sale/delivery" target="_blank" rel="noopener" style="text-decoration:none;padding:10px 16px;border-radius:9px;display:inline-block">스마트스토어 주문 열기 ↗</a>
+      <button type="button" class="secondary" onclick="nvLoad()">네이버 주문 불러오기</button>
+      <a href="calendar.html" class="secondary" style="text-decoration:none;padding:10px 16px;border-radius:9px;display:inline-block;background:#ecefec;color:#222">📅 배송 달력</a>
+    </div>
+    <details id="nvPasteBox" style="margin-top:12px;border:2px dashed #9cc7ad;border-radius:12px;padding:10px 14px;background:#f6fbf8">
+      <summary style="font-weight:800;cursor:pointer">📋 새 주문 붙여넣기 (스마트스토어 엑셀)</summary>
+      <ol class="muted" style="margin:8px 0 8px 18px;padding:0">
+        <li>스마트스토어 「발주(주문)확인/발송관리」에서 「엑셀다운」 → 비밀번호로 엑셀 열기</li>
+        <li><b>Ctrl+A</b> (전체 선택) → <b>Ctrl+C</b> (복사)</li>
+        <li>아래 칸을 누르고 <b>Ctrl+V</b> → 「미리보기」 → 「저장」 (같은 주문을 다시 붙여도 두 번 들어가지 않습니다)</li>
+      </ol>
+      <textarea id="nvPaste" style="min-height:110px" placeholder="여기에 붙여넣기 (Ctrl+V)" onpaste="setTimeout(nvPreview,50)"></textarea>
+      <div class="toolbar">
+        <label class="secondary" style="padding:10px 14px;border-radius:9px;cursor:pointer;font-weight:700;background:#ecefec">또는 엑셀 파일 선택<input type="file" accept=".xlsx,.xls" style="display:none" onchange="nvFile(this)"></label>
+        <button type="button" class="secondary" onclick="nvPreview()">미리보기</button>
+        <button type="button" class="primary" id="nvSaveBtn" onclick="nvImport()">저장</button>
+      </div>
+      <div id="nvPreviewMsg" class="notice"></div>
+      <div class="table-wrap" id="nvPreviewWrap" style="display:none"><table style="min-width:900px"><thead><tr><th>상품주문번호</th><th>결제일</th><th>상품</th><th>수량</th><th>받는 분</th><th>도착희망일</th><th>발송기한</th><th>네이버 상태</th></tr></thead><tbody id="nvPreviewRows"></tbody></table></div>
+    </details>
+    <div id="nvMessage" class="notice"></div>
+    <div class="order-status-filter" id="nvFilter" style="display:none">
+      <span class="osf-title">표시</span>
+      <label><input type="checkbox" class="nvf" value="todo" checked onchange="nvRender()"> 발송 전 <b id="nvCntTodo">0</b></label>
+      <label><input type="checkbox" class="nvf" value="sent" onchange="nvRender()"> 발송됨 <b id="nvCntSent">0</b></label>
+      <label><input type="checkbox" class="nvf" value="cancel" onchange="nvRender()"> 취소 <b id="nvCntCancel">0</b></label>
+    </div>
+    <div class="table-wrap" style="margin-top:8px">
+      <table style="min-width:1250px">
+        <thead><tr><th>상품주문번호</th><th>결제일</th><th>상품</th><th>수량</th><th>받는 분</th><th>연락처</th><th>배송지</th><th>도착희망일</th><th>발송기한</th><th>택배사</th><th>송장번호</th><th>배송상태</th><th>저장</th></tr></thead>
+        <tbody id="nvRows"><tr><td colspan="13">「네이버 주문 불러오기」를 눌러 주세요.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- 매입관리 -->
   <div class="card">
     <h2>⑦ 매입관리</h2>
@@ -3919,7 +3960,7 @@ if(!API_URL.includes('여기에_')){
 /* ---------- 구간 접기 / 자세히 보기 (상태는 이 기기에 기억) ---------- */
 (function(){
   const KEY='adminFold_v1', ROW_LIMIT=10;
-  const DEFAULT_OPEN=['② 주문관리','⑧ 주문배송관리'];
+  const DEFAULT_OPEN=['② 주문관리','🟢 네이버 주문','⑧ 주문배송관리'];
   let saved={}; try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(_){saved={}}
   const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(saved))}catch(_){}};
   const wrap=document.querySelector('.wrap'); if(!wrap) return;
@@ -4164,6 +4205,146 @@ async function spdSaveInfo(){
     showMessage('spdMsg',res.message);
   }catch(e){ showMessage('spdMsg','정보 저장 오류: '+e.message,true); }
   finally{ btn.disabled=false; btn.textContent='정보 저장'; }
+}
+</script>
+
+<script>
+/* ---------- 2026-11-17 네이버(스마트스토어) 주문 ---------- */
+let nvOrders=[], nvParsed=[];
+const NV_COL={productOrderNo:'상품주문번호',orderNo:'주문번호',paidAt:'결제일',productCode:'판매자 상품코드',productName:'상품명',option:'옵션정보',qty:'수량',
+  name:'수취인명',phone:'수취인연락처1',zip:'우편번호',address:'통합배송지',memo:'배송메세지',wishDate:'배송희망일',shipDeadline:'발송기한',
+  status:'주문상태',detail:'주문세부상태',courier:'택배사',trackingNumber:'송장번호',price:'최종 상품별 총 주문금액',settlement:'정산예정금액'};
+function nvPw(){ return adminPw(); }
+// 엑셀에서 복사한 글(탭 구분, 줄바꿈 있는 칸은 따옴표) → 2차원 배열
+function nvParseTsv(text){
+  const rows=[]; let row=[], cell='', q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cell+='"';i++;} else q=false; } else cell+=c; continue; }
+    if(c==='"'&&cell==='') { q=true; continue; }
+    if(c==='\t'){ row.push(cell); cell=''; continue; }
+    if(c==='\n'||c==='\r'){ if(c==='\r'&&text[i+1]==='\n') i++; row.push(cell); rows.push(row); row=[]; cell=''; continue; }
+    cell+=c;
+  }
+  if(cell!==''||row.length){ row.push(cell); rows.push(row); }
+  return rows;
+}
+function nvRowsToItems(rows){
+  const h=rows.findIndex(r=>r.some(c=>String(c).trim()==='상품주문번호')&&r.some(c=>String(c).trim()==='수취인명'));
+  if(h<0) throw new Error('「상품주문번호」「수취인명」 칸 제목을 찾지 못했습니다. 스마트스토어 엑셀을 제목 줄까지 전체 복사해 주세요.');
+  const head=rows[h].map(c=>String(c).trim()), idx={};
+  Object.entries(NV_COL).forEach(([k,name])=>{ idx[k]=head.indexOf(name); });
+  const get=(r,k)=>idx[k]>=0?String(r[idx[k]]??'').trim():'';
+  return rows.slice(h+1).filter(r=>/^\d{10,}$/.test(get(r,'productOrderNo').replace(/\D/g,''))).map(r=>({
+    productOrderNo:get(r,'productOrderNo').replace(/\D/g,''), orderNo:get(r,'orderNo').replace(/\D/g,''), paidAt:get(r,'paidAt'),
+    productCode:get(r,'productCode'), productName:get(r,'productName'), option:get(r,'option'), qty:Number(get(r,'qty').replace(/\D/g,''))||1,
+    name:get(r,'name'), phone:get(r,'phone'), zip:get(r,'zip'), address:get(r,'address'), memo:get(r,'memo'), wishDate:get(r,'wishDate'),
+    shipDeadline:get(r,'shipDeadline'), naverStatus:[get(r,'status'),get(r,'detail')].filter(Boolean).join('·'),
+    courier:get(r,'courier'), trackingNumber:get(r,'trackingNumber'), price:get(r,'price'), settlement:get(r,'settlement')
+  }));
+}
+function nvArrival(o){
+  const m0=String(o.wishDate||'').match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/); if(m0) return `${m0[1]}-${String(m0[2]).padStart(2,'0')}-${String(m0[3]).padStart(2,'0')}`;
+  const s=String(o.option||''); let m=s.match(/(\d{4})\s*[-.\/년]\s*(\d{1,2})\s*[-.\/월]\s*(\d{1,2})/);
+  if(m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  m=s.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/); if(!m) return '';
+  const p=String(o.paidAt||todayYmd()).match(/(\d{4})\D+(\d{1,2})/); let y=p?+p[1]:new Date().getFullYear();
+  if(p&&+m[1]<+p[2]-1) y++;
+  return `${y}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`;
+}
+function nvPreview(){
+  try{
+    const text=$('nvPaste').value; if(!text.trim()) throw new Error('붙여넣은 내용이 없습니다.');
+    nvParsed=nvRowsToItems(nvParseTsv(text));
+    nvShowPreview();
+  }catch(e){ nvParsed=[]; $('nvPreviewWrap').style.display='none'; showMessage('nvPreviewMsg',e.message,true); }
+}
+function nvShowPreview(){
+  if(!nvParsed.length) throw new Error('주문 줄을 찾지 못했습니다.');
+  const known=new Set(nvOrders.map(o=>o.productOrderNo));
+  $('nvPreviewRows').innerHTML=nvParsed.map(o=>`<tr><td>${esc(o.productOrderNo)}${known.has(o.productOrderNo)?' <span class="muted">(이미 있음)</span>':' <b style="color:#16875a">새 주문</b>'}</td><td>${esc(o.paidAt)}</td>
+    <td class="left">${esc(o.productName)}<br><span class="muted">${esc(o.option)}</span></td><td>${o.qty}</td><td>${esc(o.name)}</td>
+    <td><b>${esc(nvArrival(o)||'-')}</b></td><td>${esc(o.shipDeadline)}</td><td>${esc(o.naverStatus)}</td></tr>`).join('');
+  $('nvPreviewWrap').style.display='block';
+  const nw=nvParsed.filter(o=>!known.has(o.productOrderNo)).length;
+  showMessage('nvPreviewMsg',`${nvParsed.length}건 읽음 (새 주문 ${nw}건${nvOrders.length?'':' · 아직 목록을 안 불러와서 새 주문 여부는 저장 때 확인'}). 확인 후 「저장」을 누르세요.`);
+}
+function nvFile(input){
+  const f=input.files&&input.files[0]; input.value=''; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=e=>{
+    try{
+      if(typeof XLSX==='undefined') throw new Error('엑셀 기능을 불러오지 못했습니다.');
+      let wb; try{ wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'}); }
+      catch(_){ throw new Error('비밀번호가 걸린 파일이라 바로 열 수 없습니다. 엑셀에서 열어 Ctrl+A → Ctrl+C 후 위 칸에 붙여넣어 주세요.'); }
+      const ws=wb.Sheets[wb.SheetNames.find(n=>n.includes('발송'))||wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+      nvParsed=nvRowsToItems(rows); nvShowPreview();
+    }catch(err){ nvParsed=[]; showMessage('nvPreviewMsg',err.message,true); }
+  };
+  rd.readAsArrayBuffer(f);
+}
+async function nvImport(){
+  const btn=$('nvSaveBtn');
+  try{
+    if(!nvParsed.length) nvPreview();
+    if(!nvParsed.length) return;
+    const password=nvPw(); if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+    btn.disabled=true; btn.textContent='저장 중...';
+    const res=await apiPost({action:'adminNaverOrderImport',password,items:nvParsed});
+    if(!res.success) throw new Error(res.message||'저장 실패');
+    $('nvPaste').value=''; nvParsed=[]; $('nvPreviewWrap').style.display='none'; $('nvPreviewMsg').style.display='none';
+    await nvLoad();
+    showMessage('nvMessage',res.message);
+  }catch(e){ showMessage('nvPreviewMsg','저장 오류: '+e.message,true); }
+  finally{ btn.disabled=false; btn.textContent='저장'; }
+}
+async function nvLoad(){
+  try{
+    const password=nvPw(); if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+    const res=await apiGet({action:'adminNaverOrderList',password});
+    if(!res.success) throw new Error(res.message||'조회 실패');
+    nvOrders=res.orders||[];
+    $('nvFilter').style.display='flex';
+    nvRender();
+    showMessage('nvMessage',`네이버 주문 ${nvOrders.length}건을 불러왔습니다.`);
+  }catch(e){ showMessage('nvMessage','불러오기 오류: '+e.message,true); }
+}
+function nvCat(o){ return o.shippingStatus==='취소'?'cancel':(o.trackingNumber||['송장등록','배송중','배송완료'].includes(o.shippingStatus))?'sent':'todo'; }
+function nvRender(){
+  const cats=Array.from(document.querySelectorAll('.nvf:checked')).map(x=>x.value);
+  const cnt=c=>nvOrders.filter(o=>nvCat(o)===c).length;
+  $('nvCntTodo').textContent=cnt('todo'); $('nvCntSent').textContent=cnt('sent'); $('nvCntCancel').textContent=cnt('cancel');
+  const today=todayYmd(), tmr=(()=>{const d=new Date();d.setDate(d.getDate()+1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
+  const urgent=nvOrders.filter(o=>nvCat(o)==='todo'&&String(o.shipDeadline).slice(0,10)&&String(o.shipDeadline).slice(0,10)<=tmr).length;
+  const b=$('nvBadge'); b.style.display=urgent?'inline-block':'none'; b.textContent=`발송기한 임박 ${urgent}건`;
+  const list=nvOrders.filter(o=>cats.includes(nvCat(o)));
+  $('nvRows').innerHTML=list.length?list.map(o=>{
+    const dl=String(o.shipDeadline).slice(0,10), late=nvCat(o)==='todo'&&dl&&dl<=tmr;
+    return `<tr data-no="${esc(o.productOrderNo)}">
+    <td>${esc(o.productOrderNo)}<br><span class="muted">${esc(o.naverStatus)}</span></td><td>${esc(String(o.paidAt).slice(0,16))}</td>
+    <td class="left">${esc(o.productName)}<br><span class="muted">${esc(o.option)}</span></td><td>${o.qty}</td><td>${esc(o.name)}</td>
+    <td>${esc(o.phone)}</td><td class="left">${esc(o.address)}${o.memo?`<br><span class="muted">📝 ${esc(o.memo)}</span>`:''}</td>
+    <td><input type="date" class="nv-arr" value="${esc(o.arrivalDate)}" style="min-width:130px"></td>
+    <td style="${late?'color:#c62828;font-weight:700':''}">${esc(o.shipDeadline)}${late?'<br>⚠️ 발송지연 처리 필요':''}</td>
+    <td><input class="nv-cou" list="courierList" value="${esc(o.courier)}" style="min-width:100px"></td>
+    <td><input class="nv-trk" value="${esc(o.trackingNumber)}" style="min-width:130px"></td>
+    <td><select class="nv-st">${['배송대기','송장등록','배송중','배송완료','취소'].map(s=>`<option ${s===o.shippingStatus?'selected':''}>${s}</option>`).join('')}</select></td>
+    <td><button type="button" class="primary" onclick="nvSaveRow(this)">저장</button></td></tr>`;}).join('')
+    :'<tr><td colspan="13">해당하는 네이버 주문이 없습니다.</td></tr>';
+}
+async function nvSaveRow(btn){
+  const tr=btn.closest('tr');
+  try{
+    btn.disabled=true; btn.textContent='저장 중...';
+    let st=tr.querySelector('.nv-st').value; const trk=tr.querySelector('.nv-trk').value.trim();
+    if(trk&&st==='배송대기') st='송장등록';
+    const item={productOrderNo:tr.dataset.no,arrivalDate:tr.querySelector('.nv-arr').value,courier:tr.querySelector('.nv-cou').value.trim(),trackingNumber:trk,shippingStatus:st};
+    const res=await apiPost({action:'adminNaverOrderUpdate',password:nvPw(),items:[item]});
+    if(!res.success) throw new Error(res.message||'저장 실패');
+    const o=nvOrders.find(x=>x.productOrderNo===item.productOrderNo); if(o) Object.assign(o,item);
+    nvRender(); showMessage('nvMessage',res.message+' 스마트스토어 쪽 발송처리는 스마트스토어센터에서 해 주세요.');
+  }catch(e){ showMessage('nvMessage','저장 오류: '+e.message,true); btn.disabled=false; btn.textContent='저장'; }
 }
 </script>
 

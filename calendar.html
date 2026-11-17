@@ -261,10 +261,10 @@ function reason(o){
 
 // 빠른 표시: ① 저장해 둔 지난 데이터를 바로 보여 주고 ② 배송목록이 오면 먼저 그리고 ③ 요청사항·공급처는 오는 대로 덧붙입니다.
 const CACHE_KEY='hnCalCache', SUP_KEY='hnCalSupplier', SUP_TTL=6*60*60*1000;
-let raw={ship:null,ord:null}, loading=false;
+let raw={ship:null,ord:null,naver:null}, loading=false;
 function store(){ try{ return localStorage.getItem(PW_KEY)?localStorage:sessionStorage; }catch(_){ return null; } }
 function saveCache(){
-  try{ const s=store(); if(!s) return; s.setItem(CACHE_KEY,JSON.stringify({at:Date.now(),ship:raw.ship,ord:raw.ord})); }catch(_){}
+  try{ const s=store(); if(!s) return; s.setItem(CACHE_KEY,JSON.stringify({at:Date.now(),ship:raw.ship,ord:raw.ord,naver:raw.naver})); }catch(_){}
 }
 function loadCache(){
   try{ for(const s of [sessionStorage,localStorage]){ const v=s.getItem(CACHE_KEY); if(v) return JSON.parse(v); } }catch(_){}
@@ -279,6 +279,13 @@ function rebuild(){
   (raw.ord||[]).forEach(o=>{ const no=String(o.orderNo||o.orderNumber||'').trim(); if(no) memoMap[no]=o; });
   const base=raw.ship||Object.values(memoMap);
   const all=base.map(r=>normalizeRow(r,memoMap)).filter(o=>o.orderNumber);
+  // 네이버(스마트스토어) 주문 — 관리자 「🟢 네이버 주문」에서 붙여넣은 것
+  (raw.naver||[]).filter(n=>n&&n.productOrderNo&&n.shippingStatus!=='취소').forEach(n=>{
+    all.push({orderNumber:'N'+n.productOrderNo, productCode:String(n.productCode||'').trim(), productName:String(n.productName||'').trim(),
+      name:String(n.name||'').trim(), phone:n.phone||'', qty:Number(n.qty||1), address:String(n.address||'').trim(), memo:String(n.memo||'').trim(),
+      deliveryRaw:n.arrivalDate||'', paid:true, courier:String(n.courier||'').trim(), tracking:String(n.trackingNumber||'').trim(),
+      status:n.shippingStatus||'배송대기', createdAt:n.paidAt||'', naver:true, shipDeadline:n.shipDeadline||''});
+  });
   all.forEach(o=>{
     o.arrival=parseDate(o.deliveryRaw);
     o.ship=o.arrival?shipDateOf(o.arrival):null;
@@ -304,13 +311,14 @@ async function loadAll(first){
   // ① 지난 데이터 바로 표시
   if(first){
     const c=loadCache();
-    if(c&&(c.ship||c.ord)){ raw={ship:c.ship,ord:c.ord}; rebuild(); showApp(); stamp(c.at,' · 새로 불러오는 중'); }
+    if(c&&(c.ship||c.ord)){ raw={ship:c.ship,ord:c.ord,naver:c.naver||null}; rebuild(); showApp(); stamp(c.at,' · 새로 불러오는 중'); }
     else { const m=$('loginMsg'); m.textContent='불러오는 중... (처음에는 몇 초 걸립니다)'; m.className='msg'; m.style.display='block'; }
   }
   const fail=e=>({success:false,message:e.message});
   const shipP=apiGet({action:'shippingList',password}).catch(fail);
   const ordP=apiGet({action:'orders',password}).catch(fail);
   const needSup=!sup||Date.now()-sup.at>SUP_TTL;
+  const nvP=apiGet({action:'adminNaverOrderList',password}).catch(fail);
   const purP=needSup?apiGet({action:'adminPurchaseFormData',password}).catch(fail):null;
   const warn=[];
   try{
@@ -324,6 +332,8 @@ async function loadAll(first){
     if(ord.success){ raw.ord=ord.orders||ord.data||[]; }
     else if(!ship.success) throw new Error(ship.message||ord.message||'주문을 불러오지 못했습니다.');
     if(!ship.success) raw.ship=null;
+    const nv=await nvP;
+    if(nv&&nv.success) raw.naver=nv.orders||[];
     rebuild(); showApp(); saveCache();
     // ④ 공급처 (6시간마다 새로)
     if(purP){
@@ -383,10 +393,11 @@ function sortOrders(list){
 }
 function orderHtml(o){
   return `<div class="ord"><i class="dot ${o.color}"></i><div class="body">
-    <div class="l1"><b>${esc(o.name||'(이름 없음)')}</b><span>${esc(o.productName)}</span><span class="qty">${o.qty}박스</span>
+    <div class="l1"><b>${esc(o.name||'(이름 없음)')}</b><span>${esc(o.productName)}</span><span class="qty">${o.qty}박스</span>${o.naver?'<span class="tag" style="background:#03c75a;color:#fff">N 스마트스토어</span>':''}
       <span class="tag ${o.color}">${esc(reason(o))}</span>${o.paid?'':'<span class="tag unpaid">입금 전</span>'}</div>
     <div class="l2">${o.phone?`<a href="tel:${esc(String(o.phone).replace(/\D/g,''))}">${esc(phoneFmt(o.phone))}</a> · `:''}${esc(o.address)}</div>
     ${o.memo?`<div class="l3">📝 ${esc(o.memo)}</div>`:''}
+    ${o.naver&&o.shipDeadline&&o.color!=='green'?`<div class="l3" style="color:#b42318">네이버 발송기한 ${esc(String(o.shipDeadline).slice(0,16))} — 도착일보다 이르면 스마트스토어에서 「발송지연 처리」</div>`:''}
     <div class="l3" style="color:#8a938d">${esc(o.orderNumber)}${o.courier||o.tracking?' · '+esc(o.courier)+' '+esc(o.tracking):''}</div>
   </div></div>`;
 }
