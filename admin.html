@@ -372,7 +372,7 @@ async function saveSupplierApplication(btn){
       <label><input type="checkbox" class="nvf" value="cancel" onchange="nvRender()"> 취소 <b id="nvCntCancel">0</b></label>
     </div>
     <div class="table-wrap" style="margin-top:8px">
-      <table style="min-width:1250px">
+      <table style="min-width:1500px">
         <thead><tr><th>상품주문번호</th><th>결제일</th><th>상품</th><th>수량</th><th>받는 분</th><th>연락처</th><th>배송지</th><th>도착희망일</th><th>발송기한</th><th>택배사</th><th>송장번호</th><th>배송상태</th><th>저장</th></tr></thead>
         <tbody id="nvRows"><tr><td colspan="13">「네이버 주문 불러오기」를 눌러 주세요.</td></tr></tbody>
       </table>
@@ -4322,14 +4322,14 @@ function nvRender(){
   $('nvRows').innerHTML=list.length?list.map(o=>{
     const dl=String(o.shipDeadline).slice(0,10), late=nvCat(o)==='todo'&&dl&&dl<=tmr;
     return `<tr data-no="${esc(o.productOrderNo)}">
-    <td>${esc(o.productOrderNo)}<br><span class="muted">${esc(o.naverStatus)}</span></td><td>${esc(String(o.paidAt).slice(0,16))}</td>
-    <td class="left">${esc(o.productName)}<br><span class="muted">${esc(o.option)}</span></td><td>${o.qty}</td><td>${esc(o.name)}</td>
-    <td>${esc(o.phone)}</td><td class="left">${esc(o.address)}${o.memo?`<br><span class="muted">📝 ${esc(o.memo)}</span>`:''}</td>
+    <td style="white-space:nowrap">${esc(o.productOrderNo)}<br><span class="muted">${esc(o.naverStatus)}</span></td><td style="white-space:nowrap">${esc(String(o.paidAt).slice(0,16))}</td>
+    <td class="left" style="min-width:180px">${esc(o.productName)}<br><span class="muted">${esc(o.option)}</span></td><td>${o.qty}</td><td style="white-space:nowrap">${esc(o.name)}</td>
+    <td style="white-space:nowrap">${esc(o.phone)}</td><td class="left" style="min-width:220px">${esc(o.address)}${o.memo?`<br><span class="muted">📝 ${esc(o.memo)}</span>`:''}</td>
     <td><input type="date" class="nv-arr" value="${esc(o.arrivalDate)}" style="min-width:130px"></td>
     <td style="${late?'color:#c62828;font-weight:700':''}">${esc(o.shipDeadline)}${late?'<br>⚠️ 발송지연 처리 필요':''}</td>
     <td><input class="nv-cou" list="courierList" value="${esc(o.courier)}" style="min-width:100px"></td>
     <td><input class="nv-trk" value="${esc(o.trackingNumber)}" style="min-width:130px"></td>
-    <td><select class="nv-st">${['배송대기','송장등록','배송중','배송완료','취소'].map(s=>`<option ${s===o.shippingStatus?'selected':''}>${s}</option>`).join('')}</select></td>
+    <td><select class="nv-st" style="min-width:100px">${['배송대기','송장등록','배송중','배송완료','취소'].map(s=>`<option ${s===o.shippingStatus?'selected':''}>${s}</option>`).join('')}</select></td>
     <td><button type="button" class="primary" onclick="nvSaveRow(this)">저장</button></td></tr>`;}).join('')
     :'<tr><td colspan="13">해당하는 네이버 주문이 없습니다.</td></tr>';
 }
