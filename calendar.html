@@ -89,7 +89,7 @@
 <div class="top">
   <h1>📅 배송 달력</h1>
   <span id="lastLoad" style="font-size:12px;opacity:.85"></span>
-  <button id="reloadBtn" type="button" onclick="loadAll()" style="display:none">새로고침</button>
+  <button id="reloadBtn" type="button" onclick="forceReload()" style="display:none">새로고침</button>
   <a href="admin.html">관리자</a>
 </div>
 
@@ -192,7 +192,7 @@ function login(){
   loadAll(true);
 }
 function logout(msg){
-  password=''; try{localStorage.removeItem(PW_KEY);sessionStorage.removeItem(PW_KEY);}catch(_){}
+  password=''; try{[localStorage,sessionStorage].forEach(st=>{st.removeItem(PW_KEY);st.removeItem(CACHE_KEY);});}catch(_){}
   $('app').style.display='none'; $('reloadBtn').style.display='none'; $('loginBox').style.display='block';
   const m=$('loginMsg'); m.textContent=msg||''; m.className='msg err'; m.style.display=msg?'block':'none';
 }
@@ -256,51 +256,88 @@ function reason(o){
   return left+'일 뒤 출고';
 }
 
+// 빠른 표시: ① 저장해 둔 지난 데이터를 바로 보여 주고 ② 배송목록이 오면 먼저 그리고 ③ 요청사항·공급처는 오는 대로 덧붙입니다.
+const CACHE_KEY='hnCalCache', SUP_KEY='hnCalSupplier', SUP_TTL=6*60*60*1000;
+let raw={ship:null,ord:null}, loading=false;
+function store(){ try{ return localStorage.getItem(PW_KEY)?localStorage:sessionStorage; }catch(_){ return null; } }
+function saveCache(){
+  try{ const s=store(); if(!s) return; s.setItem(CACHE_KEY,JSON.stringify({at:Date.now(),ship:raw.ship,ord:raw.ord})); }catch(_){}
+}
+function loadCache(){
+  try{ for(const s of [sessionStorage,localStorage]){ const v=s.getItem(CACHE_KEY); if(v) return JSON.parse(v); } }catch(_){}
+  return null;
+}
+function loadSupplierCache(){
+  try{ const v=JSON.parse(localStorage.getItem(SUP_KEY)||'null'); if(v&&v.map) return v; }catch(_){}
+  return null;
+}
+function rebuild(){
+  const memoMap={};
+  (raw.ord||[]).forEach(o=>{ const no=String(o.orderNo||o.orderNumber||'').trim(); if(no) memoMap[no]=o; });
+  const base=raw.ship||Object.values(memoMap);
+  const all=base.map(r=>normalizeRow(r,memoMap)).filter(o=>o.orderNumber);
+  all.forEach(o=>{
+    o.arrival=parseDate(o.deliveryRaw);
+    o.ship=o.arrival?shipDateOf(o.arrival):null;
+    o.supplier=supplierOf[o.productCode]||NO_SUPPLIER;
+    o.color=colorOf(o);
+  });
+  orders=all.filter(o=>o.arrival);
+  undated=all.filter(o=>!o.arrival&&o.color!=='green');
+}
+function showApp(){
+  $('loginBox').style.display='none'; $('app').style.display='block'; $('reloadBtn').style.display='inline-block';
+  if(!viewStart){ const t=todayDate(); viewStart=new Date(t.getFullYear(),t.getMonth(),1); }
+  if(!selected&&!colorView){ if(orders.some(o=>o.color==='red')) colorView='red'; else selected=ymd(todayDate()); }
+  renderAll();
+}
+function stamp(at,suffix){ const d=new Date(at); $('lastLoad').textContent=pad(d.getHours())+':'+pad(d.getMinutes())+' 기준'+(suffix||''); }
+
 async function loadAll(first){
-  if(!password) return;
+  if(!password||loading) return;
+  loading=true;
   const btn=$('reloadBtn'); btn.disabled=true; btn.textContent='불러오는 중...';
-  if(first){ const m=$('loginMsg'); m.textContent='불러오는 중...'; m.className='msg'; m.style.display='block'; }
+  const sup=loadSupplierCache(); if(sup) supplierOf=sup.map;
+  // ① 지난 데이터 바로 표시
+  if(first){
+    const c=loadCache();
+    if(c&&(c.ship||c.ord)){ raw={ship:c.ship,ord:c.ord}; rebuild(); showApp(); stamp(c.at,' · 새로 불러오는 중'); }
+    else { const m=$('loginMsg'); m.textContent='불러오는 중... (처음에는 몇 초 걸립니다)'; m.className='msg'; m.style.display='block'; }
+  }
+  const fail=e=>({success:false,message:e.message});
+  const shipP=apiGet({action:'shippingList',password}).catch(fail);
+  const ordP=apiGet({action:'orders',password}).catch(fail);
+  const needSup=!sup||Date.now()-sup.at>SUP_TTL;
+  const purP=needSup?apiGet({action:'adminPurchaseFormData',password}).catch(fail):null;
+  const warn=[];
   try{
-    const [ship,ord,pur]=await Promise.all([
-      apiGet({action:'shippingList',password}).catch(e=>({success:false,message:e.message})),
-      apiGet({action:'orders',password}).catch(e=>({success:false,message:e.message})),
-      apiGet({action:'adminPurchaseFormData',password}).catch(e=>({success:false,message:e.message}))
-    ]);
-    const bad=[ship,ord].find(r=>r&&r.success===false&&/비밀번호/.test(String(r.message||'')));
-    if(bad) return logout('비밀번호가 맞지 않습니다.');
-    if(!ship.success&&!ord.success) throw new Error(ship.message||ord.message||'주문을 불러오지 못했습니다.');
-
-    const memoMap={};
-    (ord.success?(ord.orders||ord.data||[]):[]).forEach(o=>{ const no=String(o.orderNo||o.orderNumber||'').trim(); if(no) memoMap[no]=o; });
-    const base=ship.success?(ship.rows||[]):Object.values(memoMap);
-    supplierOf=pur&&pur.success?buildSupplierMap(pur.supplyPrices):{};
-
-    const all=base.map(r=>normalizeRow(r,memoMap)).filter(o=>o.orderNumber);
-    all.forEach(o=>{
-      o.arrival=parseDate(o.deliveryRaw);
-      o.ship=o.arrival?shipDateOf(o.arrival):null;
-      o.supplier=supplierOf[o.productCode]||NO_SUPPLIER;
-      o.color=colorOf(o);
-    });
-    orders=all.filter(o=>o.arrival);
-    undated=all.filter(o=>!o.arrival&&o.color!=='green');
-
-    $('loginBox').style.display='none'; $('app').style.display='block'; btn.style.display='inline-block';
-    lastLoadAt=Date.now(); const now=new Date(); $('lastLoad').textContent=pad(now.getHours())+':'+pad(now.getMinutes())+' 기준';
-    const warn=[];
-    if(!ship.success) warn.push('배송목록을 못 불러와 주문관리 기준으로 표시합니다.');
-    if(!(pur&&pur.success)) warn.push('공급처 정보를 못 불러왔습니다 (업체가 "'+NO_SUPPLIER+'"로 보임).');
+    // ② 배송목록 먼저
+    const ship=await shipP;
+    if(ship&&ship.success===false&&/비밀번호/.test(String(ship.message||''))) return logout('비밀번호가 맞지 않습니다.');
+    if(ship.success){ raw.ship=ship.rows||[]; rebuild(); showApp(); stamp(Date.now(),' · 요청사항 불러오는 중'); }
+    else warn.push('배송목록을 못 불러와 주문관리 기준으로 표시합니다.');
+    // ③ 요청사항(주문관리)
+    const ord=await ordP;
+    if(ord.success){ raw.ord=ord.orders||ord.data||[]; }
+    else if(!ship.success) throw new Error(ship.message||ord.message||'주문을 불러오지 못했습니다.');
+    if(!ship.success) raw.ship=null;
+    rebuild(); showApp(); saveCache();
+    // ④ 공급처 (6시간마다 새로)
+    if(purP){
+      const pur=await purP;
+      if(pur&&pur.success){ supplierOf=buildSupplierMap(pur.supplyPrices); try{ localStorage.setItem(SUP_KEY,JSON.stringify({at:Date.now(),map:supplierOf})); }catch(_){} rebuild(); renderAll(); }
+      else if(!sup) warn.push('공급처 정보를 못 불러왔습니다 (업체가 "'+NO_SUPPLIER+'"로 보임).');
+    }
+    lastLoadAt=Date.now(); stamp(lastLoadAt);
     showMsg(warn.join(' '),warn.length>0);
-    if(!viewStart){ const t=todayDate(); viewStart=new Date(t.getFullYear(),t.getMonth(),1); }
-    if(!selected&&!colorView){ const red=orders.some(o=>o.color==='red'); if(red) colorView='red'; else selected=ymd(todayDate()); }
-    renderAll();
     clearInterval(timer); timer=setInterval(()=>{ if(document.visibilityState==='visible') loadAll(); },5*60*1000);
   }catch(e){
-    if(first){ const m=$('loginMsg'); m.textContent='오류: '+e.message; m.className='msg err'; m.style.display='block'; }
-    else showMsg('불러오기 오류: '+e.message,true);
-  }finally{ btn.disabled=false; btn.textContent='새로고침'; }
+    if($('app').style.display==='none'){ const m=$('loginMsg'); m.textContent='오류: '+e.message; m.className='msg err'; m.style.display='block'; }
+    else showMsg('불러오기 오류: '+e.message+' (화면은 지난 데이터입니다)',true);
+  }finally{ loading=false; btn.disabled=false; btn.textContent='새로고침'; }
 }
 
+function forceReload(){ try{localStorage.removeItem(SUP_KEY);}catch(_){} loadAll(); }
 /* ---------- 화면 ---------- */
 function renderAll(){ renderSummary(); renderMonths(); renderDetail(); }
 function renderSummary(){
