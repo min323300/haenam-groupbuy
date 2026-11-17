@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /admin.html
+Disallow: /calendar.html
 Disallow: /partner.html
 Disallow: /promotion.html
 Disallow: /accounting.html
