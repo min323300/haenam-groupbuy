@@ -348,6 +348,89 @@ async function saveSupplierApplication(btn){
       <button class="secondary" type="button" onclick="loadPurchaseFormData()">상품·공급처 불러오기</button>
     </div>
 
+    <!-- 2026-11-17 공급처별 상품·입고가 -->
+    <details id="spdManage" open style="margin-top:14px;border:2px solid #cfe0d5;border-radius:12px;padding:10px 14px;background:#fbfdfb">
+      <summary style="font-weight:800;cursor:pointer;font-size:16px">🏭 공급처별 상품·입고가 <span class="muted" style="font-weight:400">(공급처를 열어 정보 확인·수정, 상품과 입고가를 한 번에 등록)</span></summary>
+      <div class="toolbar" style="margin-top:10px">
+        <input id="spdSearch" placeholder="공급처 이름·대표자 검색" style="max-width:260px" oninput="spdRenderList()">
+        <button type="button" class="primary" onclick="openSupplierRegister()">+ 새 공급처 등록</button>
+        <span class="muted">먼저 위의 「상품·공급처 불러오기」를 눌러 주세요.</span>
+      </div>
+      <div class="table-wrap" style="margin-top:8px">
+        <table style="min-width:760px">
+          <thead><tr><th>공급처</th><th>구분</th><th>대표자</th><th>연락처</th><th>공급 상품</th><th></th></tr></thead>
+          <tbody id="spdList"><tr><td colspan="6">「상품·공급처 불러오기」 후 표시됩니다.</td></tr></tbody>
+        </table>
+      </div>
+
+      <div id="spdPanel" style="display:none;margin-top:16px;border-top:2px solid #16875a;padding-top:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+          <h3 id="spdTitle" style="margin:0"></h3>
+          <button type="button" class="secondary" onclick="spdClose()">닫기 ✕</button>
+        </div>
+
+        <details style="margin-top:10px;border:1px solid #e5e7eb;border-radius:10px;padding:8px 12px">
+          <summary style="font-weight:700;cursor:pointer">📇 공급처 정보 확인·수정</summary>
+          <div class="grid" style="margin-top:10px">
+            <div class="field"><label>공급처명 *</label><input id="spdName" maxlength="60"></div>
+            <div class="field"><label>공급자구분 *</label><select id="spdType"><option value="">선택</option><option>농가·개인</option><option>개인사업자</option><option>법인사업자</option></select></div>
+            <div class="field"><label>대표자명</label><input id="spdOwner" maxlength="30"></div>
+            <div class="field"><label>연락처</label><input id="spdPhone" inputmode="tel"></div>
+            <div class="field full"><label>사업자등록번호</label><input id="spdBiz" inputmode="numeric" placeholder="농가는 비워 두세요"></div>
+          </div>
+          <p class="muted" style="margin:6px 0 0">이름을 바꾸면 공급단가·매입관리·벤더수수료에 적힌 공급처 이름도 함께 바뀝니다.</p>
+          <div class="toolbar"><button type="button" class="primary" id="spdInfoBtn" onclick="spdSaveInfo()">정보 저장</button></div>
+        </details>
+
+        <h3 style="margin-top:16px">📦 공급 상품·입고가 <span id="spdCount" class="badge"></span></h3>
+        <div class="toolbar" style="margin-top:4px">
+          <input id="spdFilter" placeholder="상품 검색" style="max-width:220px" oninput="spdRenderProducts()">
+          <span class="muted">입고가를 바꿀 상품만 「새 입고가」 칸에 적고 아래 저장을 누르세요. 이전 가격은 이력으로 남습니다.</span>
+        </div>
+        <div class="table-wrap" style="margin-top:6px;max-height:520px;overflow:auto">
+          <table style="min-width:900px">
+            <thead><tr><th>상품</th><th>현재 입고가</th><th>택배비</th><th>적용 시작</th><th>새 입고가</th><th>새 택배비</th><th></th></tr></thead>
+            <tbody id="spdRows"></tbody>
+          </table>
+        </div>
+
+        <div style="margin-top:14px;padding:12px;border:1px dashed #9cc7ad;border-radius:10px;background:#f6fbf8">
+          <b>➕ 상품 추가</b>
+          <div class="toolbar" style="margin-top:8px">
+            <input id="spdAddProduct" list="spdProductList" placeholder="상품 이름 입력 후 목록에서 선택" style="flex:2;min-width:220px">
+            <datalist id="spdProductList"></datalist>
+            <input id="spdAddPrice" type="number" min="0" step="1" placeholder="입고가(원)" style="max-width:140px">
+            <input id="spdAddShip" type="number" min="0" step="1" placeholder="택배비(선택)" style="max-width:140px">
+            <button type="button" class="secondary" onclick="spdAddOne()">목록에 추가</button>
+          </div>
+          <details style="margin-top:8px">
+            <summary style="cursor:pointer;font-weight:700">📋 여러 개 한 번에 붙여넣기 (엑셀에서 복사)</summary>
+            <p class="muted" style="margin:6px 0">한 줄에 하나씩: <b>상품명(또는 상품코드), 입고가, 택배비(선택)</b> — 엑셀 칸을 그대로 복사해도 됩니다. 상품관리에 등록된 상품만 연결됩니다.</p>
+            <textarea id="spdBulk" style="min-height:120px" placeholder="해남절임배추	27000	5000&#10;해남고구마	20000"></textarea>
+            <div class="toolbar"><button type="button" class="secondary" onclick="spdApplyBulk()">붙여넣은 내용 목록에 추가</button></div>
+          </details>
+          <div id="spdBulkMsg" class="notice"></div>
+          <div class="table-wrap" id="spdPendingWrap" style="display:none;margin-top:8px">
+            <table style="min-width:640px">
+              <thead><tr><th>새로 연결할 상품</th><th>입고가</th><th>택배비</th><th></th></tr></thead>
+              <tbody id="spdPending"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="grid3" style="margin-top:12px">
+          <div class="field"><label>적용 시작일</label><input id="spdStart" type="date"></div>
+          <div class="field"><label>가격 변경 사유</label><select id="spdReason"><option>시세변동</option><option>차수변경</option><option>공급처변경</option><option>기타</option></select></div>
+          <div class="field"><label>공구차수</label><input id="spdRound" maxlength="20" placeholder="예: 1차"></div>
+        </div>
+        <div class="toolbar">
+          <button type="button" class="primary" id="spdSaveBtn" onclick="spdSave()">저장</button>
+          <span id="spdSaveHint" class="muted"></span>
+        </div>
+        <div id="spdMsg" class="notice"></div>
+      </div>
+    </details>
+
     <div class="grid" style="margin-top:14px">
       <div class="field">
         <label>매입일자 *</label>
@@ -2854,6 +2937,7 @@ async function loadPurchaseFormData(){
     spRender(true);
     vfFillSelects();
     vfRender(true);
+    if(typeof spdAfterLoad==='function') spdAfterLoad();
 
     // 주문 기준 매출·발주수량 자동 계산용 (주문배송관리 데이터)
     try{
@@ -2945,6 +3029,7 @@ async function saveSupplierRegister(){
     }
     closeSupplierRegister();
     showMessage('purchaseSaveMessage',msg,spErr);
+    if(typeof spdAfterLoad==='function'){ spdAfterLoad(); spdOpen(res.supplier.supplierName); }
   }catch(e){ showMessage('spRegMessage',e.message,true); }
   finally{ btn.disabled=false; btn.textContent='공급처 저장'; }
 }
@@ -3903,5 +3988,184 @@ if(!API_URL.includes('여기에_')){
   });
 })();
 </script>
+<script>
+/* ---------- 2026-11-17 공급처별 상품·입고가 ---------- */
+let spdCurrent=null, spdPendingList=[];
+const spdK=v=>String(v||'').replace(/\s+/g,'').toLowerCase();
+function spdPw(){ return ($('purchaseAdminPassword').value||'').trim()||adminPw(); }
+// 공급처의 상품별 현재(또는 예정) 입고가
+function spdProductsOf(name){
+  const today=todayYmd(), k=spdK(name), by={};
+  (purchaseSupplyPrices||[]).filter(x=>spdK(x.supplierName)===k&&(!x.endDate||x.endDate>=today)).forEach(x=>{
+    const cur=by[x.productCode];
+    // 오늘 적용 중인 것 우선, 없으면 예정
+    const active=x.startDate<=today;
+    if(!cur||(active&&(!cur._active||x.startDate>cur.startDate))||(!active&&!cur._active&&x.startDate<cur.startDate)) by[x.productCode]={...x,_active:active};
+  });
+  return Object.values(by).sort((a,b)=>String(a.productName).localeCompare(String(b.productName),'ko'));
+}
+function spdAfterLoad(){
+  spdRenderList();
+  const dl=$('spdProductList'); if(dl) dl.innerHTML=(purchaseProducts||[]).map(p=>`<option value="${esc(p.productName)} (${esc(p.productCode)})">`).join('');
+  if(spdCurrent){ const s=(purchaseSuppliers||[]).find(x=>x.supplierCode===spdCurrent.supplierCode)||(purchaseSuppliers||[]).find(x=>spdK(x.supplierName)===spdK(spdCurrent.supplierName)); if(s) spdOpen(s.supplierName,true); }
+}
+function spdRenderList(){
+  const q=spdK($('spdSearch').value);
+  const list=(purchaseSuppliers||[]).filter(s=>!q||spdK(s.supplierName+s.ownerName).includes(q));
+  $('spdList').innerHTML=list.length?list.map(s=>{
+    const n=spdProductsOf(s.supplierName).length;
+    return `<tr${spdCurrent&&spdK(spdCurrent.supplierName)===spdK(s.supplierName)?' style="background:#eef8f2"':''}>
+      <td class="left"><b>${esc(s.supplierName)}</b> <span class="muted">${esc(s.supplierCode||'')}</span></td><td>${esc(s.supplierType||'')}</td>
+      <td>${esc(s.ownerName||'')}</td><td>${esc(s.phone||'')}</td>
+      <td>${n?n+'개':'<span style="color:#b45309">없음</span>'}</td>
+      <td><button type="button" class="primary" onclick="spdOpen(${esc(JSON.stringify(s.supplierName))})">열기</button></td></tr>`;}).join('')
+    :`<tr><td colspan="6">${(purchaseSuppliers||[]).length?'검색 결과가 없습니다.':'「상품·공급처 불러오기」 후 표시됩니다.'}</td></tr>`;
+}
+function spdOpen(name,keep){
+  const s=(purchaseSuppliers||[]).find(x=>spdK(x.supplierName)===spdK(name)); if(!s) return;
+  const changed=!spdCurrent||spdCurrent.supplierCode!==s.supplierCode;
+  spdCurrent=s;
+  if(changed&&!keep){ spdPendingList=[]; $('spdBulk').value=''; $('spdBulkMsg').style.display='none'; $('spdMsg').style.display='none'; }
+  $('spdPanel').style.display='block';
+  $('spdTitle').textContent='🏭 '+s.supplierName+(s.supplierCode?' ('+s.supplierCode+')':'');
+  $('spdName').value=s.supplierName||''; $('spdType').value=s.supplierType||''; $('spdOwner').value=s.ownerName||'';
+  $('spdPhone').value=s.phone||''; $('spdBiz').value=s.businessNumber||'';
+  if(!$('spdStart').value) $('spdStart').value=todayYmd();
+  spdRenderList(); spdRenderProducts(); spdRenderPending();
+  if(!keep) $('spdPanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function spdClose(){ spdCurrent=null; spdPendingList=[]; $('spdPanel').style.display='none'; spdRenderList(); }
+function spdRenderProducts(){
+  if(!spdCurrent) return;
+  const all=spdProductsOf(spdCurrent.supplierName), q=spdK($('spdFilter').value);
+  const list=all.filter(x=>!q||spdK(x.productName+x.productCode).includes(q));
+  $('spdCount').textContent=all.length+'개';
+  $('spdRows').innerHTML=list.length?list.map(x=>`<tr data-code="${esc(x.productCode)}">
+    <td class="left"><b>${esc(x.productName)}</b><br><span class="muted">${esc(x.productCode)}</span></td>
+    <td><b>${money(x.unitPrice)}</b></td><td>${money(x.shippingPerBox)}</td>
+    <td>${esc(x.startDate)}${x._active?'':' <span style="color:#2878d0">(예정)</span>'}</td>
+    <td><input class="spd-np" type="number" min="0" step="1" placeholder="${Number(x.unitPrice)||''}" style="max-width:120px" oninput="spdHint()"></td>
+    <td><input class="spd-ns" type="number" min="0" step="1" placeholder="${Number(x.shippingPerBox)||0}" style="max-width:110px" oninput="spdHint()"></td>
+    <td><button type="button" class="secondary" onclick="spdEnd('${esc(x.productCode)}')">공급 종료</button></td></tr>`).join('')
+    :`<tr><td colspan="7">${all.length?'검색 결과가 없습니다.':'아직 연결된 상품이 없습니다. 아래 「상품 추가」에서 넣어 주세요.'}</td></tr>`;
+  spdHint();
+}
+function spdFindProduct(text){
+  const t=String(text||'').trim(); if(!t) return null;
+  const m=t.match(/\((P-[^)]+)\)\s*$/); const code=m?m[1]:t;
+  return (purchaseProducts||[]).find(p=>p.productCode===code)||(purchaseProducts||[]).find(p=>spdK(p.productName)===spdK(t));
+}
+function spdLinked(code){ return spdCurrent&&spdProductsOf(spdCurrent.supplierName).some(x=>x.productCode===code); }
+function spdPush(p,price,ship){
+  const i=spdPendingList.findIndex(x=>x.productCode===p.productCode);
+  const item={productCode:p.productCode,productName:p.productName,unitPrice:price,shippingPerBox:ship};
+  if(i>=0) spdPendingList[i]=item; else spdPendingList.push(item);
+}
+function spdAddOne(){
+  if(!spdCurrent) return;
+  const p=spdFindProduct($('spdAddProduct').value);
+  if(!p) return showMessage('spdBulkMsg','상품을 목록에서 골라 주세요. (상품관리에 없는 상품은 먼저 상품관리에서 등록해야 합니다)',true);
+  const price=$('spdAddPrice').value.trim();
+  if(!Number(price)) return showMessage('spdBulkMsg','입고가를 입력해 주세요.',true);
+  if(spdLinked(p.productCode)) return showMessage('spdBulkMsg',`${p.productName}은(는) 이미 연결돼 있습니다. 위 표의 「새 입고가」 칸에서 바꿔 주세요.`,true);
+  spdPush(p,price,$('spdAddShip').value.trim());
+  $('spdAddProduct').value=''; $('spdAddPrice').value=''; $('spdAddShip').value='';
+  $('spdBulkMsg').style.display='none'; spdRenderPending();
+}
+function spdApplyBulk(){
+  if(!spdCurrent) return;
+  const lines=$('spdBulk').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  let ok=0, changed=0; const bad=[];
+  lines.forEach(l=>{
+    const parts=l.split(/\t|,(?=\s*[\d₩])|\s{2,}/).map(x=>x.trim()).filter(x=>x!=='');
+    const num=v=>String(v||'').replace(/[^0-9]/g,'');
+    let name=parts[0], price=num(parts[1]), ship=num(parts[2]);
+    if(parts.length===1){ const m=l.match(/^(.*?)[\s,]+([\d,]+)\s*원?(?:[\s,]+([\d,]+)\s*원?)?$/); if(m){ name=m[1]; price=num(m[2]); ship=num(m[3]); } }
+    const p=spdFindProduct(name);
+    if(!p){ bad.push(l+' → 상품을 못 찾음'); return; }
+    if(!Number(price)){ bad.push(l+' → 입고가 없음'); return; }
+    if(spdLinked(p.productCode)){
+      const tr=document.querySelector(`#spdRows tr[data-code="${CSS.escape(p.productCode)}"]`);
+      if(tr){ tr.querySelector('.spd-np').value=price; if(ship) tr.querySelector('.spd-ns').value=ship; changed++; return; }
+    }
+    spdPush(p,price,ship); ok++;
+  });
+  spdRenderPending(); spdHint();
+  showMessage('spdBulkMsg',`새 상품 ${ok}개 추가${changed?`, 연결된 상품 ${changed}개는 위 표에 새 입고가로 넣음`:''}${bad.length?` · 확인 필요 ${bad.length}줄:\n`+bad.slice(0,20).join('\n')+(bad.length>20?`\n…외 ${bad.length-20}줄`:''):''}`,bad.length>0);
+  $('spdBulkMsg').style.whiteSpace='pre-line';
+  if(!bad.length) $('spdBulk').value='';
+}
+function spdRenderPending(){
+  $('spdPendingWrap').style.display=spdPendingList.length?'block':'none';
+  $('spdPending').innerHTML=spdPendingList.map((x,i)=>`<tr><td class="left">${esc(x.productName)} <span class="muted">${esc(x.productCode)}</span></td>
+    <td><input type="number" min="0" value="${esc(x.unitPrice)}" style="max-width:120px" oninput="spdPendingList[${i}].unitPrice=this.value"></td>
+    <td><input type="number" min="0" value="${esc(x.shippingPerBox)}" placeholder="기본값" style="max-width:110px" oninput="spdPendingList[${i}].shippingPerBox=this.value"></td>
+    <td><button type="button" class="secondary" onclick="spdPendingList.splice(${i},1);spdRenderPending()">빼기</button></td></tr>`).join('');
+  spdHint();
+}
+function spdChangedRows(){
+  return Array.from(document.querySelectorAll('#spdRows tr[data-code]')).map(tr=>({
+    productCode:tr.dataset.code, unitPrice:tr.querySelector('.spd-np').value.trim(), shippingPerBox:tr.querySelector('.spd-ns').value.trim()
+  })).filter(x=>x.unitPrice!==''||x.shippingPerBox!=='');
+}
+function spdHint(){
+  const c=spdChangedRows().length, n=spdPendingList.length;
+  $('spdSaveHint').textContent=(c||n)?`가격 변경 ${c}개 · 새 상품 ${n}개 저장 예정`:'바뀐 내용이 없습니다.';
+}
+async function spdSave(){
+  const btn=$('spdSaveBtn');
+  try{
+    if(!spdCurrent) return;
+    const password=spdPw(); if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+    const cur={}; spdProductsOf(spdCurrent.supplierName).forEach(x=>cur[x.productCode]=x);
+    const items=[];
+    spdChangedRows().forEach(x=>{
+      const c=cur[x.productCode]; if(!c) return;
+      items.push({productCode:x.productCode,unitPrice:x.unitPrice||c.unitPrice,shippingPerBox:x.shippingPerBox!==''?x.shippingPerBox:c.shippingPerBox,reason:$('spdReason').value,round:$('spdRound').value.trim()});
+    });
+    spdPendingList.forEach(x=>items.push({productCode:x.productCode,unitPrice:x.unitPrice,shippingPerBox:x.shippingPerBox,round:$('spdRound').value.trim()}));
+    if(!items.length) throw new Error('바뀐 내용이 없습니다. 「새 입고가」를 적거나 상품을 추가해 주세요.');
+    if(items.length>500) throw new Error('한 번에 500개까지 저장할 수 있습니다.');
+    btn.disabled=true; btn.textContent=`저장 중... (${items.length}개)`;
+    const res=await apiPost({action:'adminSupplierProductsSave',password,supplierName:spdCurrent.supplierName,startDate:$('spdStart').value||todayYmd(),items});
+    if(!res.success) throw new Error(res.message||'저장 실패');
+    const failed=new Set((res.errors||[]).map(e=>e.productCode));
+    spdPendingList=spdPendingList.filter(x=>failed.has(x.productCode));
+    await reloadSupplyPrices();
+    spdRenderList(); spdRenderProducts(); spdRenderPending();
+    const err=(res.errors||[]).map(e=>`· ${e.productName}: ${e.message}`).join('\n');
+    showMessage('spdMsg',res.message+(err?'\n'+err:''),!!err); $('spdMsg').style.whiteSpace='pre-line';
+  }catch(e){ showMessage('spdMsg','저장 오류: '+e.message,true); }
+  finally{ btn.disabled=false; btn.textContent='저장'; }
+}
+async function spdEnd(code){
+  const x=spdProductsOf(spdCurrent.supplierName).find(v=>v.productCode===code); if(!x) return;
+  const end=prompt(`${x.productName} — ${spdCurrent.supplierName}에서 공급을 끝낼 마지막 날짜 (YYYY-MM-DD)\n이력은 그대로 남습니다.`,todayYmd());
+  if(!end) return;
+  try{
+    const res=await apiPost({action:'adminSupplyPriceEnd',password:spdPw(),productCode:code,supplierName:spdCurrent.supplierName,endDate:end.trim()});
+    if(!res.success) throw new Error(res.message||'종료 실패');
+    await reloadSupplyPrices(); spdRenderList(); spdRenderProducts();
+    showMessage('spdMsg',res.message);
+  }catch(e){ showMessage('spdMsg','공급 종료 오류: '+e.message,true); }
+}
+async function spdSaveInfo(){
+  const btn=$('spdInfoBtn');
+  try{
+    if(!spdCurrent) return;
+    btn.disabled=true; btn.textContent='저장 중...';
+    const res=await apiPost({action:'adminSupplierUpdate',password:spdPw(),supplierCode:spdCurrent.supplierCode,supplierName:$('spdName').value.trim(),
+      supplierType:$('spdType').value,ownerName:$('spdOwner').value.trim(),phone:$('spdPhone').value.trim(),businessNumber:$('spdBiz').value.trim()});
+    if(!res.success) throw new Error(res.message||'저장 실패');
+    const oldName=spdCurrent.supplierName, s=res.supplier;
+    Object.assign(spdCurrent,s);
+    if(spdK(oldName)!==spdK(s.supplierName)) (purchaseSupplyPrices||[]).forEach(x=>{ if(spdK(x.supplierName)===spdK(oldName)) x.supplierName=s.supplierName; });
+    renderPurchaseSuppliers(); spdOpen(s.supplierName,true);
+    showMessage('spdMsg',res.message);
+  }catch(e){ showMessage('spdMsg','정보 저장 오류: '+e.message,true); }
+  finally{ btn.disabled=false; btn.textContent='정보 저장'; }
+}
+</script>
+
 </body>
 </html>
