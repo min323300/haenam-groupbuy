@@ -148,6 +148,7 @@ const DOW=['일','월','화','수','목','금','토'];
 const COLOR_LABEL={red:'🔴 급함',yellow:'🟡 곧 출고',gray:'⚪ 예정',green:'🟢 발송됨'};
 const COLOR_RANK={red:4,yellow:3,gray:2,green:1};
 const NO_SUPPLIER='공급처 미지정';
+const IS_MOBILE=!!(window.matchMedia&&window.matchMedia('(pointer:coarse)').matches);
 
 let lastLoadAt=0, password='', orders=[], undated=[], supplierOf={}, viewStart=null, selected=null, colorView='', lead=1, timer=null;
 
@@ -408,7 +409,7 @@ function supplierBlock(sup,list,dateKey){
   window._sendData=window._sendData||{}; window._sendData[id]={sup,list,dateKey};
   return `<div class="sup"><div class="suph"><b>🏭 ${esc(sup)} <span style="font-weight:400;font-size:13px;color:#555">· ${list.length}건 ${boxes}박스</span></b>
     <button type="button" onclick="copyFor('${id}')">📋 복사</button>
-    <button type="button" class="kakao" onclick="shareFor('${id}')">카톡 보내기</button></div>
+    <button type="button" class="kakao" onclick="shareFor('${id}')">${IS_MOBILE?'카톡 보내기':'카톡용 복사'}</button></div>
     <div class="prods">${Object.entries(prod).map(([n,q])=>`${esc(n)} <b>${q}박스</b>`).join(' · ')}${sup===NO_SUPPLIER?'<div class="note" style="margin-top:4px">⚠️ 관리자 ⑦ 매입관리 &gt; 공급단가에서 이 상품의 공급처를 지정하면 업체 이름으로 묶입니다.</div>':''}</div>
     ${sortOrders(list).map(orderHtml).join('')}</div>`;
 }
@@ -487,7 +488,22 @@ async function shareFor(id){
     catch(e){ if(e&&e.name==='AbortError') return; }
   }
   const ok=await copyText(r.t);
-  toast(ok?'복사했습니다. 카톡 대화방에 붙여넣기 하세요'+extraNote(r):'복사하지 못했습니다.');
+  showSendBox(r,ok);
+}
+function showSendBox(r,ok){
+  let m=$('sendBox');
+  if(!m){ m=document.createElement('div'); m.id='sendBox';
+    m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:90;display:flex;align-items:center;justify-content:center;padding:14px';
+    m.onclick=e=>{ if(e.target===m) m.style.display='none'; }; document.body.appendChild(m); }
+  m.innerHTML=`<div style="background:#fff;border-radius:16px;max-width:560px;width:100%;max-height:90vh;overflow:auto;padding:18px">
+    <div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:17px">${ok?'✅ 복사됐습니다':'아래 글을 복사해 주세요'}</b><button type="button" onclick="document.getElementById('sendBox').style.display='none'">닫기 ✕</button></div>
+    <ol style="margin:10px 0;padding-left:20px;line-height:1.7;font-size:15px">
+      <li>PC 카카오톡에서 <b>업체 대화방</b>을 엽니다 (둘톡·단톡방 모두 가능)</li>
+      <li>입력칸을 누르고 <b>Ctrl+V</b> → <b>전송</b></li></ol>
+    <div style="font-size:13px;color:#555;margin-bottom:6px">${esc(r.count+'건'+extraNote(r))} · 휴대폰에서 누르면 카톡 대화방 고르는 창이 바로 열립니다.</div>
+    <textarea readonly style="width:100%;min-height:260px;border:1px solid #ccd3cc;border-radius:10px;padding:10px;font-size:13px">${esc(r.t)}</textarea>
+    <div style="margin-top:10px;text-align:right"><button type="button" class="primary" onclick="copyText(this.closest('div').previousElementSibling.value).then(ok=>toast(ok?'다시 복사했습니다':'복사 실패'))">다시 복사</button></div></div>`;
+  m.style.display='flex';
 }
 
 /* ---------- 시작 ---------- */
