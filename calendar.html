@@ -216,7 +216,10 @@ function normalizeRow(r,memoMap){
   const extra=memoMap[no]||{};
   const tracking=String(r.trackingNumber||'').trim();
   let st=String(r.shippingStatus||'').trim();
-  if(!st) st=(r.shippingCompleted||extra.shippingCompleted)?'배송완료':(tracking?'송장등록':'배송대기');
+  if(!st) st=tracking?'송장등록':'배송대기';
+  // 주문관리 '배송완료' 체크(K열)도 발송 완료로 봅니다 — 배송관리에 송장을 안 넣고 체크만 한 주문
+  const doneFlag=v=>v===true||String(v).toUpperCase()==='TRUE';
+  if(st!=='배송완료'&&(doneFlag(r.shippingCompleted)||doneFlag(extra.shippingCompleted))) st='배송완료';
   return {
     orderNumber:no,
     productCode:String(r.productCode||extra.productCode||'').trim(),
@@ -247,7 +250,7 @@ function colorOf(o){
   return 'gray';
 }
 function reason(o){
-  if(o.color==='green') return o.status==='배송완료'?'배송완료':(o.tracking?'송장 등록':o.status);
+  if(o.color==='green') return o.status==='배송완료'?(o.tracking?'배송완료':'배송완료 (송장 없음)'):(o.tracking?'송장 등록':o.status);
   if(!o.ship) return '희망일 없음';
   const left=dayDiff(o.ship,todayDate());
   if(left<0) return '출고일 '+(-left)+'일 지남';
