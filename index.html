@@ -13,8 +13,8 @@
 <meta property="og:image" content="https://haenamgonggu.kr/share.png?v=2">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#176c46">
-<link rel="icon" type="image/png" href="/favicon.png">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="/favicon.png?v=2">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="해남공구">
@@ -28,7 +28,7 @@
 body{margin:0;font-family:Arial,"Noto Sans KR",sans-serif;background:var(--cream);color:var(--ink)}
 header{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
 .header-in{max-width:1180px;margin:auto;padding:16px 20px;display:flex;justify-content:space-between;align-items:center}
-.logo{font-size:24px;font-weight:900;color:var(--green)} .logo small{display:block;font-size:11px;color:#79827c;font-weight:500;margin-top:3px}
+.logo{font-size:24px;font-weight:900;color:var(--green);display:flex;align-items:center;gap:10px}.logo-mark{width:40px;height:40px;border-radius:9px;flex:none} .logo small{display:block;font-size:11px;color:#79827c;font-weight:500;margin-top:3px}
 .header-link{color:var(--green);font-weight:700;text-decoration:none}
 .hero{background:linear-gradient(135deg,#eef6ef,#fff8e8);padding:56px 20px}
 .hero-in{max-width:1180px;margin:auto;display:grid;grid-template-columns:1.2fr .8fr;gap:35px;align-items:center}
@@ -159,7 +159,7 @@ main>.section-head{display:none}
 }
 @media(max-width:580px){
  .top-banner{font-size:13px;padding:9px 12px}
- .header-in{padding:10px 12px;gap:10px}.logo{font-size:19px}.logo small{display:none}
+ .header-in{padding:10px 12px;gap:10px}.logo{font-size:19px;gap:8px}.logo-mark{width:32px;height:32px;border-radius:7px}.logo small{display:none}
  .header-right .header-link{display:none}
  .header-in #productSearch{font-size:14px;padding:8px 12px}
  .header-in .search-wrap{min-width:0}
@@ -190,7 +190,7 @@ main>.section-head{display:none}
 </head>
 <body>
 <a id="topBanner" class="top-banner" href="#products" hidden></a>
-<header><div class="header-in"><div class="logo" onclick="window.scrollTo({top:0,behavior:'smooth'})" style="cursor:pointer">해남공구마켓<small>전국 생산자와 함께하는 농·수·축산물 공동구매</small></div><div class="search-wrap"><input id="productSearch" type="search" autocomplete="off" placeholder="상품 찾기 (키위, ㄱㄷ)" aria-label="상품 찾기" oninput="onProductSearch()" onfocus="onProductSearch()"><div id="searchSuggest" class="search-suggest"></div></div><div class="header-right"><button type="button" id="a2hsHead" class="a2hs-head" onclick="a2hsOpen()" hidden>📲 바로가기</button><a class="header-link" href="#products">진행 공구 보기</a></div></div></header>
+<header><div class="header-in"><div class="logo" onclick="window.scrollTo({top:0,behavior:'smooth'})" style="cursor:pointer"><img src="/logo-seal.png" alt="" class="logo-mark" width="40" height="40"><span>해남공구마켓<small>전국 생산자와 함께하는 농·수·축산물 공동구매</small></span></div><div class="search-wrap"><input id="productSearch" type="search" autocomplete="off" placeholder="상품 찾기 (키위, ㄱㄷ)" aria-label="상품 찾기" oninput="onProductSearch()" onfocus="onProductSearch()"><div id="searchSuggest" class="search-suggest"></div></div><div class="header-right"><button type="button" id="a2hsHead" class="a2hs-head" onclick="a2hsOpen()" hidden>📲 바로가기</button><a class="header-link" href="#products">진행 공구 보기</a></div></div></header>
 <div id="a2hsBar" class="a2hs-bar" hidden><img src="/icon-192.png" alt=""><div><b>해남공구마켓 바로가기</b><small>홈 화면에 추가하면 다음 공구도 한 번에!</small></div><button type="button" class="go" onclick="a2hsOpen()">추가하기</button><button type="button" class="x" onclick="a2hsLater()" aria-label="닫기">✕</button></div>
 <div id="a2hsModal" class="a2hs-modal" onclick="if(event.target===this)a2hsClose()"><div class="box"><button type="button" class="x" onclick="a2hsClose()" aria-label="닫기">✕</button><img src="/icon-192.png" alt="" class="ic"><h3>홈 화면에 바로가기 추가</h3><div id="a2hsGuide"></div></div></div>
 <section class="hero"><div class="hero-in"><div><div class="eyebrow">HAENAM GROUP BUY MARKET</div><h1>전국 생산자의 좋은 상품을<br>함께 더 합리적으로</h1><p>농산물·수산물·축산물까지 전국 생산자가 직접 준비한 공동구매를 한곳에서 확인하세요.<br>남은 기간과 현재 주문 현황도 실시간으로 확인할 수 있습니다.</p></div><div class="hero-box"><strong>🌾 지금 진행 중인 공구</strong><span>상품마다 마감일과 현재 주문 현황이 표시됩니다. 마감 전에 주문해 주세요.</span></div></div></section>
