@@ -386,7 +386,7 @@ function promoImage(url, size){
 function promoState(p){
   const now = Date.now();
   const end = p.endAt ? new Date(p.endAt) : null, start = p.startAt ? new Date(p.startAt) : null;
-  if (promoText_(p.saleStatus) === '종료' || (end && !isNaN(end) && end.getTime() <= now)) return '종료';
+  if (['종료','판매종료','판매중단'].includes(promoText_(p.saleStatus)) || (end && !isNaN(end) && end.getTime() <= now)) return '종료';
   if (promoText_(p.saleStatus) === '준비중' || (start && !isNaN(start) && start.getTime() > now)) return '준비중';
   return '판매중';
 }

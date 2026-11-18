@@ -574,7 +574,7 @@ window.addEventListener('error',function(ev){
 function dateOf(v){if(!v)return null;const d=new Date(v);return isNaN(d.getTime())?null:d}
 function stateOf(p){
  const now=Date.now(),start=dateOf(p.startAt),end=dateOf(p.endAt);
- if(s(p.saleStatus)==='종료'||(end&&end.getTime()<=now)) return '종료';
+ if(['종료','판매종료','판매중단'].includes(s(p.saleStatus))||(end&&end.getTime()<=now)) return '종료';
  if(s(p.saleStatus)==='준비중'||(start&&start.getTime()>now)) return '준비중';
  return '판매중';
 }
