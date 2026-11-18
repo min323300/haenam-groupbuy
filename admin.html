@@ -1457,7 +1457,8 @@ function homeUnits(){
   const units=[...map.values()];
   units.forEach(u=>{
     u.state=u.items.map(prodState).sort((a,b)=>STATE_RANK[a]-STATE_RANK[b])[0];
-    const os=u.items.map(prodOrder).filter(n=>n>0); u.order=os.length?Math.min(...os):0;
+    // 홈페이지와 같게: 묶음은 가장 싼 옵션(대표)의 번호를 씁니다.
+    const lead=u.items.slice().sort((a,b)=>Number(a.salePrice||0)-Number(b.salePrice||0))[0]; u.order=prodOrder(lead);
   });
   units.sort((a,b)=>(STATE_RANK[a.state]-STATE_RANK[b.state])||((a.order||9999)-(b.order||9999))||(a.idx-b.idx));
   return units;
