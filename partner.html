@@ -752,6 +752,14 @@ function ppRender(force){
   if (!$('partnerUrl').value) message('ppMessage', '내 전용 URL을 확인하지 못해 공식 URL이 들어갔습니다. 새로고침 후 다시 시도해 주세요.', true);
 }
 
+/* --- 2026-11-19 카톡 카드 상품 목록은 6글자 정도만 보여서 짧은 이름으로 (무게·개수 빼고, 길면 지역명 빼기) --- */
+function ppGroupOf(p){ try{ let b=p.detailBlocks; if(!Array.isArray(b)) b=JSON.parse(b||'[]'); const g=b.find(x=>String(x.value||'').startsWith('[[묶음]]')||x.type==='group'); return g?String(g.value).replace('[[묶음]]','').trim():''; }catch(_){ return ''; } }
+function ppHasOptions(p){ const g=ppGroupOf(p); return !!g && ppProducts.filter(x=>ppGroupOf(x)===g).length>1; }
+function ppShortName(p){
+  let n=(ppGroupOf(p)||promoText_(p.productName)).replace(/\s*\d+(\.\d+)?\s*(kg|KG|Kg|g|개|과|팩|봉|박스|마리|종)(?![A-Za-z]).*$/,'').replace(/\s*(특품|선물세트)$/,'').trim();
+  if(n.length>6) n=n.replace(/^(해남|제주|나주|진도|땅끝|전남|국내산)\s*/,'').trim();
+  return n||promoText_(p.productName);
+}
 /* --- 2026-11-18 여러 상품 카톡 카드용 사진 묶음(최대 4장)을 미리 만들어 카카오에 올려 둠 --- */
 let ppCollage = { key: '', promise: null, url: '' };
 function ppCorsImage(url){
@@ -893,7 +901,7 @@ async function sharePromoList(list, text, link){
           content: { title: '🌾 ' + ppHeader(), description: ppNote() || '산지에서 바로 보내는 공동구매 가격이에요',
             imageUrl: collage || promoImage(list[0].image, 'w800') || (MARKET_URL + 'share.png'), link: { mobileWebUrl: link, webUrl: link } },
           itemContent: { profileText: '해남공구마켓',
-            items: list.slice(0, 5).map(p => { const sale = Number(p.salePrice || 0); return { item: promoText_(p.productName), itemOp: sale ? sale.toLocaleString('ko-KR') + '원' : '가격 준비중' }; }) },
+            items: list.slice(0, 5).map(p => { const sale = Number(p.salePrice || 0); return { item: ppShortName(p), itemOp: sale ? sale.toLocaleString('ko-KR') + '원' + (ppHasOptions(p) ? '~' : '') : '가격 준비중' }; }) },
           buttons: [{ title: list.length > 1 ? '상품 ' + list.length + '개 보기' : '상품 보기', link: { mobileWebUrl: link, webUrl: link } }]
         });
         return 'kakao';
