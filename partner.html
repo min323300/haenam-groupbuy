@@ -722,15 +722,56 @@ function ppRender(force){
   const list = ppSelectedList();
   ppRenderSel(list);
   $('ppPanel').classList.toggle('hidden', !list.length); $('ppMessage').style.display = 'none';
-  $('ppCount').textContent = list.length ? '선택 ' + list.length + '개' + (list.length === 1 ? ' → 큰 사진 카드로 보냅니다' : list.length <= 3 ? ' → 상품 목록 카드 한 장으로 보냅니다' : ' → 카드에 3개 + "모두 보기"로 보냅니다') : '';
+  $('ppCount').textContent = list.length ? '선택 ' + list.length + '개' + (list.length === 1 ? ' → 큰 사진 카드로 보냅니다' : ' → 상품 사진 묶음 + 상품 목록 카드 한 장으로 보냅니다' + (list.length > 5 ? ' (목록은 5개까지)' : '')) : '';
   if (!list.length) return;
   if (force && ppEdited && !confirm('고친 문구를 지우고 다시 만들까요?')) return;
+  ppPrepCollage(list);
   $('ppThumbs').innerHTML = list.slice(0, 4).map(p => { const img = promoImage(p.image, 'w600'); return img ? `<img src="${esc(img)}" alt="${esc(p.productName)}">` : ''; }).join('');
   if (!force && ppEdited) { ppRenderTrack(); return; }
   const link = ppLinkPick(list);
   $('ppText').value = list.length === 1 ? (ppName() ? buildPromoText(list[0], link).replace('\n', '\n👤 ' + ppName() + '님 추천\n') : buildPromoText(list[0], link)) : ppMultiText(list, link);
   ppEdited = false; ppRenderTrack();
   if (!$('partnerUrl').value) message('ppMessage', '내 전용 URL을 확인하지 못해 공식 URL이 들어갔습니다. 새로고침 후 다시 시도해 주세요.', true);
+}
+
+/* --- 2026-11-18 여러 상품 카톡 카드용 사진 묶음(최대 4장)을 미리 만들어 카카오에 올려 둠 --- */
+let ppCollage = { key: '', promise: null, url: '' };
+function ppCorsImage(url){
+  const raw = promoText_(url).trim(); if (!raw) return '';
+  const m = raw.match(/(?:\/file\/d\/|[?&]id=)([-\w]{20,})/);
+  return m ? 'https://lh3.googleusercontent.com/d/' + encodeURIComponent(m[1]) + '=w600' : raw; // 구글 드라이브 썸네일은 캔버스에 못 그려서 lh3 주소 사용
+}
+function ppLoadImg(u){ return new Promise(r => { if (!u) return r(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => r(i); i.onerror = () => r(null); i.src = u; }); }
+function ppPrepCollage(list){
+  const key = ppSetKey(list);
+  if (list.length < 2) { ppCollage = { key, promise: Promise.resolve(''), url: '' }; return; }
+  if (ppCollage.key === key && ppCollage.promise) return;
+  const st = { key, promise: null, url: '' }; ppCollage = st;
+  st.promise = (async () => {
+    try {
+      const imgs = (await Promise.all(list.slice(0, 4).map(p => ppLoadImg(ppCorsImage(p.image))))).filter(Boolean);
+      if (imgs.length < 2) return '';
+      const n = imgs.length, gap = 6, W = 800, H = n === 4 ? 800 : 400;
+      const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
+      c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, H);
+      const cells = n === 4 ? [[0,0,2,2],[1,0,2,2],[0,1,2,2],[1,1,2,2]] : imgs.map((_, k) => [k, 0, n, 1]);
+      imgs.forEach((im, k) => {
+        const [cx, cy, cols, rows] = cells[k];
+        const cw = (W - gap * (cols - 1)) / cols, ch = (H - gap * (rows - 1)) / rows, x = cx * (cw + gap), y = cy * (ch + gap);
+        const sc = Math.max(cw / im.width, ch / im.height), sw = cw / sc, sh = ch / sc; // 가운데 맞춰 꽉 채움
+        c.drawImage(im, (im.width - sw) / 2, (im.height - sh) / 2, sw, sh, x, y, cw, ch);
+      });
+      const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.88)); if (!blob || !(await loadKakaoSdk_())) return '';
+      const res = await window.Kakao.Share.uploadImage({ file: [new File([blob], 'haenam-products.jpg', { type: 'image/jpeg' })] });
+      st.url = (res && res.infos && res.infos.original && res.infos.original.url) || '';
+      return st.url;
+    } catch (e) { return ''; }
+  })();
+}
+async function ppCollageUrl(list){
+  const key = ppSetKey(list); if (ppCollage.key !== key) ppPrepCollage(list);
+  if (ppCollage.url) return ppCollage.url;
+  return await Promise.race([ppCollage.promise, new Promise(r => setTimeout(() => r(''), 2500))]) || '';
 }
 
 /* --- 책갈피 · 오늘의 공유 --- */
@@ -827,11 +868,12 @@ async function sharePromoList(list, text, link){
           link: { mobileWebUrl: l, webUrl: l } };
       });
       // 2026-11-18 한마디를 넣을 수 있게 피드 카드(사진 + 상품 목록 + 제목·설명)로 보냄. 실패하면 기존 목록 카드
+      const collage = await ppCollageUrl(list); // 상품 사진 2~4장을 한 장으로 묶은 이미지 (못 만들면 첫 상품 사진)
       try {
         window.Kakao.Share.sendDefault({
           objectType: 'feed',
           content: { title: '🌾 ' + ppHeader(), description: ppNote() || '산지에서 바로 보내는 공동구매 가격이에요',
-            imageUrl: promoImage(list[0].image, 'w800') || (MARKET_URL + 'share.png'), link: { mobileWebUrl: link, webUrl: link } },
+            imageUrl: collage || promoImage(list[0].image, 'w800') || (MARKET_URL + 'share.png'), link: { mobileWebUrl: link, webUrl: link } },
           itemContent: { profileText: '해남공구마켓',
             items: list.slice(0, 5).map(p => { const sale = Number(p.salePrice || 0); return { item: promoText_(p.productName), itemOp: sale ? sale.toLocaleString('ko-KR') + '원' : '가격 준비중' }; }) },
           buttons: [{ title: list.length > 1 ? '상품 ' + list.length + '개 보기' : '상품 보기', link: { mobileWebUrl: link, webUrl: link } }]
