@@ -50,7 +50,9 @@
         <div id="ppTrack" class="pp-track"></div>
         <div class="pp-wrap"><div id="ppThumbs" class="pp-thumbs"></div><div><label for="ppText" style="font-size:13px;font-weight:700">홍보 문구 <span class="muted">(복사해서 보낼 때 쓰는 문구 · 직접 고칠 수 있습니다)</span></label><textarea id="ppText" class="pp-input" style="min-height:200px;margin-top:6px"></textarea></div></div>
         <div style="margin-top:12px"><label for="ppNote" style="font-size:13px;font-weight:700">카톡 카드에 들어갈 한마디 <span class="muted">(카드 안 상품 아래에 보입니다 · 40자까지 · 비우면 기본 문구)</span></label>
-        <input id="ppNote" class="pp-input" maxlength="40" placeholder="예: 지인분들께 많은 홍보 부탁드립니다 🙏" style="margin-top:6px"></div>
+        <input id="ppNote" class="pp-input" maxlength="40" placeholder="예: 지인분들께 많은 홍보 부탁드립니다 🙏" style="margin-top:6px">
+        <div class="muted" style="font-size:12px;margin-top:8px">눌러서 바로 넣기 <span class="muted">(넣으면서 복사도 됩니다)</span></div>
+        <div id="ppNoteChips" class="pp-chips"></div></div>
         <div class="pp-actions"><button class="kakao" type="button" onclick="ppShare()">💬 카카오톡 공유하기</button><button class="secondary" type="button" onclick="ppCopy()">홍보 문구 복사</button><button class="secondary" type="button" onclick="ppRender(true)">문구 다시 만들기</button></div>
         <p class="muted" style="margin-top:10px">카카오톡은 한 번에 10명까지 보낼 수 있습니다. 보내고 돌아오면 <b>마지막으로 보낸 사람</b>을 적어 두세요. 다음엔 그 다음 사람부터 이어서 보내면 됩니다.</p>
       </div>
@@ -697,8 +699,24 @@ $('ppFind').addEventListener('input', ppFilter);
 function ppName(){ return promoText_(dash && dash.partner && dash.partner.name).trim().slice(0, 12); }
 // 2026-11-18 카톡 카드에 들어갈 한마디 (이 기기에 기억)
 const PP_NOTE_KEY='hn_pp_note';
+// 추천 문구 3개 + 내가 쓴 문구(최근 6개)를 버튼으로 — 누르면 한마디 칸에 넣고 복사
+const PP_NOTE_PRESETS=['지인분들께 많은 홍보 부탁드립니다 🙏','산지에서 바로 보내는 공구가격이에요. 필요하신 분 주문하세요!','주문 마감 전에 꼭 확인해 보세요 ⏰'];
+const PP_NOTE_MINE='hn_pp_note_mine';
+function ppNoteMine(){ try{ return JSON.parse(localStorage.getItem(PP_NOTE_MINE)||'[]').filter(Boolean).slice(0,6); }catch(_){ return []; } }
+function ppNoteRemember(t){ t=String(t||'').trim(); if(!t||PP_NOTE_PRESETS.includes(t)) return; const a=[t].concat(ppNoteMine().filter(x=>x!==t)).slice(0,6); try{localStorage.setItem(PP_NOTE_MINE,JSON.stringify(a))}catch(_){} ppRenderNoteChips(); }
+function ppNoteForget(i){ const a=ppNoteMine(); a.splice(i,1); try{localStorage.setItem(PP_NOTE_MINE,JSON.stringify(a))}catch(_){} ppRenderNoteChips(); }
+async function ppNotePick(t){
+  const el=$('ppNote'); el.value=t; try{localStorage.setItem(PP_NOTE_KEY,t)}catch(_){}
+  ppRenderNoteChips(); const ok=await promoCopy(t);
+  message('ppMessage', ok?'한마디를 넣었습니다. (복사도 됐어요 — 채팅방에 붙여넣기 해도 됩니다)':'한마디를 넣었습니다.');
+}
+function ppRenderNoteChips(){
+  const box=document.getElementById('ppNoteChips'); if(!box) return; const cur=ppNote();
+  const chip=(t,k,mine,i)=>`<button type="button" style="${cur===t?'background:#16875a;color:#fff':''}" onclick="ppNotePick(${esc(JSON.stringify(t))})">${k} ${esc(t)}</button>`+(mine?`<button type="button" aria-label="이 문구 지우기" title="지우기" style="padding:6px 8px;margin-left:-4px" onclick="ppNoteForget(${i})">✕</button>`:'');
+  box.innerHTML=PP_NOTE_PRESETS.map((t,i)=>chip(t,(i+1)+'번',false)).join('')+ppNoteMine().map((t,i)=>chip(t,'✍️',true,i)).join('');
+}
 function ppNote(){ const el=$('ppNote'); return el?String(el.value||'').trim().slice(0,40):''; }
-try{ const el=document.getElementById('ppNote'); if(el){ el.value=localStorage.getItem(PP_NOTE_KEY)||'지인분들께 많은 홍보 부탁드립니다 🙏'; el.addEventListener('input',()=>{ try{localStorage.setItem(PP_NOTE_KEY,el.value)}catch(_){} }); } }catch(_){}
+try{ const el=document.getElementById('ppNote'); if(el){ el.value=localStorage.getItem(PP_NOTE_KEY)||PP_NOTE_PRESETS[0]; el.addEventListener('input',()=>{ try{localStorage.setItem(PP_NOTE_KEY,el.value)}catch(_){} ppRenderNoteChips(); }); ppRenderNoteChips(); } }catch(_){}
 function ppHeader(){ return ppName() ? ppName() + '님이 추천하는 해남 공동구매' : '해남공구마켓 추천 공동구매'; }
 function ppBase(){ return $('partnerUrl').value || MARKET_URL; }
 function ppLinkOne(p){ const u = new URL(promoLink(ppBase(), promoText_(p.productCode))); u.searchParams.set('product', promoText_(p.productCode)); if (ppName()) u.searchParams.set('by', ppName()); return u.toString(); }
@@ -902,6 +920,7 @@ async function ppShare(){
   const list = ppSelectedList(); if (!list.length) return message('ppMessage', '보낼 상품을 먼저 골라 주세요.', true);
   const text = $('ppText').value.trim(); if (!text) return message('ppMessage', '홍보 문구가 비어 있습니다.', true);
   const link = ppLinkPick(list);
+  ppNoteRemember(ppNote()); // 직접 쓴 한마디는 다음에 버튼으로 다시 쓸 수 있게 기억
   const r = list.length === 1 ? await sharePromo(list[0], text, link) : await sharePromoList(list, text, link);
   if (r === 'kakao' || r === 'shared') ppPending = { key: ppSetKey(list), at: Date.now() };
   message('ppMessage', shareResultMessage(r), r === 'fail');
