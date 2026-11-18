@@ -196,7 +196,7 @@ async function saveSupplierApplication(btn){
       <div class="field full"><label>대표이미지 주소</label><input id="productImage" placeholder="대표 이미지 URL"></div>
       <div class="field full"><label>상품 한 줄 설명 <span class="muted" id="productDescriptionCount">0/40자</span></label><textarea id="productDescription" maxlength="40" rows="2" placeholder="예: 신안 천일염으로 절인 해남 절임배추 20kg · 원하는 도착일 선택" oninput="updateMetaCount()"></textarea><span class="muted">상품 카드와 주문창의 상품명 바로 아래에 보입니다. 40자 이내(휴대폰에서 2줄)로 써 주세요.</span></div>
       <div class="field full"><label>가격 옆 문구 <span class="muted" id="priceNoteCount">0/12자</span></label><input id="priceNote" maxlength="12" placeholder="예: 택배비 포함" oninput="updateMetaCount()"><span class="muted">가격 바로 옆에 작은 표시로 보입니다. 12자 이내. 비워 두면 보이지 않습니다.</span></div>
-      <div class="field"><label>노출 순서</label><input id="displayOrder" type="number" min="1" max="999" placeholder="예: 1 (맨 앞)"><span class="muted">숫자가 작을수록 홈 화면 앞에 보입니다. 비우면 맨 뒤. 판매중 → 준비중 → 종료 순서는 항상 유지됩니다.</span></div>
+      <div class="field"><label>노출 순서</label><input id="displayOrder" type="number" min="1" max="999" placeholder="예: 1 (맨 앞)"><span class="muted">숫자가 작을수록 홈 화면 앞에 보입니다. 이미 있는 번호를 넣으면 그 자리에 들어가고 기존 상품은 한 칸씩 뒤로 밀립니다. 비우면 맨 뒤. 아래 상품 목록의 ▲▼로도 바꿀 수 있습니다.</span></div>
       <div class="field"><label>옵션 묶음 이름</label><input id="optionGroup" maxlength="20" placeholder="예: 골드키위"><span class="muted">같은 묶음 이름을 쓴 상품끼리 손님 화면에서 상품 1개 + 옵션 선택으로 묶입니다. 묶지 않으려면 비워 두세요.</span></div>
       <div class="field"><label>옵션 이름</label><input id="optionLabel" maxlength="30" placeholder="예: 5kg (44과 내외)"><span class="muted">옵션 선택 칸에 보이는 이름입니다. 비우면 상품명이 보입니다.</span></div>
       <div class="field full"><label>공구 연결 링크</label><input id="productLink" placeholder="예: https://.../product.html?id=..."></div>
@@ -243,7 +243,7 @@ async function saveSupplierApplication(btn){
     <div class="toolbar"><button class="secondary" onclick="loadProducts()">새로고침</button></div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>코드</th><th>상품명</th><th>판매가</th><th>기간</th><th>현재 주문</th><th>목표</th><th>상태</th><th>은행</th><th>계좌번호</th><th>예금주</th><th>상세</th><th>수정</th></tr></thead>
+        <thead><tr><th>홈 순서</th><th>코드</th><th>상품명</th><th>판매가</th><th>기간</th><th>현재 주문</th><th>목표</th><th>상태</th><th>은행</th><th>계좌번호</th><th>예금주</th><th>상세</th><th>수정</th></tr></thead>
         <tbody id="productRows"></tbody>
       </table>
     </div>
@@ -1431,19 +1431,124 @@ async function loadProducts(){
     renderProducts();
   }catch(e){showMessage('productMessage','상품 불러오기 오류: '+e.message,true)}
 }
+/* ---------- 2026-11-18 홈 노출 순서: 표에서 ▲▼ 이동 + 저장 시 자동 밀어내기 ---------- */
+function prodBlocks(p){
+  let b=p.detailBlocks; if(!Array.isArray(b)){ try{ b=JSON.parse(b||'[]'); }catch(_){ b=[]; } }
+  return (b||[]).map(decodeBlock);
+}
+function prodMeta(p,type){ const b=prodBlocks(p).find(x=>x.type===type); return b?String(b.value||'').trim():''; }
+function prodOrder(p){ const n=Number(prodMeta(p,'displayOrder')); return n>0?n:0; }
+function prodState(p){
+  const now=Date.now(), st=String(p.saleStatus||p.status||'').trim();
+  const start=new Date(p.startAt||p.startDate||''), end=new Date(p.endAt||p.endDate||'');
+  if(['종료','판매종료','판매중단'].includes(st)||(!isNaN(end)&&end.getTime()<=now)) return '종료';
+  if(st==='준비중'||(!isNaN(start)&&start.getTime()>now)) return '준비중';
+  return '판매중';
+}
+const STATE_RANK={'판매중':0,'준비중':1,'종료':2};
+// 옵션 묶음(같은 묶음 이름)은 홈에서 카드 1개 → 순서도 한 덩어리로 움직입니다.
+function homeUnits(){
+  const map=new Map();
+  products.forEach((p,i)=>{
+    const g=prodMeta(p,'group'), key=g?'G:'+g:'P:'+(p.productCode||p.code);
+    if(!map.has(key)) map.set(key,{key,name:g||(p.productName||p.name||''),items:[],idx:i});
+    map.get(key).items.push(p);
+  });
+  const units=[...map.values()];
+  units.forEach(u=>{
+    u.state=u.items.map(prodState).sort((a,b)=>STATE_RANK[a]-STATE_RANK[b])[0];
+    const os=u.items.map(prodOrder).filter(n=>n>0); u.order=os.length?Math.min(...os):0;
+  });
+  units.sort((a,b)=>(STATE_RANK[a.state]-STATE_RANK[b.state])||((a.order||9999)-(b.order||9999))||(a.idx-b.idx));
+  return units;
+}
 function renderProducts(){
-  $('productRows').innerHTML=products.map(p=>`
-    <tr>
-      <td>${esc(p.productCode||p.code||'')}</td>
-      <td class="left"><b>${esc(p.productName||p.name||'')}</b></td>
+  const units=homeUnits(); let pos=0;
+  const rows=[];
+  units.forEach(u=>{
+    const live=u.state!=='종료'; if(live) pos++;
+    const same=units.filter(x=>x.state===u.state), k=same.indexOf(u);
+    u.items.forEach((p,j)=>{
+      const code=esc(p.productCode||p.code||'');
+      const orderCell=!live?'<span class="muted">-</span>':(j>0?'<span class="muted">〃</span>':
+        `<div style="display:flex;align-items:center;gap:4px;justify-content:center;white-space:nowrap"><b style="min-width:22px">${pos}</b>`+
+        `<button type="button" class="secondary" style="padding:3px 7px" ${k===0?'disabled':''} onclick="moveHomeOrder('${esc(u.key)}',-1)" title="위로">▲</button>`+
+        `<button type="button" class="secondary" style="padding:3px 7px" ${k===same.length-1?'disabled':''} onclick="moveHomeOrder('${esc(u.key)}',1)" title="아래로">▼</button></div>`+
+        `<div class="muted" style="font-size:11px">${u.state}${u.order?' · '+u.order:' · 미지정'}</div>`);
+      rows.push(`
+    <tr${u.state==='종료'?' style="color:#999"':''}>
+      <td>${orderCell}</td>
+      <td>${code}</td>
+      <td class="left"><b>${esc(p.productName||p.name||'')}</b>${u.items.length>1?`<br><span class="muted" style="font-size:11px">묶음: ${esc(u.name)}</span>`:''}</td>
       <td>${money(p.salePrice||p.price)}</td>
-      <td>${esc(String(p.startDate||'').slice(0,16))}<br>~ ${esc(String(p.endDate||'').slice(0,16))}</td>
-      <td>${esc(p.orderCount||0)}건</td><td>${esc(p.targetCount||0)}건</td>
-      <td>${esc(p.saleStatus||p.status||'')}</td><td>${esc(p.bankName||'')}</td>
+      <td>${esc(String(p.startAt||p.startDate||'').slice(0,16).replace('T',' '))}<br>~ ${esc(String(p.endAt||p.endDate||'').slice(0,16).replace('T',' '))}</td>
+      <td>${esc(p.orderCount||0)}건</td><td>${esc(p.targetCount||p.targetOrders||0)}건</td>
+      <td>${esc(p.saleStatus||p.status||'')}${prodState(p)==='종료'&&!['종료','판매종료','판매중단'].includes(String(p.saleStatus||''))?'<br><span class="muted" style="font-size:11px">(마감일 지남)</span>':''}</td><td>${esc(p.bankName||'')}</td>
       <td>${esc(p.accountNumber||'')}</td><td>${esc(p.accountHolder||'')}</td>
-      <td>${Array.isArray(p.detailBlocks)&&p.detailBlocks.length ? p.detailBlocks.length+'개' : '-'}</td>
-      <td><button class="blue" onclick="editProduct('${esc(p.productCode||p.code||'')}')">수정</button></td>
-    </tr>`).join('');
+      <td>${prodBlocks(p).filter(b=>!PRODUCT_META_TYPES.includes(b.type)).length||'-'}</td>
+      <td><button class="blue" onclick="editProduct('${code}')">수정</button></td>
+    </tr>`);
+    });
+  });
+  $('productRows').innerHTML=rows.join('');
+}
+// 상품 1개의 노출 순서만 바꿔 저장 (다른 내용은 서버에 있는 그대로 다시 저장)
+async function saveProductOrder(code,order,password){
+  const res=await apiGet({action:'product',productCode:code});
+  const p=res.product||res.data; if(!res.success||!p) throw new Error('상품을 찾을 수 없습니다. ('+code+')');
+  const blocks=prodBlocks(p).filter(b=>b.type!=='displayOrder');
+  if(order>0){
+    let at=0; while(at<blocks.length&&PRODUCT_META_TYPES.includes(blocks[at].type)) at++;
+    blocks.splice(at,0,{type:'displayOrder',value:String(order),imageUrl:''});
+  }
+  const desc=(blocks.find(b=>b.type==='cardDesc')||{}).value||p.description||'';
+  const payload={action:'saveProduct',password,productCode:code,productName:p.productName||p.name||'',salePrice:p.salePrice||p.price||'',normalPrice:p.normalPrice||'',
+    productImage:p.image||p.productImage||'',productDescription:desc,description:desc,startDate:toLocalInput(p.startAt||p.startDate),endDate:toLocalInput(p.endAt||p.endDate),
+    targetCount:p.targetOrders||p.targetCount||'',paymentMethod:p.paymentMethod||'계좌이체',bankName:p.bankName||'',accountNumber:p.accountNumber||'',accountHolder:p.accountHolder||'',
+    paymentGuide:p.paymentMessage||p.paymentGuide||'',productLink:p.linkUrl||p.productLink||'',saleStatus:p.saleStatus||p.status||'판매중',deliveryDateEnabled:p.deliveryDateEnabled||'사용안함',
+    deliveryDates:Array.isArray(p.deliveryDates)?p.deliveryDates:String(p.deliveryDates||'').split(',').map(v=>v.trim()).filter(Boolean),
+    detailBlocks:blocks.map(encodeBlock)};
+  const r=await apiPost(payload); if(!r.success) throw new Error(r.message||'순서 저장 실패');
+}
+// 같은 상태(판매중/준비중) 안에서 units 순서대로 1,2,3… 번호를 매기고 바뀐 상품만 저장
+async function applyHomeOrder(units,skipCode){
+  const password=adminPw(); if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+  const jobs=[];
+  units.forEach((u,i)=>u.items.forEach(p=>{ const c=p.productCode||p.code; if(c!==skipCode&&prodOrder(p)!==i+1) jobs.push([c,i+1,p.productName||p.name]); }));
+  for(let i=0;i<jobs.length;i++){
+    showMessage('productMessage',`홈 순서 저장 중... (${i+1}/${jobs.length}) ${jobs[i][2]} → ${jobs[i][1]}번`);
+    await saveProductOrder(jobs[i][0],jobs[i][1],password);
+  }
+  return jobs.length;
+}
+let homeOrderBusy=false;
+async function moveHomeOrder(key,dir){
+  if(homeOrderBusy) return; homeOrderBusy=true;
+  try{
+    const all=homeUnits(), u=all.find(x=>x.key===key); if(!u) return;
+    const same=all.filter(x=>x.state===u.state), i=same.indexOf(u), j=i+dir;
+    if(j<0||j>=same.length) return;
+    [same[i],same[j]]=[same[j],same[i]];
+    const n=await applyHomeOrder(same);
+    await loadProducts();
+    showMessage('productMessage',`홈 순서를 바꿨습니다. (${n}개 상품 저장) 홈페이지는 새로고침하면 반영됩니다.`);
+  }catch(e){ showMessage('productMessage','홈 순서 저장 오류: '+e.message,true); await loadProducts(); }
+  finally{ homeOrderBusy=false; }
+}
+// 수정 화면에서 노출 순서 N을 저장하면: 그 자리에 끼워 넣고 기존 N번부터 한 칸씩 뒤로 밀기
+async function pushHomeOrderAfterSave(code,n){
+  if(!(n>0)) return 0;
+  const all=homeUnits(), u=all.find(x=>x.items.some(p=>(p.productCode||p.code)===code)); if(!u||u.state==='종료') return 0;
+  const same=all.filter(x=>x.state===u.state&&x!==u);
+  if(!same.some(x=>x.order===n)) { // 겹치는 번호가 없으면 묶음 상품만 맞춤
+    const rest=u.items.filter(p=>(p.productCode||p.code)!==code&&prodOrder(p)!==n);
+    const password=adminPw(); for(const p of rest) await saveProductOrder(p.productCode||p.code,n,password);
+    return rest.length;
+  }
+  const numbered=same.filter(x=>x.order>0), blank=same.filter(x=>!x.order);
+  numbered.splice(Math.min(n-1,numbered.length),0,u);
+  const seq=numbered.concat(blank);
+  return applyHomeOrder(seq,code);
 }
 async function editProduct(code){
   try{
@@ -1572,6 +1677,12 @@ async function saveProduct(){
     if(res.productCode) $('productCode').value=res.productCode;
     showMessage('productMessage','상품과 상세페이지가 저장되었습니다.');
     await loadProducts();
+    // 2026-11-18 노출 순서 자동 밀어내기
+    const ord=Number($('displayOrder').value||0);
+    if(ord>0){
+      const moved=await pushHomeOrderAfterSave($('productCode').value.trim(),ord);
+      if(moved){ await loadProducts(); showMessage('productMessage',`상품과 상세페이지가 저장되었습니다. 홈 순서 ${ord}번에 넣고 뒤 상품 순서를 정리했습니다. (${moved}개)`); }
+    }
   }catch(e){showMessage('productMessage','상품 저장 오류: '+e.message,true)}
 }
 
