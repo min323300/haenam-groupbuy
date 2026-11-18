@@ -600,7 +600,10 @@ function remainText(p){
    const x=start-Date.now(); return x>0?'공구 시작까지 '+duration(x):'공구 준비중';
  }
  const end=dateOf(p.endAt); if(!end)return '마감일 확인 중';
- const x=end-Date.now(); return x>0?'마감까지 '+duration(x):'공동구매가 마감되었습니다';
+ const x=end-Date.now(); if(x<=0)return '공동구매가 마감되었습니다';
+ // 2026-11-19 7일 넘게 남으면 짧게 "마감까지 101일 (2/28)", 7일 안이면 시·분·초까지
+ if(x>7*86400000)return '마감까지 '+Math.floor(x/86400000)+'일 ('+(end.getMonth()+1)+'/'+end.getDate()+')';
+ return '마감까지 '+duration(x);
 }
 function duration(ms){
  let sec=Math.floor(ms/1000),d=Math.floor(sec/86400);sec%=86400;
