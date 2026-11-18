@@ -49,6 +49,8 @@
       <div id="ppPanel" class="hidden">
         <div id="ppTrack" class="pp-track"></div>
         <div class="pp-wrap"><div id="ppThumbs" class="pp-thumbs"></div><div><label for="ppText" style="font-size:13px;font-weight:700">홍보 문구 <span class="muted">(복사해서 보낼 때 쓰는 문구 · 직접 고칠 수 있습니다)</span></label><textarea id="ppText" class="pp-input" style="min-height:200px;margin-top:6px"></textarea></div></div>
+        <div style="margin-top:12px"><label for="ppNote" style="font-size:13px;font-weight:700">카톡 카드에 들어갈 한마디 <span class="muted">(카드 안 상품 아래에 보입니다 · 40자까지 · 비우면 기본 문구)</span></label>
+        <input id="ppNote" class="pp-input" maxlength="40" placeholder="예: 지인분들께 많은 홍보 부탁드립니다 🙏" style="margin-top:6px"></div>
         <div class="pp-actions"><button class="kakao" type="button" onclick="ppShare()">💬 카카오톡 공유하기</button><button class="secondary" type="button" onclick="ppCopy()">홍보 문구 복사</button><button class="secondary" type="button" onclick="ppRender(true)">문구 다시 만들기</button></div>
         <p class="muted" style="margin-top:10px">카카오톡은 한 번에 10명까지 보낼 수 있습니다. 보내고 돌아오면 <b>마지막으로 보낸 사람</b>을 적어 두세요. 다음엔 그 다음 사람부터 이어서 보내면 됩니다.</p>
       </div>
@@ -593,8 +595,8 @@ async function sharePromo(p, text, link){
       window.Kakao.Share.sendDefault({
         objectType: 'feed',
         content: {
-          title: promoEmoji(p.productName) + ' ' + promoText_(p.productName) + ' 공동구매',
-          description: ((typeof ppName === 'function' && ppName()) ? ppName() + '님 추천 · ' : '') + (sale ? '공구가격 ' + sale.toLocaleString('ko-KR') + '원' : '') + (promoDeadline(p) ? ' · ' + promoDeadline(p) : ''),
+          title: promoEmoji(p.productName) + ' ' + promoText_(p.productName) + (sale ? ' · ' + sale.toLocaleString('ko-KR') + '원' : ' 공동구매'),
+          description: ((typeof ppNote === 'function' && ppNote()) ? ppNote() + '\n' : '') + ((typeof ppName === 'function' && ppName()) ? ppName() + '님 추천' : '해남공구마켓 공동구매') + (promoDeadline(p) ? ' · ' + promoDeadline(p) : ''),
           imageUrl: promoImage(p.image, 'w800') || (MARKET_URL + 'share.png'),
           link: { mobileWebUrl: link, webUrl: link }
         },
@@ -693,6 +695,10 @@ $('ppFind').addEventListener('input', ppFilter);
 
 /* --- 링크 --- */
 function ppName(){ return promoText_(dash && dash.partner && dash.partner.name).trim().slice(0, 12); }
+// 2026-11-18 카톡 카드에 들어갈 한마디 (이 기기에 기억)
+const PP_NOTE_KEY='hn_pp_note';
+function ppNote(){ const el=$('ppNote'); return el?String(el.value||'').trim().slice(0,40):''; }
+try{ const el=document.getElementById('ppNote'); if(el){ el.value=localStorage.getItem(PP_NOTE_KEY)||'지인분들께 많은 홍보 부탁드립니다 🙏'; el.addEventListener('input',()=>{ try{localStorage.setItem(PP_NOTE_KEY,el.value)}catch(_){} }); } }catch(_){}
 function ppHeader(){ return ppName() ? ppName() + '님이 추천하는 해남 공동구매' : '해남공구마켓 추천 공동구매'; }
 function ppBase(){ return $('partnerUrl').value || MARKET_URL; }
 function ppLinkOne(p){ const u = new URL(promoLink(ppBase(), promoText_(p.productCode))); u.searchParams.set('product', promoText_(p.productCode)); if (ppName()) u.searchParams.set('by', ppName()); return u.toString(); }
@@ -820,6 +826,18 @@ async function sharePromoList(list, text, link){
           imageUrl: promoImage(p.image, 'w400') || (MARKET_URL + 'share.png'),
           link: { mobileWebUrl: l, webUrl: l } };
       });
+      // 2026-11-18 한마디를 넣을 수 있게 피드 카드(사진 + 상품 목록 + 제목·설명)로 보냄. 실패하면 기존 목록 카드
+      try {
+        window.Kakao.Share.sendDefault({
+          objectType: 'feed',
+          content: { title: '🌾 ' + ppHeader(), description: ppNote() || '산지에서 바로 보내는 공동구매 가격이에요',
+            imageUrl: promoImage(list[0].image, 'w800') || (MARKET_URL + 'share.png'), link: { mobileWebUrl: link, webUrl: link } },
+          itemContent: { profileText: '해남공구마켓',
+            items: list.slice(0, 5).map(p => { const sale = Number(p.salePrice || 0); return { item: promoText_(p.productName), itemOp: sale ? sale.toLocaleString('ko-KR') + '원' : '가격 준비중' }; }) },
+          buttons: [{ title: list.length > 1 ? '상품 ' + list.length + '개 보기' : '상품 보기', link: { mobileWebUrl: link, webUrl: link } }]
+        });
+        return 'kakao';
+      } catch (e2) { /* 목록 카드로 */ }
       window.Kakao.Share.sendDefault({
         objectType: 'list',
         headerTitle: '🌾 ' + ppHeader(),
