@@ -197,7 +197,10 @@ main>.section-head{display:none}
 }
 
 /* 2026-11-19 홈 카드 배너 (4.5초마다 바뀜) */
-.cbanner{max-width:640px;margin:14px auto 6px;padding:0 4px}
+.cbanner{max-width:640px;margin:14px auto 6px;padding:0 4px;position:relative}
+.cb-nav{display:none;position:absolute;top:54px;transform:translateY(-50%);width:30px;height:30px;border-radius:999px;border:1px solid #dfe5e0;background:#fff;color:#176c46;font-size:20px;line-height:26px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.08);z-index:2;padding:0}
+.cb-nav.prev{left:-12px}.cb-nav.next{right:-12px}
+@media (hover:hover) and (min-width:700px){.cb-nav{display:block}}
 .cb-card{position:relative;display:flex;align-items:center;gap:14px;min-height:108px;box-sizing:border-box;padding:10px 14px 10px 10px;background:#fff;border-radius:18px;box-shadow:0 2px 10px rgba(0,0,0,.05);cursor:pointer;border:0;width:100%;text-align:left;font-family:inherit;color:inherit;touch-action:pan-y}
 .cb-card img{width:88px;height:88px;border-radius:14px;object-fit:cover;flex:none;background:#eef2ee}
 .cb-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
@@ -761,16 +764,18 @@ function cbShow(k,anim){
   const box=document.getElementById('cardBanner'); if(!box||!cbSlides.length)return;
   cbIdx=(k+cbSlides.length)%cbSlides.length; const x=cbSlides[cbIdx];
   box.innerHTML=`<button type="button" class="cb-card${anim?' anim':''}" aria-label="${e(x.title)}"><img src="${e(x.img)}" alt="" loading="lazy"><span class="cb-txt"><span class="cb-tag" style="background:${x.color}">${e(x.tag)}</span><span class="cb-title">${e(x.title)}</span><span class="cb-sub">${e(x.sub)}</span></span><span class="cb-pos">${cbIdx+1} / ${cbSlides.length}</span></button>`+
+    (cbSlides.length>1?`<button type="button" class="cb-nav prev" aria-label="이전 배너" onclick="cbShow(cbIdx-1,true);cbStart()">‹</button><button type="button" class="cb-nav next" aria-label="다음 배너" onclick="cbShow(cbIdx+1,true);cbStart()">›</button>`:'')+
     (cbSlides.length>1?`<div class="cb-dots">${cbSlides.map((_,j)=>`<button type="button" class="${j===cbIdx?'on':''}" aria-label="${j+1}번 배너 보기" onclick="cbShow(${j},true);cbStart()"></button>`).join('')}</div>`:'');
   const card=box.querySelector('.cb-card');
   card.onclick=()=>{ x.code?openProduct(x.code):openPartnerApplyModal(); };
-  card.onmouseenter=()=>{cbHold=true}; card.onmouseleave=()=>{cbHold=false};
+  // 2026-11-19 PC: 마우스를 카드에 올린 동안만 멈춤 (바깥 상자 기준이라 화면이 바뀌어도 멈춤이 풀림)
+  box.onmouseenter=()=>{cbHold=true}; box.onmouseleave=()=>{cbHold=false};
   let sx=null; card.ontouchstart=ev=>{cbHold=true;sx=ev.touches[0].clientX};
   card.ontouchend=ev=>{cbHold=false; if(sx==null)return; const dx=ev.changedTouches[0].clientX-sx; sx=null; if(Math.abs(dx)>40){ev.preventDefault();cbShow(cbIdx+(dx<0?1:-1),true);cbStart();}};
 }
 function cbStart(){
   clearInterval(cbTimer); if(cbSlides.length<2)return;
-  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  // 윈도우 '애니메이션 효과 끄기'(움직임 줄이기) 설정이면 예전엔 아예 안 넘어갔음 → 넘기기는 하고 움직이는 효과만 뺌(CSS)
   cbTimer=setInterval(()=>{ if(!cbHold&&!document.hidden) cbShow(cbIdx+1,true); },4500);
 }
 function updateCardBanner(list,visible){
