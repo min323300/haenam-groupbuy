@@ -95,12 +95,15 @@ ${jsonld ? `<script type="application/ld+json">${JSON.stringify(jsonld).replace(
 <header class="top"><a href="/"><img src="/logo-seal.png" alt="">해남공구마켓</a></header>
 `;
 }
+// 파트너 링크(?ref=PT-…&utm_…)로 들어오면 주문 버튼 등 사이트 안 링크에 그대로 이어 붙여 수당·유입이 끊기지 않게
+const KEEP_PARAMS = `<script>(function(){try{var q=new URLSearchParams(location.search),keep=[];['ref','utm_source','utm_medium','utm_campaign','utm_content','by'].forEach(function(k){var v=q.get(k);if(v)keep.push([k,v])});if(!keep.length)return;document.querySelectorAll('a[href^="/"]').forEach(function(a){var u=new URL(a.getAttribute('href'),location.origin);keep.forEach(function(kv){u.searchParams.set(kv[0],kv[1])});a.setAttribute('href',u.pathname+u.search)})}catch(e){}})();</script>`;
 function foot(biz) {
   return `<footer>
   <div>해남공구마켓 · 전국 생산자와 함께하는 농·수·축산물 공동구매</div>
   ${biz ? `<div style="margin-top:8px">${biz}</div>` : ''}
   <div style="margin-top:8px"><a href="/">홈으로</a> · <a href="/p/">전체 상품 보기</a> · <a href="/refund.html">배송·교환·환불 안내</a> · <a href="/?lookup=1">주문조회</a></div>
 </footer>
+${KEEP_PARAMS}
 </body>
 </html>
 `;
@@ -245,8 +248,12 @@ fs.mkdirSync(OUT, { recursive: true });
 const keep = new Set(['index.html']);
 for (const u of units) {
   const others = units.filter(x => x !== u && x.state === '판매중').slice(0, 6);
-  fs.writeFileSync(path.join(OUT, u.slug + '.html'), productPage(u, others, biz));
-  keep.add(u.slug + '.html');
+  const html = productPage(u, others, biz);
+  for (const code of new Set([u.slug, ...u.items.map(x => s(x.productCode))])) {
+    if (!code || keep.has(code + '.html')) continue;
+    fs.writeFileSync(path.join(OUT, code + '.html'), html);
+    keep.add(code + '.html');
+  }
 }
 fs.writeFileSync(path.join(OUT, 'index.html'), listPage(units, biz));
 // 시트에서 지워진 상품 페이지만 정리 (마감된 상품은 noindex 로 남겨 링크가 끊기지 않게)
