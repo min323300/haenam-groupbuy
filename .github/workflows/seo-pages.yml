@@ -1,0 +1,37 @@
+# 검색 노출용 상품 페이지(/p/), sitemap.xml, 홈 상품 링크 목록을 매일 새로 만듭니다.
+# 수동 실행: 깃허브 → Actions → "상품 페이지 갱신" → Run workflow
+name: 상품 페이지 갱신
+on:
+  schedule:
+    - cron: '7 20 * * *'   # 매일 한국시간 새벽 5시 7분
+    - cron: '7 4 * * *'    # 매일 한국시간 오후 1시 7분
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/build-seo.mjs'
+      - '.github/workflows/seo-pages.yml'
+permissions:
+  contents: write
+concurrency:
+  group: seo-pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 상품 페이지 만들기
+        run: node tools/build-seo.mjs
+      - name: 바뀐 내용 올리기
+        run: |
+          git config user.name "seo-bot"
+          git config user.email "seo-bot@users.noreply.github.com"
+          git add -A p sitemap.xml index.html
+          if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
+          git commit -m "상품 페이지 자동 갱신 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
+          git pull --rebase origin main
+          git push
