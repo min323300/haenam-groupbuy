@@ -1592,24 +1592,20 @@ async function togglePublicOrderStatus(productCode, button){
 
   try{
 
-    const res = await fetch(
-      API_URL +
-      '?action=publicProductOrders' +
-      '&productCode=' +
-      encodeURIComponent(productCode)
-    ).then(function(r){
-      return r.json();
-    });
-
-    if(!res.success){
-      throw new Error(
-        res.message || '주문현황을 불러오지 못했습니다.'
-      );
-    }
-
-    const rows = Array.isArray(res.orders)
-      ? res.orders
-      : [];
+    // 2026-11-19 옵션 묶음(예: 사과 2·3·5kg)은 카드가 대표 상품 하나라서, 묶음 안 모든 상품의 주문을 합쳐 보여줌
+    const base = products.find(function(x){ return s(x.productCode) === s(productCode); });
+    const group = base ? [base].concat(siblingsOf(base).filter(function(x){ return x !== base; })) : [{productCode: productCode}];
+    const multi = group.length > 1;
+    const results = await Promise.all(group.map(function(g){
+      return fetch(API_URL + '?action=publicProductOrders&productCode=' + encodeURIComponent(g.productCode))
+        .then(function(r){ return r.json(); })
+        .then(function(r){
+          if(!r.success) throw new Error(r.message || '주문현황을 불러오지 못했습니다.');
+          const label = multi ? (productMeta(g, 'optionLabel') || s(g.productName)) : '';
+          return (Array.isArray(r.orders) ? r.orders : []).map(function(o){ return Object.assign({}, o, {_opt: label}); });
+        });
+    }));
+    const rows = [].concat.apply([], results);
 
     if(rows.length === 0){
 
@@ -1634,6 +1630,7 @@ async function togglePublicOrderStatus(productCode, button){
             <tr>
               <th>주문자</th>
               <th>전화번호</th>
+              ${multi ? '<th>옵션</th>' : ''}
               <th>수량</th>
               <th>상태</th>
             </tr>
@@ -1645,6 +1642,7 @@ async function togglePublicOrderStatus(productCode, button){
                 <tr>
                   <td>${esc(row.name || '')}</td>
                   <td>${esc(row.phone || '')}</td>
+                  ${multi ? '<td>' + esc(row._opt || '') + '</td>' : ''}
                   <td>${Number(row.quantity || 0)}개</td>
                   <td>${esc(row.status || '주문접수')}</td>
                 </tr>
