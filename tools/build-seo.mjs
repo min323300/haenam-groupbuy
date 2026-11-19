@@ -278,4 +278,47 @@ if (idx.includes(A) && idx.includes(B)) {
   if (next !== idx) fs.writeFileSync(idxPath, next);
 } else console.warn('index.html 에 SEO-LIST 표시가 없어 홈 목록은 건너뜁니다.');
 
-console.log(`상품 ${products.length}개 → 페이지 ${units.length}개 (검색 노출 ${live.length}개), sitemap ${urls.length}개 주소`);
+
+// ---------- 구글 판매자 센터 상품 피드 (/feed/google.xml) — 판매중·가격·사진 있는 상품만, 옵션은 각각 1줄 ----------
+const xe = v => s(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const feedItems = [];
+for (const u of units.filter(x => x.state === '판매중')) {
+  for (const x of u.items) {
+    const price = Number(x.salePrice || 0), img = imageUrl(x.image || u.leader.image, 'w1200');
+    if (!(price > 0) || !img) continue;
+    const opt = u.items.length > 1 ? (meta(x, 'optionLabel') || s(x.productName)) : '';
+    const title = cut(u.items.length > 1 ? `${u.name} ${opt}` : s(x.productName), 140);
+    const desc = cut([meta(u.leader, 'cardDesc') || s(u.leader.description), plain(blocksOf(u.leader).filter(b => ['text', 'price'].includes(s(b.type).toLowerCase())).map(b => s(b.value)).join(' '))].filter(Boolean).join(' · ') || u.name, 4900);
+    const end = dateOf(x.endAt);
+    feedItems.push(`  <item>
+    <g:id>${xe(x.productCode)}</g:id>
+    <g:title>${xe(title)}</g:title>
+    <g:description>${xe(desc)}</g:description>
+    <g:link>${SITE}/p/${xe(u.slug)}.html</g:link>
+    <g:image_link>${xe(img)}</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>${price} KRW</g:price>
+    <g:condition>new</g:condition>
+    <g:brand>해남공구마켓</g:brand>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>422</g:google_product_category>
+${u.items.length > 1 ? `    <g:item_group_id>${xe(u.slug)}</g:item_group_id>\n` : ''}    <g:shipping>
+      <g:country>KR</g:country>
+      <g:price>0 KRW</g:price>
+    </g:shipping>
+${end ? `    <g:expiration_date>${ymd(end)}</g:expiration_date>\n` : ''}  </item>`);
+  }
+}
+fs.mkdirSync(path.join(ROOT, 'feed'), { recursive: true });
+fs.writeFileSync(path.join(ROOT, 'feed', 'google.xml'), `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
+<channel>
+  <title>해남공구마켓</title>
+  <link>${SITE}/</link>
+  <description>해남공구마켓 공동구매 상품</description>
+${feedItems.join('\n')}
+</channel>
+</rss>
+`);
+
+console.log(`상품 ${products.length}개 → 페이지 ${units.length}개 (검색 노출 ${live.length}개), sitemap ${urls.length}개 주소, 구글 피드 ${feedItems.length}개`);
