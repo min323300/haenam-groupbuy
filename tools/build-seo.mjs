@@ -99,7 +99,7 @@ function foot(biz) {
   return `<footer>
   <div>해남공구마켓 · 전국 생산자와 함께하는 농·수·축산물 공동구매</div>
   ${biz ? `<div style="margin-top:8px">${biz}</div>` : ''}
-  <div style="margin-top:8px"><a href="/">홈으로</a> · <a href="/p/">전체 상품 보기</a></div>
+  <div style="margin-top:8px"><a href="/">홈으로</a> · <a href="/p/">전체 상품 보기</a> · <a href="/refund.html">배송·교환·환불 안내</a> · <a href="/?lookup=1">주문조회</a></div>
 </footer>
 </body>
 </html>
@@ -254,7 +254,7 @@ for (const f of fs.readdirSync(OUT)) if (f.endsWith('.html') && !keep.has(f)) fs
 
 // sitemap.xml: 홈 + 전체목록 + 진행/준비중 상품
 const today = ymd(new Date());
-const urls = [[SITE + '/', '1.0', 'daily'], [SITE + '/p/', '0.9', 'daily'],
+const urls = [[SITE + '/', '1.0', 'daily'], [SITE + '/p/', '0.9', 'daily'], [SITE + '/refund.html', '0.3', 'monthly'],
 ...units.filter(u => u.index).map(u => [`${SITE}/p/${u.slug}.html`, u.state === '판매중' ? '0.8' : '0.5', 'daily'])];
 fs.writeFileSync(path.join(ROOT, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
