@@ -59,7 +59,7 @@ main{max-width:1180px;margin:45px auto;padding:0 20px 70px}
 .product .desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .price-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.price-row .price{margin:0}
 .option-prices{display:flex;flex-direction:column;gap:2px;margin:6px 0 2px;font-size:13px;color:#4a564e}.option-prices b{color:#1d2a22}
-#optionBox{margin:14px 0 6px}.option-title{font-weight:800;margin-bottom:8px}.option-btn{display:flex;justify-content:space-between;align-items:center;width:100%;padding:13px 14px;margin:0 0 8px;border:2px solid #d8ddd8;border-radius:12px;background:#fff;font-size:15px;cursor:pointer;text-align:left}.option-btn.on{border-color:var(--green);background:#f1f8f3}.option-btn span{flex:1;padding-right:10px}.option-btn b{font-size:16px;white-space:nowrap}
+#optionBox{margin:14px 0 6px}#optionSummary{margin:4px 0 8px}.option-hint{font-size:12px;color:#7a847c;margin-top:2px}.option-title{font-weight:800;margin-bottom:8px}.option-btn{display:flex;justify-content:space-between;align-items:center;width:100%;padding:13px 14px;margin:0 0 8px;border:2px solid #d8ddd8;border-radius:12px;background:#fff;font-size:15px;cursor:pointer;text-align:left}.option-btn.on{border-color:var(--green);background:#f1f8f3}.option-btn span{flex:1;padding-right:10px}.option-btn b{font-size:16px;white-space:nowrap}
 .price-note{display:inline-block;padding:4px 10px;border-radius:999px;background:#e8f5ec;color:var(--green);font-size:13px;font-weight:800;line-height:1.4;white-space:nowrap}
 .price{font-size:27px;font-weight:900;margin:13px 0 5px} .normal{font-size:13px;color:#999;text-decoration:line-through}
 .arrive-box{margin:10px 0 6px;padding:11px 13px;border-radius:10px;background:#eef6ff;color:#174a7c;font-size:14px;line-height:1.5}.arrive-box b{font-weight:900}
@@ -297,8 +297,7 @@ main>.section-head{display:none}
   <div class="modal-body">
    <img id="modalImage" class="detail-img" alt="상품 이미지" style="display:none">
    <h2 id="modalProductName"></h2><div id="modalDescription" class="desc"></div>
-   <div id="optionBox" style="display:none"></div>
-   <div class="price" id="modalPrice"></div><div id="modalTimer" class="timer"></div><div id="modalArrive" class="arrive-box" style="display:none"></div><div id="npayBox" class="npay-box" style="display:none"></div>
+   <div class="price" id="modalPrice"></div><div id="optionSummary" style="display:none"></div><div id="modalTimer" class="timer"></div><div id="modalArrive" class="arrive-box" style="display:none"></div><div id="npayBox" class="npay-box" style="display:none"></div>
    <div id="detailBlocks" class="detail-blocks"></div>
    <div id="paymentBox" class="payment"></div>
    <div id="orderAmountBox" class="payment" style="display:none; margin-top:8px;">
@@ -319,6 +318,7 @@ main>.section-head{display:none}
     <label>입금자명</label><input id="depositorName" required>
     <label class="of-inline"><input id="sameAsOrderer" type="checkbox" checked> 주문자와 같음</label>
     <div class="of-hint">입금자명이 주문자와 다르면 체크를 풀고 입력해 주세요. 입금 확인이 빨라집니다.</div>
+    <div id="optionBox" style="display:none"></div>
     <label>주문 수량</label><select id="qty"><option value="1">1개</option><option value="2">2개</option><option value="3">3개</option><option value="4">4개</option><option value="5">5개</option><option value="6">6개</option><option value="7">7개</option><option value="8">8개</option><option value="9">9개</option><option value="10">10개</option></select>
     <label>배송 주소</label>
     <div class="of-row"><input id="zipcode" placeholder="우편번호" readonly><button type="button" class="of-sub-btn" id="findAddressBtn">주소 검색</button></div>
@@ -913,8 +913,11 @@ function optionPricesHtml(p){
 }
 function renderOptionBox(p){
  const box=document.getElementById('optionBox'); if(!box) return;
+ const sum=document.getElementById('optionSummary');
  const sib=siblingsOf(p);
- if(sib.length<2){box.innerHTML='';box.style.display='none';return}
+ if(sib.length<2){box.innerHTML='';box.style.display='none';if(sum){sum.innerHTML='';sum.style.display='none'}return}
+ // 2026-11-19 옵션 고르기는 주문서(주문 수량 위)로 옮기고, 위쪽에는 옵션별 가격만 안내
+ if(sum){sum.innerHTML=optionPricesHtml(p)+'<div class="option-hint">옵션은 아래 주문서에서 고를 수 있어요</div>';sum.style.display='block'}
  box.style.display='block';
  box.innerHTML='<div class="option-title">옵션 선택</div>'+sib.map(x=>{
   const on=s(x.productCode)===s(p.productCode);
