@@ -799,6 +799,28 @@ async function saveSupplierApplication(btn){
     </div>
 
     <hr style="border:0;border-top:1px solid #e3e7e3;margin:24px 0">
+    <h3>👥 센터장 발급 (파트너 소속 영업 담당)</h3>
+    <p class="muted">파트너 아래에 센터장 로그인과 전용 링크를 발급합니다. 센터장 링크로 들어온 주문의 <b>수당은 모두 소속 파트너에게</b> 잡히고, 주문관리 AD열에 센터장코드가 기록됩니다. 센터장 화면에는 링크·상품 홍보·본인 주문 건수만 보이고(수당 금액 없음), 소속 파트너 화면에 센터장별 실적이 보입니다. 위 관리자 비밀번호를 그대로 씁니다.</p>
+    <div class="grid" style="margin-top:10px">
+      <div class="field"><label>소속 파트너 *</label><select id="centerParent"><option value="">파트너 목록을 먼저 불러와 주세요</option></select></div>
+      <div class="field"><label>센터장 이름 *</label><input id="centerName" placeholder="예: 홍길동"></div>
+      <div class="field"><label>로그인 ID *</label><input id="centerLoginId" placeholder="영문 소문자·숫자 4~30자"></div>
+      <div class="field"><label>초기 비밀번호 *</label><input id="centerLoginPassword" type="password" placeholder="6자 이상"></div>
+      <div class="field full"><label>메모</label><input id="centerMemo" placeholder="예: 연락처, 담당 지역"></div>
+    </div>
+    <div class="toolbar">
+      <button class="primary" type="button" onclick="saveCenter()">센터장 발급</button>
+      <button class="secondary" type="button" onclick="loadCenters()">센터장 목록 불러오기</button>
+    </div>
+    <div id="centerMessage" class="notice"></div>
+    <div class="table-wrap" style="margin-top:12px">
+      <table>
+        <thead><tr><th>센터장코드</th><th>소속 파트너</th><th>이름</th><th>로그인 ID</th><th>상태</th><th>전용 링크</th><th>관리</th></tr></thead>
+        <tbody id="centerRows"><tr><td colspan="7">센터장 목록 불러오기를 눌러 주세요.</td></tr></tbody>
+      </table>
+    </div>
+
+    <hr style="border:0;border-top:1px solid #e3e7e3;margin:24px 0">
     <h3>전체 파트너 실적</h3>
     <p class="muted">본사 관리자 전용입니다. 파트너 주문·판매금액·배송완료·예상수당·확정수당을 한 번에 확인합니다.</p>
     <div class="toolbar">
@@ -2075,6 +2097,7 @@ async function loadPartners(){
 
     const rows=Array.isArray(res.partners)?res.partners:[];
     partnerCache = rows;
+    try{ fillCenterParents(); }catch(_){}
     $('partnerRows').innerHTML=rows.length ? rows.map(p=>`
       <tr>
         <td>${esc(p.partnerCode||'')}</td>
@@ -4460,6 +4483,59 @@ async function nvSaveRow(btn){
     nvRender(); showMessage('nvMessage',res.message+' 스마트스토어 쪽 발송처리는 스마트스토어센터에서 해 주세요.');
   }catch(e){ showMessage('nvMessage','저장 오류: '+e.message,true); btn.disabled=false; btn.textContent='저장'; }
 }
+
+/* ---------- 2026-11-19 센터장 발급 ---------- */
+function fillCenterParents(){
+  const sel=$('centerParent'); if(!sel) return;
+  const cur=sel.value;
+  const list=(partnerCache||[]).filter(p=>p.partnerCode&&p.status!=='정지');
+  sel.innerHTML='<option value="">소속 파트너 선택</option>'+list.map(p=>`<option value="${esc(p.partnerCode)}">${esc(p.name)} (${esc(p.partnerCode)})</option>`).join('');
+  if(cur) sel.value=cur;
+}
+async function loadCenters(){
+  try{
+    const password=partnerPassword(); if(!password) return showMessage('centerMessage','관리자 비밀번호를 입력해 주세요.',true);
+    if(!(partnerCache||[]).length){ await loadPartners(); }
+    fillCenterParents();
+    const res=await apiGet({action:'adminCenterList',password});
+    if(!res.success) throw new Error(res.message||'센터장 조회 실패');
+    const rows=res.centers||[];
+    $('centerRows').innerHTML=rows.length?rows.map(c=>`<tr>
+      <td>${esc(c.centerCode)}</td><td>${esc(c.parentName||'')} (${esc(c.parentCode)})</td><td>${esc(c.name)}</td><td>${esc(c.loginId)}</td>
+      <td><span class="badge">${esc(c.status)}</span></td>
+      <td class="left"><input value="${esc(c.partnerUrl)}" readonly style="min-width:300px"></td>
+      <td><button class="secondary" type="button" onclick="centerCopy('${esc(c.partnerUrl)}')">링크 복사</button>
+        <button class="secondary" type="button" onclick="centerSetPassword('${esc(c.centerCode)}')">비밀번호 재설정</button>
+        <button class="${c.status==='활성'?'danger':'primary'}" type="button" onclick="centerToggle('${esc(c.centerCode)}','${c.status==='활성'?'정지':'활성'}')">${c.status==='활성'?'정지':'다시 활성'}</button></td>
+    </tr>`).join(''):'<tr><td colspan="7">발급된 센터장이 없습니다.</td></tr>';
+    showMessage('centerMessage','센터장 '+rows.length+'명을 불러왔습니다.');
+  }catch(e){ showMessage('centerMessage','센터장 조회 오류: '+e.message,true); }
+}
+async function saveCenter(){
+  try{
+    const password=partnerPassword(); if(!password) return showMessage('centerMessage','관리자 비밀번호를 입력해 주세요.',true);
+    const data={action:'adminCenterSave',password,parentCode:$('centerParent').value,name:$('centerName').value.trim(),loginId:$('centerLoginId').value.trim(),loginPassword:$('centerLoginPassword').value,memo:$('centerMemo').value.trim()};
+    if(!data.parentCode) return showMessage('centerMessage','소속 파트너를 골라 주세요.',true);
+    if(!data.name||!data.loginId||!data.loginPassword) return showMessage('centerMessage','이름, 로그인 ID, 초기 비밀번호를 모두 넣어 주세요.',true);
+    showMessage('centerMessage','발급 중입니다...');
+    const res=await apiPost(data);
+    if(!res.success) throw new Error(res.message||'발급 실패');
+    ['centerName','centerLoginId','centerLoginPassword','centerMemo'].forEach(id=>$(id).value='');
+    showMessage('centerMessage',(res.centerCode||'')+' 발급 완료. 센터장에게 파트너센터 주소와 로그인 ID·비밀번호를 알려 주세요. 링크: '+(res.partnerUrl||''));
+    loadCenters();
+  }catch(e){ showMessage('centerMessage','센터장 발급 오류: '+e.message,true); }
+}
+async function centerToggle(code,status){
+  if(!confirm(code+' 센터장을 '+status+' 상태로 바꿀까요?')) return;
+  try{ const res=await apiPost({action:'adminCenterSave',password:partnerPassword(),centerCode:code,status}); if(!res.success) throw new Error(res.message); loadCenters(); }
+  catch(e){ showMessage('centerMessage','상태 변경 오류: '+e.message,true); }
+}
+async function centerSetPassword(code){
+  const pw=prompt(code+' 센터장의 새 비밀번호 (6자 이상)'); if(!pw) return;
+  try{ const res=await apiPost({action:'adminCenterSave',password:partnerPassword(),centerCode:code,loginPassword:pw}); if(!res.success) throw new Error(res.message); showMessage('centerMessage',code+' 비밀번호를 바꿨습니다.'); }
+  catch(e){ showMessage('centerMessage','비밀번호 변경 오류: '+e.message,true); }
+}
+async function centerCopy(url){ try{ await navigator.clipboard.writeText(url); showMessage('centerMessage','링크를 복사했습니다: '+url); }catch(_){ prompt('링크를 복사해 주세요',url); } }
 </script>
 
 </body>

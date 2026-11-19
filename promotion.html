@@ -486,7 +486,7 @@ function kpStatus(msg,error){const el=$('kpStatus');el.textContent=msg;el.classN
 function kpBaseUrl(){
  if($('kpUrlType').value!=='partner') return MARKET_URL;
  const c=$('kpPartnerCode').value.trim().toUpperCase();
- return /^PT-\d{4,}$/.test(c) ? MARKET_URL+'?ref='+c : null;
+ return /^PT-\d{4,}(-\d{2,})?$/.test(c) ? MARKET_URL+'?ref='+c : null;
 }
 function kpLink(p){const base=kpBaseUrl();return base?promoLink(base,promoText_(p.productCode)):null;}
 function renderKakaoPromo(force){

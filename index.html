@@ -478,7 +478,7 @@ const PARTNER_REF_DAYS = 30;
 function capturePartnerRef(){
   const params = new URLSearchParams(location.search);
   const ref = String(params.get('ref') || '').trim().toUpperCase();
-  if (/^PT-\d{4,}$/.test(ref)) {
+  if (/^PT-\d{4,}(-\d{2,})?$/.test(ref)) {
     localStorage.setItem(PARTNER_REF_KEY, ref);
     localStorage.setItem(PARTNER_REF_TIME_KEY, String(Date.now()));
   }

@@ -17,6 +17,7 @@
 .vgrid{grid-template-columns:repeat(4,minmax(0,1fr))}
 .vagree{margin-top:12px;border:2px solid #f59e0b;border-radius:12px;padding:12px 14px;background:#fffbeb}.vagree.ok{border-color:#cfe7d8;background:#f4faf6}.vagree summary{cursor:pointer;font-weight:700;list-style:none;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.vagree summary::-webkit-details-marker{display:none}.vagree-more{color:#6c756f;font-size:13px;font-weight:600}.vagree[open] .vagree-more{display:none}.vagree-body{margin-top:10px;border-top:1px dashed #e5c97a;padding-top:10px}.vagree-terms{padding-left:0;list-style:none;margin:0;max-height:300px;overflow:auto;background:#fff;border:1px solid #eee;border-radius:9px;padding:10px 12px}.vagree-terms li{font-size:13.5px;line-height:1.6;margin:0 0 6px}.vagree-chk{display:flex;gap:8px;align-items:flex-start;margin:6px 0;font-size:14px;cursor:pointer}.vagree-chk input{margin-top:3px;width:auto}@media(max-width:700px){.vgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .cardmodal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;display:none;align-items:center;justify-content:center;padding:14px}.cardmodal.open{display:flex}.cardmodal .box{background:#fff;border-radius:16px;padding:16px;max-width:520px;width:100%;max-height:94vh;overflow:auto}.cardmodal img{width:100%;border-radius:12px;display:block}
+.center-off{display:none!important}
 </style>
 </head>
 <body>
@@ -33,7 +34,7 @@
   </section>
 
   <main id="dashboard" class="hidden">
-    <section class="card">
+    <section class="card" data-center="1">
       <h2 id="partnerTitle">내 파트너 현황</h2>
       <p class="muted" id="partnerCode"></p>
       <label style="font-size:13px;font-weight:700">내 전용 홍보 URL</label>
@@ -41,7 +42,7 @@
       <a class="openchat" href="https://open.kakao.com/o/gspcsUUi" target="_blank" rel="noopener"><span class="oc-ic">💬</span><span class="oc-tx"><b>해남공구 오픈채팅방 입장</b><small>새 공구 소식 · 공지 · 문의를 가장 빨리 받아보세요</small></span><span class="oc-go">입장 ›</span></a>
     </section>
 
-    <section class="card" id="promoCard">
+    <section class="card" id="promoCard" data-center="1">
       <h2 style="margin:0 0 6px">📣 상품 홍보하기</h2>
       <p class="muted">보낼 상품을 골라 주세요. <b>여러 개를 고르면 카톡 카드 한 장</b>으로 같이 갑니다. (카드에는 3개까지 보이고, 나머지는 '모두 보기'로 연결됩니다) 이 링크로 들어와 주문하면 어떤 상품이든 내 실적으로 잡힙니다.</p>
       <div class="pp-find"><input id="ppFind" class="pp-input" type="search" placeholder="🔍 상품 찾기 (예: 고구마, 문어)" autocomplete="off"></div><div id="ppList" class="pp-list"><div class="muted">상품을 불러오는 중...</div></div><div id="ppSel" class="pp-sel"></div>
@@ -74,7 +75,20 @@
       </details>
     </section>
 
-    <section class="card">
+    <section class="card hidden" id="centerCard" data-center="1">
+      <h2 style="margin:0 0 6px">📦 내 링크로 들어온 주문</h2>
+      <p class="muted" id="centerIntro" style="margin:0 0 10px">내 링크로 들어온 주문 건수입니다. 수당은 소속 파트너님께 지급되며, 배분은 소속 파트너님이 정합니다.</p>
+      <div class="grid" style="margin-bottom:12px"><div class="stat"><span>주문</span><strong id="cOrders">0건</strong></div><div class="stat"><span>판매수량</span><strong id="cQty">0개</strong></div></div>
+      <div class="table-wrap"><table style="min-width:0"><thead><tr><th>상품</th><th>주문</th><th>수량</th></tr></thead><tbody id="cProductRows"></tbody></table></div>
+      <h3 style="font-size:15px;margin:14px 0 6px">주문 목록</h3>
+      <div class="table-wrap"><table style="min-width:0"><thead><tr><th>주문일</th><th>상품</th><th>수량</th><th>상태</th></tr></thead><tbody id="cOrderRows"></tbody></table></div>
+    </section>
+    <section class="card hidden" id="centersCard">
+      <h2 style="margin:0 0 6px">👥 센터장 실적</h2>
+      <p class="muted" style="margin:0 0 10px">센터장 링크로 들어온 주문입니다. 수당은 모두 파트너님께 지급되며(위 실적에 포함), 센터장 배분 참고용입니다. 취소 주문은 빠집니다.</p>
+      <div class="table-wrap"><table style="min-width:520px"><thead><tr><th>센터장</th><th>코드</th><th>주문</th><th>수량</th><th>판매금액</th><th>수당</th></tr></thead><tbody id="centerRows"></tbody></table></div>
+    </section>
+    <section class="card" data-center="1">
       <h2 style="margin:0 0 8px">📅 조회 기간</h2>
       <div class="period">
         <button class="chip" data-range="all" onclick="setRange('all')">전체</button>
@@ -244,6 +258,8 @@ async function loadDashboard(pre){
     const res=pre||await apiGet({action:'partnerDashboard',token,startDate,endDate});
     if(!res.success)throw new Error(res.message||'실적 조회 실패');
     dash=res;
+    if(res.role==='center'){ renderCenterMode(res); await loadPromoProducts(); return; }
+    setCenterMode(false);
     $('loginCard').classList.add('hidden');$('dashboard').classList.remove('hidden');$('logoutBtn').classList.remove('hidden');
     $('partnerTitle').textContent=(res.partner.name||'파트너')+'님 실적';$('partnerCode').textContent='파트너코드 '+(res.partner.partnerCode||'');$('partnerUrl').value=res.partner.partnerUrl||'';
     $('periodLabel').textContent=periodText()+' (주문 접수일 기준)';
@@ -254,6 +270,7 @@ async function loadDashboard(pre){
     const rows=Array.isArray(res.products)?res.products:[];
     $('productRows').innerHTML=rows.length?rows.map(x=>`<tr><td>${esc(x.productName||x.productCode)}</td><td>${Number(x.orders||0).toLocaleString('ko-KR')}건</td><td>${Number(x.quantity||0).toLocaleString('ko-KR')}개</td><td>${money(x.salesAmount)}</td><td>${money(x.expectedCommission)}</td><td>${money(x.confirmedCommission)}</td><td><b>${money(x.paidCommission)}</b></td></tr>`).join(''):'<tr><td colspan="7">이 기간에는 파트너 주문 실적이 없습니다.</td></tr>';
     renderOrders();
+    renderCenters(res.centers);
     renderVendor(res.vendor);
     message('dashMessage','최신 실적을 불러왔습니다.');
     await Promise.all([loadPromoProducts(), loadCommissions(), loadSettlements()]);
@@ -261,6 +278,33 @@ async function loadDashboard(pre){
     if(/로그인|만료|계정/.test(e.message||'')){sessionStorage.removeItem(TOKEN_KEY);showLogin();message('loginMessage',e.message,true);}
     else message('dashMessage',e.message,true);
   }
+}
+/* 2026-11-19 센터장: 센터장 로그인은 링크·홍보·주문 건수만 / 파트너는 센터장별 실적 표 */
+function setCenterMode(on){
+  document.querySelectorAll('#dashboard > section').forEach(sec=>{ if(!sec.dataset.center){ sec.classList.toggle('center-off',on); } });
+  $('centerCard').classList.toggle('hidden',!on);
+}
+function renderCenterMode(res){
+  setCenterMode(true);
+  $('loginCard').classList.add('hidden');$('dashboard').classList.remove('hidden');$('logoutBtn').classList.remove('hidden');
+  const p=res.partner||{};
+  $('partnerTitle').textContent=(p.name||'센터장')+' 센터장님';
+  $('partnerCode').textContent='센터장코드 '+(p.partnerCode||'')+(p.parentName?' · '+p.parentName+' 파트너 소속':'');
+  $('partnerUrl').value=p.partnerUrl||'';
+  $('periodLabel').textContent=periodText()+' (주문 접수일 기준)';
+  const s=res.summary||{};
+  $('cOrders').textContent=Number(s.orders||0).toLocaleString('ko-KR')+'건';$('cQty').textContent=Number(s.quantity||0).toLocaleString('ko-KR')+'개';
+  const pr=res.products||[], od=res.orders||[];
+  $('cProductRows').innerHTML=pr.length?pr.map(x=>`<tr><td>${esc(x.productName)}</td><td>${Number(x.orders||0)}건</td><td>${Number(x.quantity||0)}개</td></tr>`).join(''):'<tr><td colspan="3" class="muted">아직 내 링크로 들어온 주문이 없습니다.</td></tr>';
+  $('cOrderRows').innerHTML=od.length?od.map(o=>`<tr><td>${esc(o.orderDate)}</td><td>${esc(o.productName)}</td><td>${Number(o.quantity||0)}개</td><td>${esc(o.status)}</td></tr>`).join(''):'<tr><td colspan="4" class="muted">주문이 없습니다.</td></tr>';
+}
+function renderCenters(list){
+  const card=$('centersCard'); list=Array.isArray(list)?list:[];
+  if(!list.length){card.classList.add('hidden');return;}
+  card.classList.remove('hidden');
+  const t=list.reduce((a,x)=>({o:a.o+x.orders,q:a.q+x.quantity,s:a.s+x.salesAmount,c:a.c+x.commission}),{o:0,q:0,s:0,c:0});
+  $('centerRows').innerHTML=list.map(x=>`<tr${x.status==='활성'?'':' style="color:#999"'}><td><b>${esc(x.name)}</b>${x.status==='활성'?'':' (정지)'}</td><td style="font-size:12px">${esc(x.centerCode)}</td><td>${Number(x.orders||0)}건</td><td>${Number(x.quantity||0)}개</td><td>${money(x.salesAmount)}</td><td><b>${money(x.commission)}</b></td></tr>`).join('')
+    +`<tr style="background:#f6f8f6;font-weight:700"><td colspan="2">합계</td><td>${t.o}건</td><td>${t.q}개</td><td>${money(t.s)}</td><td>${money(t.c)}</td></tr>`;
 }
 /* 2026-11-16 내가 연결한 공급처 (벤더 수수료) */
 function renderVendor(v){
