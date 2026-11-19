@@ -70,6 +70,15 @@ main{max-width:1180px;margin:45px auto;padding:0 20px 70px}
 .btn.closed{background:#999;cursor:not-allowed}
 .loading,.empty{grid-column:1/-1;text-align:center;padding:55px;background:#fff;border-radius:18px;color:#777}
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;padding:20px;overflow:auto}
+/* 2026-11-19 손님 주문조회 */
+.lookup-link{margin-right:8px}
+.lk-form{display:grid;gap:10px}.lk-form input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:12px;font-size:16px}
+.lk-note{font-size:13px;color:#6b766f;margin:4px 0 0}.lk-err{color:#c2410c;font-weight:700;font-size:14px;margin-top:8px}
+.lk-list{display:grid;gap:12px;margin-top:16px}.lk-card{border:1px solid var(--line);border-radius:14px;padding:14px;background:#fbfcf8}
+.lk-card h4{margin:0 0 4px;font-size:16px}.lk-meta{font-size:13px;color:#6b766f}.lk-st{display:inline-block;font-size:12px;font-weight:800;padding:3px 9px;border-radius:999px;background:#e8f3ec;color:#176c46;margin-bottom:6px}
+.lk-st.wait{background:#fff3e0;color:#b45309}.lk-st.done{background:#eef2ff;color:#3730a3}.lk-st.cancel{background:#eee;color:#666}
+.lk-trk{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.lk-trk a{display:inline-block;background:#176c46;color:#fff;text-decoration:none;font-weight:800;font-size:14px;padding:8px 12px;border-radius:10px}
+.lk-trk .copy{background:#fff;border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:13px;cursor:pointer}
 .modal.open{display:block} .modal-card{max-width:720px;margin:20px auto;background:#fff;border-radius:22px;overflow:hidden;overflow:clip}
 .npay-box{margin:10px 0 4px}.npay-btn{display:block;width:100%;padding:13px;border:0;border-radius:10px;background:#03c75a;color:#fff;font-size:16px;font-weight:900;cursor:pointer}.npay-btn .n{display:inline-block;margin-right:6px;padding:0 6px;border-radius:4px;background:#fff;color:#03c75a;font-weight:900}.npay-sub{margin-top:5px;color:#666;font-size:12.5px;text-align:center}
 .jump-order-btn{position:sticky;bottom:12px;display:block;width:100%;margin-top:14px;padding:15px;font-size:17px;box-shadow:0 6px 18px rgba(0,0,0,.18);z-index:5}.jump-order-btn.hide{display:none}
@@ -150,7 +159,7 @@ main>.section-head{display:none}
 .bottom-nav{display:none}
 @media(max-width:899px){
  .ask-qr,.pc-only{display:none}
- .bottom-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+ .bottom-nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
  .bottom-nav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:58px;color:#5f6a63;text-decoration:none;font-size:11px;font-weight:700}
  .bottom-nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
  .bottom-nav a:first-child{color:var(--green)}
@@ -207,7 +216,7 @@ main>.section-head{display:none}
 </head>
 <body>
 <a id="topBanner" class="top-banner" href="#products" hidden></a>
-<header><div class="header-in"><div class="logo" onclick="window.scrollTo({top:0,behavior:'smooth'})" style="cursor:pointer"><img src="/logo-seal.png" alt="" class="logo-mark" width="40" height="40"><span>해남공구마켓<small>전국 생산자와 함께하는 농·수·축산물 공동구매</small></span></div><div class="search-wrap"><input id="productSearch" type="search" autocomplete="off" placeholder="상품 찾기 (키위, ㄱㄷ)" aria-label="상품 찾기" oninput="onProductSearch()" onfocus="onProductSearch()"><div id="searchSuggest" class="search-suggest"></div></div><div class="header-right"><button type="button" id="a2hsHead" class="a2hs-head" onclick="a2hsOpen()" hidden>📲 바로가기</button><a class="header-link" href="#products">진행 공구 보기</a></div></div></header>
+<header><div class="header-in"><div class="logo" onclick="window.scrollTo({top:0,behavior:'smooth'})" style="cursor:pointer"><img src="/logo-seal.png" alt="" class="logo-mark" width="40" height="40"><span>해남공구마켓<small>전국 생산자와 함께하는 농·수·축산물 공동구매</small></span></div><div class="search-wrap"><input id="productSearch" type="search" autocomplete="off" placeholder="상품 찾기 (키위, ㄱㄷ)" aria-label="상품 찾기" oninput="onProductSearch()" onfocus="onProductSearch()"><div id="searchSuggest" class="search-suggest"></div></div><div class="header-right"><button type="button" id="a2hsHead" class="a2hs-head" onclick="a2hsOpen()" hidden>📲 바로가기</button><a class="header-link lookup-link" href="#" onclick="event.preventDefault();openLookupModal()">주문조회</a><a class="header-link" href="#products">진행 공구 보기</a></div></div></header>
 <div id="a2hsBar" class="a2hs-bar" hidden><img src="/icon-192.png" alt=""><div><b>해남공구마켓 바로가기</b><small>홈 화면에 추가하면 다음 공구도 한 번에!</small></div><button type="button" class="go" onclick="a2hsOpen()">추가하기</button><button type="button" class="x" onclick="a2hsLater()" aria-label="닫기">✕</button></div>
 <div id="a2hsModal" class="a2hs-modal" onclick="if(event.target===this)a2hsClose()"><div class="box"><button type="button" class="x" onclick="a2hsClose()" aria-label="닫기">✕</button><img src="/icon-192.png" alt="" class="ic"><h3>홈 화면에 바로가기 추가</h3><div id="a2hsGuide"></div></div></div>
 <section class="hero"><div class="hero-in"><div><div class="eyebrow">HAENAM GROUP BUY MARKET</div><h1>전국 생산자의 좋은 상품을<br>함께 더 합리적으로</h1><p>농산물·수산물·축산물까지 전국 생산자가 직접 준비한 공동구매를 한곳에서 확인하세요.<br>남은 기간과 현재 주문 현황도 실시간으로 확인할 수 있습니다.</p></div><div class="hero-box"><strong>🌾 지금 진행 중인 공구</strong><span>상품마다 마감일과 현재 주문 현황이 표시됩니다. 마감 전에 주문해 주세요.</span></div></div></section>
@@ -239,6 +248,7 @@ main>.section-head{display:none}
  <a href="#" onclick="event.preventDefault();window.scrollTo({top:0,behavior:'smooth'})"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>홈</a>
  <a href="#" onclick="event.preventDefault();window.scrollTo({top:0,behavior:'smooth'});setTimeout(()=>{const i=document.getElementById('productSearch');if(i)i.focus()},300)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>검색</a>
  <a href="#reviews"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>후기</a>
+ <a href="#" onclick="event.preventDefault();openLookupModal()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4"/><path d="M12 11v10"/></svg>주문조회</a>
  <a href="https://open.kakao.com/o/gnuO7mXi" target="_blank" rel="noopener" onclick="trackAsk()" class="nav-kakao"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4c-4.9 0-9 3.1-9 7 0 2.5 1.7 4.7 4.2 5.9L6.5 20l4-2.4c.5.1 1 .1 1.5.1 4.9 0 9-3.1 9-7s-4.1-6.7-9-6.7z"/></svg>카톡문의</a>
 </nav>
 <footer>
@@ -247,6 +257,20 @@ main>.section-head{display:none}
   <!--SEO-LIST-START--><nav class="seo-list" aria-label="공동구매 상품"><b>공동구매 상품</b> <a href="/p/P-20261118200608-827.html">제주 노지감귤 5kg</a> · <a href="/p/P-20261023175212-432.html">해남절임배추</a> · <a href="/p/P-20261029134408-654.html">해남고구마</a> · <a href="/p/P-20261110235320-768.html">해남골드키위</a> · <a href="/p/P-20261030210233-354.html">땅끝호박당 베이글7종</a> · <a href="/p/P-20261118200553-487.html">부사 사과</a> · <a href="/p/P-20261118200604-750.html">나주 신고배 특품 5kg</a> · <a href="/p/P-20261115160022-362.html">참두릅</a> · <a href="/p/P-20261115170659-606.html">LA갈비선물세트</a> · <a href="/p/P-20261115170801-921.html">갈비살</a> · <a href="/p/">전체 상품 보기</a></nav><!--SEO-LIST-END-->
 </footer>
 
+<div id="lookupModal" class="modal" onclick="if(event.target===this)closeLookupModal()">
+ <div class="modal-card" style="max-width:520px">
+  <div class="modal-top"><strong>내 주문 조회</strong><button class="close" type="button" onclick="closeLookupModal()">×</button></div>
+  <div class="modal-body">
+   <form class="lk-form" onsubmit="event.preventDefault();runLookup()">
+    <input id="lkName" type="text" autocomplete="name" placeholder="주문하신 분 이름" required>
+    <input id="lkPhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="주문 때 쓴 전화번호 (010-0000-0000)" required>
+    <button class="btn" type="submit" id="lkBtn">주문 조회하기</button>
+    <p class="lk-note">주문서에 적은 이름과 전화번호가 모두 맞아야 조회됩니다. 송장번호를 누르면 택배사 배송조회로 이동합니다.</p>
+   </form>
+   <div id="lkResult"></div>
+  </div>
+ </div>
+</div>
 <div id="reviewModal" class="modal" onclick="reviewBackdropClose(event)">
  <div class="modal-card review-modal-card">
   <div class="modal-top"><strong>구매후기 작성</strong><button class="close" type="button" onclick="closeReviewModal()">×</button></div>
@@ -1864,6 +1888,50 @@ loadBusinessFooter();
  // 크롬 설치창이 안 오는 경우(아이폰·삼성인터넷·카톡 등)에도 안내 버튼은 보여줌
  if(isMobile&&!standalone) setTimeout(show,1200);
 })();
+
+/* ---------- 2026-11-19 손님 주문조회 ---------- */
+const LK_KEY='hn_lookup_v1';
+function openLookupModal(){
+ try{const v=JSON.parse(localStorage.getItem(LK_KEY)||'null');if(v){if(!document.getElementById('lkName').value)document.getElementById('lkName').value=v.n||'';if(!document.getElementById('lkPhone').value)document.getElementById('lkPhone').value=v.p||'';}}catch(_){}
+ document.getElementById('lookupModal').classList.add('open');document.body.style.overflow='hidden';
+ setTimeout(()=>{const n=document.getElementById('lkName');if(!n.value)n.focus()},100);
+ try{if(window.trackOrderStep)window.trackOrderStep('lookup_open',null)}catch(_){}
+}
+function closeLookupModal(){document.getElementById('lookupModal').classList.remove('open');document.body.style.overflow='';}
+function lkTrackUrl(courier,no){
+ const c=s(courier),n=encodeURIComponent(no);
+ if(/로젠/.test(c))return 'https://www.ilogen.com/web/personal/trace/'+n;
+ if(/한진/.test(c))return 'https://www.hanjin.com/kor/CMS/DeliveryMgr/WaybillResult.do?mCode=MN038&schLang=KR&wblnumText2='+n;
+ if(/CJ|대한통운/i.test(c))return 'https://trace.cjlogistics.com/next/tracking.html?wblNo='+n;
+ if(/우체국/.test(c))return 'https://service.epost.go.kr/trace.RetrieveDomRigiTraceList.comm?sid1='+n;
+ if(/롯데/.test(c))return 'https://www.lotteglogis.com/home/reservation/tracking/linkView?InvNo='+n;
+ return 'https://search.naver.com/search.naver?query='+encodeURIComponent((c||'택배')+' 배송조회 '+no);
+}
+function lkCopy(btn,no){try{navigator.clipboard.writeText(no).then(()=>{btn.textContent='복사됨 ✓';setTimeout(()=>btn.textContent='번호 복사',1500)})}catch(_){}}
+async function runLookup(){
+ const name=document.getElementById('lkName').value.trim(), phone=document.getElementById('lkPhone').value.trim();
+ const box=document.getElementById('lkResult'), btn=document.getElementById('lkBtn');
+ if(!name||phone.replace(/[^0-9]/g,'').length<10){box.innerHTML='<div class="lk-err">이름과 전화번호를 정확히 넣어 주세요.</div>';return}
+ btn.disabled=true;btn.textContent='조회 중...';box.innerHTML='';
+ try{
+  const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'myOrders',name,phone})}).then(x=>x.json());
+  if(!r.success)throw new Error(r.message||'조회하지 못했습니다.');
+  const list=r.orders||[];
+  if(!list.length){box.innerHTML='<div class="lk-err">일치하는 주문이 없습니다. 주문서에 적은 이름·전화번호인지 확인해 주시고, 그래도 안 나오면 카톡으로 문의해 주세요.</div>';return}
+  try{localStorage.setItem(LK_KEY,JSON.stringify({n:name,p:phone}))}catch(_){}
+  box.innerHTML='<div class="lk-list">'+list.map(o=>{
+   const cls=o.status==='배송완료'?'done':o.status==='취소·환불'?'cancel':(o.status==='배송중'?'':'wait');
+   const trk=(o.trackingNumbers||[]).map(no=>`<a href="${e(lkTrackUrl(o.courier,no))}" target="_blank" rel="noopener">${e(o.courier||'택배')} ${e(no)} 배송조회 →</a><button type="button" class="copy" onclick="lkCopy(this,'${e(no)}')">번호 복사</button>`).join('');
+   const info=[o.orderedAt?('주문 '+e(o.orderedAt.split(' 오')[0])):'', o.deliveryDate?('희망 도착 '+e(o.deliveryDate)):'', o.trackingDate?('발송 '+e(o.trackingDate)):''].filter(Boolean).join(' · ');
+   const guide=o.status==='입금 확인 중'?'<div class="lk-meta" style="margin-top:6px">입금이 확인되면 출고 준비를 시작합니다.</div>':o.status==='출고 준비 중'?'<div class="lk-meta" style="margin-top:6px">출고되면 송장번호가 이곳에 표시됩니다.</div>':'';
+   return `<div class="lk-card"><span class="lk-st ${cls}">${e(o.status)}</span><h4>${e(o.productName)} ${o.qty?e(o.qty)+'개':''}</h4><div class="lk-meta">${info}</div>${trk?`<div class="lk-trk">${trk}</div>`:''}${guide}</div>`;
+  }).join('')+'</div>';
+  try{if(window.trackOrderStep)window.trackOrderStep('lookup_ok',null)}catch(_){}
+ }catch(err){box.innerHTML='<div class="lk-err">'+e(err.message||'조회 중 오류가 났습니다.')+'</div>'}
+ finally{btn.disabled=false;btn.textContent='주문 조회하기'}
+}
+// 주소에 ?lookup=1 또는 #lookup 이 있으면 주문조회 창을 바로 엽니다 (카톡 안내용)
+if(new URLSearchParams(location.search).get('lookup')||location.hash==='#lookup')setTimeout(openLookupModal,300);
 </script>
 </body>
 </html>
