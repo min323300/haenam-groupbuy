@@ -331,7 +331,7 @@ main>.section-head{display:none}
       <select id="deliveryDate">
         <option value="">희망 도착일을 선택해 주세요</option>
       </select>
-      <div class="muted">관리자가 지정한 날짜 중에서 선택해 주세요.</div>
+      <div class="muted">산지에서 준비해 보내야 해서 <b>도착일 2일 전까지</b> 주문하신 날짜만 고를 수 있어요.</div>
     </div>
     <label>요청사항</label><textarea id="memo" placeholder="배송 시 요청사항을 적어주세요."></textarea>
     <!-- 2026-11-16 현금영수증 (10만원 이상 주문에만 표시) -->
@@ -970,13 +970,23 @@ function showOrderForm(){
  const sob=document.getElementById('showOrderFormButton'); if(sob)sob.style.display='none';
  form.scrollIntoView({behavior:'smooth',block:'start'});
 }
-// 받는 날: 지난 날짜·오늘 날짜는 빼고 보여줍니다.
+// 받는 날: 산지 준비 기간이 필요해서 도착일 2일 전까지만 고를 수 있습니다 (2026-11-19).
+// 예) 20일 도착 → 18일까지 주문 가능, 19일에 주문하면 20일은 선택 불가(회색)
+const DELIVERY_LEAD_DAYS=2;
 function parseYmd(v){const m=String(v||'').match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);return m?new Date(+m[1],+m[2]-1,+m[3]):null}
+function deliveryCutoff(){const t=new Date();t.setHours(0,0,0,0);t.setDate(t.getDate()+DELIVERY_LEAD_DAYS);return t}
 function upcomingDeliveryDates(p){
  if(!p||p.deliveryDateEnabled!=='사용'||!Array.isArray(p.deliveryDates))return [];
- const today=new Date();today.setHours(0,0,0,0);
- return p.deliveryDates.filter(d=>{const x=parseYmd(d);return x&&x>today});
+ const min=deliveryCutoff();
+ return p.deliveryDates.filter(d=>{const x=parseYmd(d);return x&&x>=min});
 }
+// 오늘~내일 도착이라 이미 주문이 마감된 날짜 (선택은 안 되고 회색으로만 보여줌)
+function closedDeliveryDates(p){
+ if(!p||p.deliveryDateEnabled!=='사용'||!Array.isArray(p.deliveryDates))return [];
+ const today=new Date();today.setHours(0,0,0,0);const min=deliveryCutoff();
+ return p.deliveryDates.filter(d=>{const x=parseYmd(d);return x&&x>=today&&x<min});
+}
+function deliveryLabel(d){const x=parseYmd(d);if(!x)return s(d);return (x.getMonth()+1)+'월 '+x.getDate()+'일 ('+'일월화수목금토'[x.getDay()]+')'}
 function renderArriveBox(dates){
  const box=document.getElementById('modalArrive'), jump=document.getElementById('jumpToOrderBtn');
  if(!box)return;
@@ -1043,10 +1053,17 @@ const futureDates = upcomingDeliveryDates(p);
 renderArriveBox(futureDates);
 renderNpayBox(p);
 if (futureDates.length > 0) {
+  closedDeliveryDates(p).forEach(function(date) {
+    const option = document.createElement('option');
+    option.value = '';
+    option.disabled = true;
+    option.textContent = deliveryLabel(date) + ' — 주문 마감 (도착 2일 전까지 주문)';
+    deliveryDate.appendChild(option);
+  });
   futureDates.forEach(function(date) {
     const option = document.createElement('option');
     option.value = date;
-    option.textContent = date;
+    option.textContent = deliveryLabel(date);
     deliveryDate.appendChild(option);
   });
 
