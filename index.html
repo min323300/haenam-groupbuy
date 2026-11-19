@@ -646,10 +646,10 @@ function openProductFromUrl(){
  if(deepLinkDone)return;
  const code=s(new URLSearchParams(location.search).get('product')).trim();
  if(!code){deepLinkDone=true;return}
- const p=products.find(x=>s(x.productCode)===code);
+ const p=products.find(x=>s(x.productCode)===code)||products.find(x=>codeMatch(x.productCode,code));
  if(!p)return; // 아직 목록에 없으면 최신 목록을 받은 뒤 다시 시도
  deepLinkDone=true;
- if(stateOf(p)==='판매중')openProduct(code);
+ if(stateOf(p)==='판매중')openProduct(p.productCode);
 }
 async function loadProducts(){
  let shownFromCache=false;
@@ -704,7 +704,9 @@ let searchQuery='';
 const PICK_CODES=String(new URLSearchParams(location.search).get('pick')||'').split(',').map(x=>x.trim()).filter(Boolean).slice(0,20);
 let pickShowAll=false, pickScrolled=false;
 const PICK_BY=String(new URLSearchParams(location.search).get('by')||'').trim().slice(0,12);
-function inPick(p){return siblingsOf(p).some(x=>PICK_CODES.includes(s(x.productCode)))||PICK_CODES.includes(s(p.productCode))}
+// 짧은 코드(상품코드 끝 3자리)도 인식: pick=768,637,827
+function codeMatch(code,token){code=s(code);token=s(token);return !!token&&(code===token||code.endsWith('-'+token))}
+function inPick(p){return [p].concat(siblingsOf(p)).some(x=>PICK_CODES.some(t=>codeMatch(x.productCode,t)))}
 function togglePickAll(v){pickShowAll=v;renderProducts();document.getElementById('products').scrollIntoView({behavior:'smooth'})}
 function onProductSearch(){
  const input=document.getElementById('productSearch'), box=document.getElementById('searchSuggest');

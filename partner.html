@@ -719,11 +719,23 @@ function ppNote(){ const el=$('ppNote'); return el?String(el.value||'').trim().s
 try{ const el=document.getElementById('ppNote'); if(el){ el.value=localStorage.getItem(PP_NOTE_KEY)||PP_NOTE_PRESETS[0]; el.addEventListener('input',()=>{ try{localStorage.setItem(PP_NOTE_KEY,el.value)}catch(_){} ppRenderNoteChips(); }); ppRenderNoteChips(); } }catch(_){}
 function ppHeader(){ return ppName() ? ppName() + '님이 추천하는 해남 공동구매' : '해남공구마켓 추천 공동구매'; }
 function ppBase(){ return $('partnerUrl').value || MARKET_URL; }
-function ppLinkOne(p){ const u = new URL(promoLink(ppBase(), promoText_(p.productCode))); u.searchParams.set('product', promoText_(p.productCode)); if (ppName()) u.searchParams.set('by', ppName()); return u.toString(); }
-function ppLinkPick(list){
-  if (list.length === 1) return ppLinkOne(list[0]);
-  const codes = list.map(p => promoText_(p.productCode)).join(',');
-  const u = new URL(promoLink(ppBase(), codes)); u.searchParams.set('pick', codes); if (ppName()) u.searchParams.set('by', ppName()); return u.toString();
+// 2026-11-19 링크 짧게: 상품코드 끝 3자리만(겹치면 전체 코드), utm_campaign 빼고, 이름(by)은 카톡 카드 링크에만
+function ppShortCode(p){
+  const code = promoText_(p.productCode), tail = code.split('-').pop();
+  const clash = ppProducts.some(x => promoText_(x.productCode) !== code && promoText_(x.productCode).split('-').pop() === tail);
+  return clash || !/^\d{3,}$/.test(tail) ? code : tail;
+}
+function ppShortLink(params, withBy){
+  const u = new URL(ppBase());
+  u.searchParams.set('utm_source', 'kakao'); u.searchParams.set('utm_medium', 'share');
+  Object.keys(params).forEach(k => u.searchParams.set(k, params[k]));
+  if (withBy && ppName()) u.searchParams.set('by', ppName());
+  return u.toString().replace(/%2C/g, ',');
+}
+function ppLinkOne(p, withBy){ return ppShortLink({ product: ppShortCode(p) }, withBy !== false); }
+function ppLinkPick(list, withBy){
+  if (list.length === 1) return ppLinkOne(list[0], withBy);
+  return ppShortLink({ pick: list.map(ppShortCode).join(',') }, withBy !== false);
 }
 
 /* --- 홍보 문구 --- */
@@ -746,7 +758,7 @@ function ppRender(force){
   ppPrepCollage(list);
   $('ppThumbs').innerHTML = list.slice(0, 4).map(p => { const img = promoImage(p.image, 'w600'); return img ? `<img src="${esc(img)}" alt="${esc(p.productName)}">` : ''; }).join('');
   if (!force && ppEdited) { ppRenderTrack(); return; }
-  const link = ppLinkPick(list);
+  const link = ppLinkPick(list, false); // 붙여넣는 문구에는 짧은 링크
   $('ppText').value = list.length === 1 ? (ppName() ? buildPromoText(list[0], link).replace('\n', '\n👤 ' + ppName() + '님 추천\n') : buildPromoText(list[0], link)) : ppMultiText(list, link);
   ppEdited = false; ppRenderTrack();
   if (!$('partnerUrl').value) message('ppMessage', '내 전용 URL을 확인하지 못해 공식 URL이 들어갔습니다. 새로고침 후 다시 시도해 주세요.', true);
