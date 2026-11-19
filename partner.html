@@ -789,13 +789,15 @@ function ppPrepCollage(list){
     try {
       const imgs = (await Promise.all(list.slice(0, 4).map(p => ppLoadImg(ppCorsImage(p.image))))).filter(Boolean);
       if (imgs.length < 2) return '';
-      const n = imgs.length, gap = 6, W = 800, H = n === 4 ? 800 : 400;
+      // 2026-11-19 카톡이 사진을 정사각형 가까이 잘라 보여서, 처음부터 800×800 정사각형으로 배치 (2개: 좌우 / 3개: 왼쪽 큰 칸 + 오른쪽 2칸 / 4개: 2×2)
+      const n = imgs.length, g = 6, W = 800, H = 800, hw = (W - g) / 2, hh = (H - g) / 2;
+      const rects = n === 2 ? [[0, 0, hw, H], [hw + g, 0, hw, H]]
+        : n === 3 ? [[0, 0, hw, H], [hw + g, 0, hw, hh], [hw + g, hh + g, hw, hh]]
+        : [[0, 0, hw, hh], [hw + g, 0, hw, hh], [0, hh + g, hw, hh], [hw + g, hh + g, hw, hh]];
       const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
       c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, H);
-      const cells = n === 4 ? [[0,0,2,2],[1,0,2,2],[0,1,2,2],[1,1,2,2]] : imgs.map((_, k) => [k, 0, n, 1]);
       imgs.forEach((im, k) => {
-        const [cx, cy, cols, rows] = cells[k];
-        const cw = (W - gap * (cols - 1)) / cols, ch = (H - gap * (rows - 1)) / rows, x = cx * (cw + gap), y = cy * (ch + gap);
+        const [x, y, cw, ch] = rects[k];
         const sc = Math.max(cw / im.width, ch / im.height), sw = cw / sc, sh = ch / sc; // 가운데 맞춰 꽉 채움
         c.drawImage(im, (im.width - sw) / 2, (im.height - sh) / 2, sw, sh, x, y, cw, ch);
       });
@@ -911,7 +913,7 @@ async function sharePromoList(list, text, link){
         window.Kakao.Share.sendDefault({
           objectType: 'feed',
           content: { title: '🌾 ' + ppHeader(), description: ppNote() || '산지에서 바로 보내는 공동구매 가격이에요',
-            imageUrl: collage || promoImage(list[0].image, 'w800') || (MARKET_URL + 'share.png'), link: { mobileWebUrl: link, webUrl: link } },
+            imageUrl: collage || promoImage(list[0].image, 'w800') || (MARKET_URL + 'share.png'), imageWidth: 800, imageHeight: 800, link: { mobileWebUrl: link, webUrl: link } },
           itemContent: { profileText: '해남공구마켓',
             items: list.slice(0, 5).map(p => { const sale = Number(p.salePrice || 0); return { item: ppShortName(p), itemOp: sale ? sale.toLocaleString('ko-KR') + '원' + (ppHasOptions(p) ? '~' : '') : '가격 준비중' }; }) },
           buttons: [{ title: list.length > 1 ? '상품 ' + list.length + '개 보기' : '상품 보기', link: { mobileWebUrl: link, webUrl: link } }]
