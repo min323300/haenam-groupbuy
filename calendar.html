@@ -293,7 +293,7 @@ function rebuild(){
   const memoMap={};
   (raw.ord||[]).forEach(o=>{ const no=String(o.orderNo||o.orderNumber||'').trim(); if(no) memoMap[no]=o; });
   const base=raw.ship||Object.values(memoMap);
-  const all=base.map(r=>normalizeRow(r,memoMap)).filter(o=>o.orderNumber);
+  const all=base.map(r=>normalizeRow(r,memoMap)).filter(o=>o.orderNumber&&o.shippingStatus!=='취소'); // 2026-11-19 취소 주문은 달력에서 뺌
   // 네이버(스마트스토어) 주문 — 관리자 「🟢 네이버 주문」에서 붙여넣은 것
   (raw.naver||[]).filter(n=>n&&n.productOrderNo&&n.shippingStatus!=='취소').forEach(n=>{
     all.push({orderNumber:'N'+n.productOrderNo, productCode:String(n.productCode||'').trim(), productName:String(n.productName||'').trim(),

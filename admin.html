@@ -667,6 +667,7 @@ async function saveSupplierApplication(btn){
       <label><input type="checkbox" class="ssf" value="송장등록" checked onchange="onShipStatusFilterChange()"> 송장등록 <b id="ssfCount-송장등록">0</b></label>
       <label><input type="checkbox" class="ssf" value="배송중" checked onchange="onShipStatusFilterChange()"> 배송중 <b id="ssfCount-배송중">0</b></label>
       <label><input type="checkbox" class="ssf" value="배송완료" onchange="onShipStatusFilterChange()"> 배송완료 <b id="ssfCount-배송완료">0</b></label>
+      <label><input type="checkbox" class="ssf" value="취소" onchange="onShipStatusFilterChange()"> 취소(환불) <b id="ssfCount-취소">0</b></label>
       <span class="muted">화면 목록과 엑셀 모두 선택한 상품·상태만 담깁니다. (한진 엑셀은 미입금 제외)</span>
     </div>
 
@@ -3676,7 +3677,7 @@ async function togglePurchasePayment(purchaseNumber,status){
 
 /* ---------- 주문배송관리 ---------- */
 let shippingRows=[];
-const SHIP_STATUSES=['배송대기','송장등록','배송중','배송완료'];
+const SHIP_STATUSES=['배송대기','송장등록','배송중','배송완료','취소']; // 2026-11-19 취소 추가
 
 function shipPhone(v){
   let p=String(v||'').replace(/[^0-9]/g,'');
@@ -3689,11 +3690,12 @@ function shipPassword(){
 }
 
 const HANJIN_DEFAULT_COURIER = '한진택배';
-const SHIP_CATEGORIES = ['unpaid','배송대기','송장등록','배송중','배송완료'];
+const SHIP_CATEGORIES = ['unpaid','배송대기','송장등록','배송중','배송완료','취소'];
 
 // 배송 화면 분류: 배송완료 > 미입금 > 배송상태
 function shipCategory(r){
   if(r.shippingStatus === '배송완료') return '배송완료';
+  if(r.shippingStatus === '취소') return '취소';
   if(!r.paymentConfirmed) return 'unpaid';
   return SHIP_STATUSES.includes(r.shippingStatus) ? r.shippingStatus : '배송대기';
 }
