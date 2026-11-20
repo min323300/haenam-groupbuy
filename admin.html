@@ -248,6 +248,26 @@ async function saveSupplierApplication(btn){
       </table>
     </div>
   </div>
+  <!-- 2026-11-19 공지 팝업 -->
+  <div class="card">
+    <h2>📢 홈페이지 공지 팝업</h2>
+    <p class="muted">켜 두면 손님이 홈페이지에 들어올 때 팝업으로 보입니다. 손님은 「닫기」 또는 「오늘 하루 보지 않기」를 누를 수 있습니다. 관련 상품을 고르면 그 상품 주문창 맨 위에도 같은 공지가 보입니다. 저장할 때 위 관리자 비밀번호를 씁니다.</p>
+    <div class="grid" style="margin-top:10px">
+      <div class="field full"><label><input type="checkbox" id="noticeOn"> <b>공지 팝업 켜기</b></label></div>
+      <div class="field full"><label>제목</label><input id="noticeTitle" maxlength="60" placeholder="예: 사과 공구 일시 중단 안내"></div>
+      <div class="field full"><label>내용 (줄바꿈 그대로 보임)</label><textarea id="noticeBody" rows="6" maxlength="1000" placeholder="예: 산지 사정으로 새 주문 접수를 잠시 멈춥니다.&#10;이미 주문하신 상품은 주문하신 가격 그대로 정상 발송됩니다."></textarea></div>
+      <div class="field"><label>보이기 시작일 (비우면 바로)</label><input id="noticeStart" type="date"></div>
+      <div class="field"><label>보이기 종료일 (비우면 끌 때까지)</label><input id="noticeEnd" type="date"></div>
+      <div class="field full"><label>관련 상품 (선택)</label><div id="noticeProducts" class="muted">상품 목록을 불러오면 여기서 고를 수 있습니다.</div></div>
+    </div>
+    <div class="toolbar">
+      <button class="primary" type="button" onclick="saveNotice()">공지 저장</button>
+      <button class="secondary" type="button" onclick="loadNotice()">현재 공지 불러오기</button>
+      <a class="secondary" href="/?notice=preview" target="_blank" rel="noopener" style="text-decoration:none;padding:11px 15px;border-radius:9px">홈페이지에서 미리보기 ↗</a>
+    </div>
+    <div id="noticeMessage" class="notice"></div>
+  </div>
+
     <!-- 방문자 분석 -->
   <div class="card">
     <h2>③ 방문자 분석</h2>
@@ -4536,6 +4556,42 @@ async function centerSetPassword(code){
   catch(e){ showMessage('centerMessage','비밀번호 변경 오류: '+e.message,true); }
 }
 async function centerCopy(url){ try{ await navigator.clipboard.writeText(url); showMessage('centerMessage','링크를 복사했습니다: '+url); }catch(_){ prompt('링크를 복사해 주세요',url); } }
+
+/* ---------- 2026-11-19 공지 팝업 ---------- */
+let noticeCur=null;
+function renderNoticeProducts(sel){
+  const box=$('noticeProducts'); if(!box) return;
+  const list=(products||[]).filter(p=>p.productCode);
+  if(!list.length){ box.textContent='상품 목록을 불러오면 여기서 고를 수 있습니다.'; return; }
+  const on=new Set(sel||[]);
+  box.innerHTML=list.map(p=>`<label style="display:inline-flex;gap:4px;align-items:center;margin:3px 10px 3px 0;font-size:13px;color:#222"><input type="checkbox" class="noticeProd" value="${esc(p.productCode)}"${on.has(p.productCode)?' checked':''}>${esc(p.productName)}</label>`).join('');
+}
+async function loadNotice(){
+  try{
+    const res=await apiGet({action:'settings'});
+    let n={}; try{ n=JSON.parse((res.settings||{}).notice||'{}')||{}; }catch(_){}
+    noticeCur=n;
+    $('noticeOn').checked=!!n.on; $('noticeTitle').value=n.title||''; $('noticeBody').value=n.body||'';
+    $('noticeStart').value=n.start||''; $('noticeEnd').value=n.end||'';
+    if(!(products||[]).length){ try{ await loadProducts(); }catch(_){} }
+    renderNoticeProducts(n.productCodes||[]);
+    showMessage('noticeMessage', n.on ? '현재 공지가 켜져 있습니다.' : '현재 켜진 공지가 없습니다.');
+  }catch(e){ showMessage('noticeMessage','공지 불러오기 오류: '+e.message,true); }
+}
+async function saveNotice(){
+  try{
+    const password=adminPw(); if(!password) return;
+    const changed=!noticeCur || noticeCur.title!==$('noticeTitle').value.trim() || noticeCur.body!==$('noticeBody').value;
+    const notice={ on:$('noticeOn').checked, id: changed ? String(Date.now()) : (noticeCur.id||String(Date.now())),
+      title:$('noticeTitle').value.trim(), body:$('noticeBody').value, start:$('noticeStart').value, end:$('noticeEnd').value,
+      productCodes:[...document.querySelectorAll('.noticeProd:checked')].map(x=>x.value) };
+    const res=await apiPost({action:'noticeSave',password,notice});
+    if(!res.success) throw new Error(res.message||'저장 실패');
+    noticeCur=res.notice;
+    showMessage('noticeMessage', res.message+(notice.on?' 홈페이지를 새로고침하면 팝업이 보입니다. (내용을 바꾸면 「오늘 하루 보지 않기」 한 손님에게도 다시 보입니다)':''));
+  }catch(e){ showMessage('noticeMessage','공지 저장 오류: '+e.message,true); }
+}
+setTimeout(()=>{ try{ loadNotice(); }catch(_){} }, 800);
 </script>
 
 </body>

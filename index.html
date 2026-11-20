@@ -79,6 +79,14 @@ main{max-width:1180px;margin:45px auto;padding:0 20px 70px}
 .lk-st.wait{background:#fff3e0;color:#b45309}.lk-st.done{background:#eef2ff;color:#3730a3}.lk-st.cancel{background:#eee;color:#666}
 .lk-trk{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.lk-trk a{display:inline-block;background:#176c46;color:#fff;text-decoration:none;font-weight:800;font-size:14px;padding:8px 12px;border-radius:10px}
 .lk-trk .copy{background:#fff;border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:13px;cursor:pointer}
+/* 2026-11-19 공지 팝업 */
+.ntc-back{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9998;display:flex;align-items:center;justify-content:center;padding:18px}
+.ntc-box{background:#fff;border-radius:18px;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.25);overflow:hidden}
+.ntc-head{background:#176c46;color:#fff;padding:14px 18px;font-weight:900;font-size:17px}
+.ntc-body{padding:16px 18px;font-size:15px;line-height:1.7;white-space:pre-wrap;max-height:55vh;overflow:auto;color:#222}
+.ntc-btns{display:flex;border-top:1px solid #e5e9e5}.ntc-btns button{flex:1;border:0;background:#fff;padding:13px;font-size:14px;cursor:pointer;font-family:inherit}
+.ntc-btns button+button{border-left:1px solid #e5e9e5;font-weight:800;color:#176c46}
+.ntc-inline{background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px 12px;margin:0 0 10px;font-size:14px;line-height:1.6;white-space:pre-wrap;color:#7c2d12}
 .modal.open{display:block} .modal-card{max-width:720px;margin:20px auto;background:#fff;border-radius:22px;overflow:hidden;overflow:clip}
 .npay-box{margin:10px 0 4px}.npay-btn{display:block;width:100%;padding:13px;border:0;border-radius:10px;background:#03c75a;color:#fff;font-size:16px;font-weight:900;cursor:pointer}.npay-btn .n{display:inline-block;margin-right:6px;padding:0 6px;border-radius:4px;background:#fff;color:#03c75a;font-weight:900}.npay-sub{margin-top:5px;color:#666;font-size:12.5px;text-align:center}
 .jump-order-btn{position:sticky;bottom:12px;display:block;width:100%;margin-top:14px;padding:15px;font-size:17px;box-shadow:0 6px 18px rgba(0,0,0,.18);z-index:5}.jump-order-btn.hide{display:none}
@@ -300,7 +308,7 @@ main>.section-head{display:none}
   <div class="modal-body">
    <img id="modalImage" class="detail-img" alt="상품 이미지" style="display:none">
    <h2 id="modalProductName"></h2><div id="modalDescription" class="desc"></div>
-   <div class="price" id="modalPrice"></div><div id="optionSummary" style="display:none"></div><div id="modalTimer" class="timer"></div><div id="modalArrive" class="arrive-box" style="display:none"></div><div id="npayBox" class="npay-box" style="display:none"></div>
+   <div id="modalNotice"></div><div class="price" id="modalPrice"></div><div id="optionSummary" style="display:none"></div><div id="modalTimer" class="timer"></div><div id="modalArrive" class="arrive-box" style="display:none"></div><div id="npayBox" class="npay-box" style="display:none"></div>
    <div id="detailBlocks" class="detail-blocks"></div>
    <div id="paymentBox" class="payment"></div>
    <div id="orderAmountBox" class="payment" style="display:none; margin-top:8px;">
@@ -1030,6 +1038,7 @@ function openProduct(code){
  modalProductName.textContent=groupOf(p)||p.productName||'상품';
  modalDescription.textContent=productMeta(p,'cardDesc')||siblingsOf(p).map(x=>productMeta(x,'cardDesc')).find(Boolean)||p.description||'';
  renderOptionBox(p);
+ try{const mn=document.getElementById('modalNotice'); if(mn) mn.innerHTML=noticeForProduct(p);}catch(_){}
  modalPrice.innerHTML=`<span class="price-row">${money(p.salePrice)}${priceNoteHtml(p)}</span>`;
  modalTimer.textContent=remainText(p);
  const img=imageUrl(p.image||lead.image, detailImgSize()); modalImage.style.display=img?'block':'none'; if(img)modalImage.src=img;
@@ -1836,6 +1845,7 @@ async function loadBusinessFooter() {
     const r = await fetch(API_URL + '?action=settings&t=' + Date.now());
     const data = await r.json();
     const settings = data.settings || {};
+    try{ showSiteNotice(settings.notice); }catch(_){}
 
     const parts = [];
 
@@ -1950,6 +1960,36 @@ async function runLookup(){
 }
 // 주소에 ?lookup=1 또는 #lookup 이 있으면 주문조회 창을 바로 엽니다 (카톡 안내용)
 if(new URLSearchParams(location.search).get('lookup')||location.hash==='#lookup')setTimeout(openLookupModal,300);
+
+/* ---------- 2026-11-19 공지 팝업 (관리자에서 켜고 끔) ---------- */
+let SITE_NOTICE=null;
+function noticeActive(n){
+  if(!n||!n.on||!(n.title||n.body))return false;
+  const t=new Date(),d=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+  if(n.start&&d<n.start)return false; if(n.end&&d>n.end)return false; return true;
+}
+function showSiteNotice(raw){
+  let n=null; try{ n=typeof raw==='string'?JSON.parse(raw||'null'):raw; }catch(_){ n=null; }
+  const preview=new URLSearchParams(location.search).get('notice')==='preview';
+  if(!n||(!noticeActive(n)&&!(preview&&(n.title||n.body))))return;
+  SITE_NOTICE=n;
+  const key='hn_notice_hide_'+(n.id||'');
+  const today=new Date().toDateString();
+  try{ if(!preview&&localStorage.getItem(key)===today)return; }catch(_){}
+  if(new URLSearchParams(location.search).get('product')||new URLSearchParams(location.search).get('lookup'))return; // 상품 바로가기·주문조회로 들어온 손님은 팝업 대신 주문창 안에 표시
+  const el=document.createElement('div'); el.className='ntc-back';
+  el.innerHTML=`<div class="ntc-box" role="dialog" aria-modal="true"><div class="ntc-head">📢 ${e(n.title||'공지사항')}</div><div class="ntc-body">${e(n.body||'')}</div><div class="ntc-btns"><button type="button" data-a="today">오늘 하루 보지 않기</button><button type="button" data-a="close">닫기</button></div></div>`;
+  el.addEventListener('click',ev=>{const a=ev.target.dataset&&ev.target.dataset.a; if(ev.target===el||a){ if(a==='today'){try{localStorage.setItem(key,today)}catch(_){}} el.remove(); }});
+  document.body.appendChild(el);
+}
+// 관련 상품 주문창 맨 위에 같은 공지 표시
+function noticeForProduct(p){
+  const n=SITE_NOTICE; if(!n||!noticeActive(n)||!p)return '';
+  const codes=n.productCodes||[]; if(!codes.length)return '';
+  const all=[p].concat(typeof siblingsOf==='function'?siblingsOf(p):[]).map(x=>s(x.productCode));
+  if(!all.some(c=>codes.includes(c)))return '';
+  return `<div class="ntc-inline"><b>📢 ${e(n.title||'공지')}</b>${n.body?'\n'+e(n.body):''}</div>`;
+}
 </script>
 </body>
 </html>
