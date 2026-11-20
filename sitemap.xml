@@ -19,13 +19,19 @@
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://haenamgonggu.kr/p/P-20261118200608-827.html</loc>
+    <loc>https://haenamgonggu.kr/p/P-20261120170001-311.html</loc>
     <lastmod>2026-11-20</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://haenamgonggu.kr/p/P-20261023175212-432.html</loc>
+    <lastmod>2026-11-20</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://haenamgonggu.kr/p/P-20261120184001-905.html</loc>
     <lastmod>2026-11-20</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
@@ -49,16 +55,40 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://haenamgonggu.kr/p/P-20261118200608-827.html</loc>
+    <lastmod>2026-11-20</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://haenamgonggu.kr/p/P-20261120191601-163.html</loc>
+    <lastmod>2026-11-20</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://haenamgonggu.kr/p/P-20261120191901-571.html</loc>
+    <lastmod>2026-11-20</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://haenamgonggu.kr/p/P-20261120192501-836.html</loc>
+    <lastmod>2026-11-20</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
     <loc>https://haenamgonggu.kr/p/P-20261118200553-487.html</loc>
     <lastmod>2026-11-20</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.8</priority>
+    <priority>0.5</priority>
   </url>
   <url>
     <loc>https://haenamgonggu.kr/p/P-20261118200604-750.html</loc>
     <lastmod>2026-11-20</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.8</priority>
+    <priority>0.5</priority>
   </url>
   <url>
     <loc>https://haenamgonggu.kr/p/P-20261115160022-362.html</loc>
