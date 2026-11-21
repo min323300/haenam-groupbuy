@@ -803,7 +803,8 @@ function categoryOf(p){
  const set=[leaderOf(p)].concat(siblingsOf(p),[p]).map(x=>productMeta(x,'category')).find(c=>CATEGORIES.includes(c));
  if(set)return set;
  const t=s(groupOf(p)||p.productName)+' '+s(p.productName);
- if(/배추|김장|고구마|감자|양파|마늘|대파|쪽파|고추|호박|당근|버섯|쌀|잡곡|옥수수|무청|시래기|브로콜리|양배추/.test(t))return '채소·김장';
+ if(/베이글|빵|케이크|쿠키|과자|한과|떡/.test(t))return '가공';
+ if(/두릅|나물|배추|김장|고구마|감자|양파|마늘|대파|쪽파|고추|호박|당근|버섯|쌀|잡곡|옥수수|무청|시래기|브로콜리|양배추/.test(t))return '채소·김장';
  if(/김치|곱창김|조미김|돌김|재래김|미역|다시마|젓갈|장아찌|떡|잼|즙|청|참기름|들기름|된장|고추장|반찬|^김\s|\s김\s/.test(t))return '가공';
  if(/가리비|오징어|갈치|과메기|킹크랩|대게|게|문어|낙지|쭈꾸미|주꾸미|굴|새우|전복|생선|가자미|골뱅이|세꼬시|조기|고등어|멸치|꼬막|바지락|홍합|장어|삼치|방어|광어|우럭|명태|황태|코다리|해삼|멍게|성게|매생이|톳/.test(t))return '수산';
  if(/한우|소고기|돼지|삼겹|목살|닭|오리|계란|달걀|육포|갈비/.test(t))return '축산';
