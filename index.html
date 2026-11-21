@@ -71,6 +71,7 @@ main{max-width:1180px;margin:45px auto;padding:0 20px 70px}
 .loading,.empty{grid-column:1/-1;text-align:center;padding:55px;background:#fff;border-radius:18px;color:#777}
 .share-btn svg,.card-share svg{width:18px;height:18px;fill:#191919;flex-shrink:0}.card-share svg{width:15px;height:15px}.share-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border:1.5px solid #fee500;background:#fee500;color:#191919;font-weight:800;font-size:15px;padding:12px;border-radius:12px;margin:10px 0 4px;font-family:inherit;cursor:pointer}.title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.title-row h3{min-width:0}.card-share{flex-shrink:0;margin-top:2px;display:flex;align-items:center;gap:4px;border:0;background:#fee500;color:#191919;font-weight:800;font-size:12.5px;padding:7px 11px;border-radius:999px;font-family:inherit;cursor:pointer;white-space:nowrap}.grid .card-share{padding:6px 9px;font-size:11.5px;margin-top:0}@media(max-width:600px){.grid .card-share span{display:none}.grid .card-share{padding:6px}.grid .card-share svg{width:16px;height:16px}}.share-toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(25,25,25,.92);color:#fff;font-size:14px;padding:11px 16px;border-radius:12px;z-index:200;max-width:90vw;text-align:center;line-height:1.5}
 .cat-tabs{max-width:1180px;margin:0 auto;padding:0 20px;display:flex;gap:24px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}.cat-tabs::-webkit-scrollbar{display:none}.cat-tabs:empty{display:none}.cat-tab{border:0;background:none;padding:10px 2px 9px;font-size:15px;font-weight:600;color:#8a938c;border-bottom:2.5px solid transparent;white-space:nowrap;font-family:inherit;cursor:pointer;flex-shrink:0}.cat-tab.on{color:#18261d;font-weight:800;border-bottom-color:var(--green)}.cat-head{grid-column:1/-1;display:flex;justify-content:space-between;align-items:baseline;margin:2px 0 4px}.cat-head h2{margin:0;font-size:20px}.cat-head span{font-size:13px;color:#7a847c}@media(max-width:600px){.cat-tabs{padding:0 12px;gap:20px}.cat-tab{font-size:14.5px}}
+.sb-box{background:#eef7f0;border:1px solid #cfe5d5;border-radius:12px;padding:11px 12px;margin:0 0 12px}.sb-box b{color:#17603c}.sb-row{display:flex;gap:6px;align-items:center;margin-top:8px}.sb-row select{flex:1;min-width:0;margin:0}.sb-fill{border:0;background:#1f6b45;color:#fff;font-weight:800;border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;cursor:pointer;white-space:nowrap}.sb-del{border:0;background:none;color:#7a847c;font-size:12px;text-decoration:underline;cursor:pointer;font-family:inherit;padding:4px 0 0}.sb-sub{color:#7a847c;font-size:12px}.sb-remember{margin-top:10px}
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;padding:20px;overflow:auto}
 /* 2026-11-19 손님 주문조회 */
 .lookup-link{margin-right:8px}
@@ -324,9 +325,10 @@ main>.section-head{display:none}
     주문금액 복사
   </button>
 </div>
-   <form id="orderForm">
-    <label>성함</label><input id="name" required autocomplete="name">
-    <label>연락처</label><input id="phone" type="tel" required placeholder="010-0000-0000" autocomplete="tel" inputmode="numeric">
+   <form id="orderForm" autocomplete="on">
+    <div id="savedBuyerBox" class="sb-box" style="display:none"></div>
+    <label>성함</label><input id="name" name="name" required autocomplete="name">
+    <label>연락처</label><input id="phone" name="tel" type="tel" required placeholder="010-0000-0000" autocomplete="tel" inputmode="numeric">
     <div id="phoneError" class="of-error">연락처를 010-0000-0000 형식으로 입력해 주세요.</div>
     <label>입금자명</label><input id="depositorName" required>
     <label class="of-inline"><input id="sameAsOrderer" type="checkbox" checked> 주문자와 같음</label>
@@ -336,7 +338,7 @@ main>.section-head{display:none}
     <label>배송 주소</label>
     <div class="of-row"><input id="zipcode" placeholder="우편번호" readonly><button type="button" class="of-sub-btn" id="findAddressBtn">주소 검색</button></div>
     <input id="addrBase" class="of-gap" placeholder="주소 검색 버튼을 눌러 주세요" readonly>
-    <input id="addrDetail" class="of-gap" placeholder="상세 주소 (동·호수 등)" autocomplete="address-line2">
+    <input id="addrDetail" name="address-line2" class="of-gap" placeholder="상세 주소 (동·호수 등)" autocomplete="address-line2">
     <input id="address" type="hidden">
     <div id="addressError" class="of-error">주소 검색 후 상세 주소까지 입력해 주세요.</div>
     <div id="deliveryDateBox" style="display:none;">
@@ -358,6 +360,7 @@ main>.section-head{display:none}
       <label class="of-inline" id="crSameWrap"><input id="crSamePhone" type="checkbox" checked> 주문 연락처와 같음</label>
       <div id="crError" class="of-error"></div>
     </div>
+    <label class="of-inline sb-remember"><input id="rememberBuyer" type="checkbox" checked> 이 휴대폰에 주문자·배송 정보 기억하기 <span class="sb-sub">(다음 주문 때 한 번에 채워요)</span></label>
     <div class="of-notice">
      <strong>주문 전 꼭 확인해 주세요</strong>
      <ul>
@@ -1116,6 +1119,47 @@ async function shareProduct(code){
  try{await navigator.clipboard.writeText(text+'\n'+url);shareToast('상품 링크를 복사했어요. 카톡 대화창에 붙여넣어 보내 주세요.')}
  catch(_){prompt('아래 링크를 복사해서 보내 주세요',url)}
 }
+
+// 2026-11-22 이 휴대폰에 주문자·배송 정보 기억 (서버에는 저장하지 않음, 이 브라우저 안에만)
+const BUYER_KEY='hn_buyers_v1';
+function loadBuyers(){try{const a=JSON.parse(localStorage.getItem(BUYER_KEY)||'[]');return Array.isArray(a)?a:[]}catch(_){return []}}
+function saveBuyers(a){try{localStorage.setItem(BUYER_KEY,JSON.stringify(a.slice(0,5)))}catch(_){}}
+function maskPhone(ph){const d=String(ph||'').replace(/\D/g,'');return d.length>=8?d.slice(0,3)+'-****-'+d.slice(-4):ph}
+function buyerLabel(b){const a=String(b.base||'').split(' ').slice(0,3).join(' ');return b.name+' · '+maskPhone(b.phone)+(a?' · '+a:'')}
+function rememberBuyer(){
+ try{
+  const cb=document.getElementById('rememberBuyer'); if(!cb||!cb.checked)return;
+  const v=id=>String((document.getElementById(id)||{}).value||'').trim();
+  const b={name:v('name'),phone:v('phone'),dep:v('depositorName'),same:document.getElementById('sameAsOrderer').checked,zip:v('zipcode'),base:v('addrBase'),detail:v('addrDetail'),t:Date.now()};
+  if(!b.name||!b.phone)return;
+  const key=x=>[x.name,x.phone,x.zip,x.base,x.detail].join('|');
+  saveBuyers([b].concat(loadBuyers().filter(x=>key(x)!==key(b))));
+ }catch(_){}
+}
+function renderSavedBuyers(){
+ const box=document.getElementById('savedBuyerBox'); if(!box)return;
+ const list=loadBuyers();
+ if(!list.length){box.style.display='none';box.innerHTML='';return}
+ const sel=list.length>1?`<select id="sbSelect" aria-label="받는 분 고르기">${list.map((b,i)=>`<option value="${i}">${e(buyerLabel(b))}</option>`).join('')}</select>`:`<span style="flex:1;font-size:13.5px">${e(buyerLabel(list[0]))}</span>`;
+ box.innerHTML=`<div style="font-size:14px">👤 <b>지난번 주문 정보</b>가 이 휴대폰에 있어요</div><div class="sb-row">${sel}<button type="button" class="sb-fill" onclick="fillSavedBuyer()">한 번에 채우기</button></div><button type="button" class="sb-del" onclick="clearSavedBuyers()">이 휴대폰에서 기억한 정보 지우기</button>`;
+ box.style.display='block';
+}
+function fillSavedBuyer(){
+ const list=loadBuyers(); const i=Number((document.getElementById('sbSelect')||{}).value||0); const b=list[i]; if(!b)return;
+ const set=(id,val)=>{const el=document.getElementById(id); if(el)el.value=val||''};
+ set('name',b.name); set('phone',b.phone);
+ const same=document.getElementById('sameAsOrderer'); same.checked=b.same!==false; syncDepositor(); if(!same.checked)set('depositorName',b.dep);
+ set('zipcode',b.zip); set('addrBase',b.base); set('addrDetail',b.detail); buildAddress();
+ ['phoneError','addressError'].forEach(id=>{const el=document.getElementById(id); if(el)el.style.display='none'});
+ try{updateCashReceiptBox()}catch(_){}
+ const box=document.getElementById('savedBuyerBox'); if(box){box.innerHTML='<div style="font-size:14px">✅ 지난번 정보로 채웠어요. <b>주소와 연락처가 맞는지</b> 한 번만 확인해 주세요.</div><button type="button" class="sb-del" onclick="renderSavedBuyers()">다른 정보 고르기</button>'}
+ try{if(window.trackOrderStep)window.trackOrderStep('buyer_autofill',currentProduct)}catch(_){}
+}
+function clearSavedBuyers(){
+ if(!confirm('이 휴대폰에 기억한 주문자·배송 정보를 지울까요?'))return;
+ try{localStorage.removeItem(BUYER_KEY)}catch(_){}
+ renderSavedBuyers();
+}
 function openProduct(code){
  const p=products.find(x=>s(x.productCode)===s(code)); if(!p)return;
  if(p.linkUrl){window.location.href=p.linkUrl;return}
@@ -1127,6 +1171,7 @@ function openProduct(code){
  modalProductName.textContent=groupOf(p)||p.productName||'상품';
  modalDescription.textContent=productMeta(p,'cardDesc')||siblingsOf(p).map(x=>productMeta(x,'cardDesc')).find(Boolean)||p.description||'';
  renderOptionBox(p);
+ try{renderSavedBuyers()}catch(_){}
  try{const mn=document.getElementById('modalNotice'); if(mn) mn.innerHTML=noticeForProduct(p);}catch(_){}
  modalPrice.innerHTML=`<span class="price-row">${money(p.salePrice)}${priceNoteHtml(p)}</span>`;
  modalTimer.textContent=remainText(p);
@@ -1442,7 +1487,8 @@ orderForm.addEventListener('submit',async ev=>{
     }
   }
   trackOrderEvent('order_submit');
-  orderForm.reset(); resetOrderFormExtras(); currentProduct.orderCount=Number(currentProduct.orderCount||0)+1; renderProducts();
+  rememberBuyer();
+  orderForm.reset(); try{renderSavedBuyers()}catch(_){} resetOrderFormExtras(); currentProduct.orderCount=Number(currentProduct.orderCount||0)+1; renderProducts();
  }catch(err){showMsg('주문 오류: '+err.message,true)}
  finally{orderButton.disabled=false;orderButton.textContent='공동구매 주문하기'}
 });
