@@ -69,6 +69,7 @@ main{max-width:1180px;margin:45px auto;padding:0 20px 70px}
 .btn{display:block;width:100%;border:0;border-radius:11px;padding:13px;text-align:center;text-decoration:none;font-weight:900;background:var(--green);color:#fff;cursor:pointer;font-size:15px;margin-top:auto}
 .btn.closed{background:#999;cursor:not-allowed}
 .loading,.empty{grid-column:1/-1;text-align:center;padding:55px;background:#fff;border-radius:18px;color:#777}
+.share-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border:1.5px solid #fee500;background:#fee500;color:#191919;font-weight:800;font-size:15px;padding:12px;border-radius:12px;margin:10px 0 4px;font-family:inherit;cursor:pointer}.card-share{position:absolute;right:10px;bottom:10px;z-index:2;border:0;background:rgba(255,255,255,.95);color:#191919;font-weight:800;font-size:12.5px;padding:7px 11px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.18);font-family:inherit;cursor:pointer}.share-toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(25,25,25,.92);color:#fff;font-size:14px;padding:11px 16px;border-radius:12px;z-index:200;max-width:90vw;text-align:center;line-height:1.5}
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;padding:20px;overflow:auto}
 /* 2026-11-19 손님 주문조회 */
 .lookup-link{margin-right:8px}
@@ -308,7 +309,7 @@ main>.section-head{display:none}
   <div class="modal-body">
    <img id="modalImage" class="detail-img" alt="상품 이미지" style="display:none">
    <h2 id="modalProductName"></h2><div id="modalDescription" class="desc"></div>
-   <div id="modalNotice"></div><div class="price" id="modalPrice"></div><div id="optionSummary" style="display:none"></div><div id="modalTimer" class="timer"></div><div id="modalArrive" class="arrive-box" style="display:none"></div><div id="npayBox" class="npay-box" style="display:none"></div>
+   <div id="modalNotice"></div><div class="price" id="modalPrice"></div><div id="optionSummary" style="display:none"></div><div id="modalTimer" class="timer"></div><button type="button" class="share-btn" onclick="shareProduct()">📤 친구에게 공유하기</button><div id="modalArrive" class="arrive-box" style="display:none"></div><div id="npayBox" class="npay-box" style="display:none"></div>
    <div id="detailBlocks" class="detail-blocks"></div>
    <div id="paymentBox" class="payment"></div>
    <div id="orderAmountBox" class="payment" style="display:none; margin-top:8px;">
@@ -844,7 +845,7 @@ function renderProducts(){
        ?`<button class="btn closed" disabled>공구 준비중</button>`
        :reqFold;
    return head+`<article class="product${useTop&&i<topN?' top-pick':''}" data-card="${e(p.productCode)}">
-    <div class="imgbox"${st==='판매중'?` onclick="openProduct('${e(p.productCode)}')" style="cursor:pointer"`:''}>${img?`<img src="${e(img)}" alt="${e(p.productName)}">`:'<div class="noimg">🌾</div>'}<span class="status ${st==='종료'?'end':st==='준비중'?'ready':''}">${st}</span></div>
+    <div class="imgbox"${st==='판매중'?` onclick="openProduct('${e(p.productCode)}')" style="cursor:pointer"`:''}>${img?`<img src="${e(img)}" alt="${e(p.productName)}">`:'<div class="noimg">🌾</div>'}<span class="status ${st==='종료'?'end':st==='준비중'?'ready':''}">${st}</span>${st==='판매중'?`<button type="button" class="card-share" onclick="event.stopPropagation();shareProduct('${e(p.productCode)}')">📤 공유</button>`:''}</div>
     <div class="product-body"><h3${st==='판매중'?` onclick="openProduct('${e(p.productCode)}')" style="cursor:pointer"`:''}>${e(groupOf(p)||p.productName)}</h3><div class="desc">${e(cardDescOf(p))}</div>
     <div class="price-row"><div class="price">${Number(p.salePrice)>0?money(p.salePrice)+(sib.length>1?'~':''):'<span style="font-size:20px;color:#7a847c">가격 준비중</span>'}</div>${Number(p.salePrice)>0?priceNoteHtml(p):''}</div>${optionPricesHtml(p)}
     <div class="timer" data-code="${e(p.productCode)}">${remainText(p)}</div>
@@ -1026,6 +1027,34 @@ function goNpay(){
  const link=currentProduct?npayLinkOf(currentProduct):''; if(!link)return;
  trackOrderEvent('npay_click');
  setTimeout(function(){window.location.href=link},150);
+}
+
+// 손님 공유하기: 상품 개별 링크(/p/코드.html) + 들어온 파트너 코드 유지
+function shareToast(msg){try{const t=document.createElement('div');t.className='share-toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600)}catch(_){}}
+async function shareLinkFor(p){
+ const code=s(leaderOf(p).productCode||p.productCode);
+ const q=new URLSearchParams();
+ const ref=getPartnerRef(); if(ref)q.set('ref',ref);
+ q.set('utm_source','customer_share');q.set('utm_medium','share');q.set('utm_content',code);
+ let page='/p/'+encodeURIComponent(code)+'.html';
+ try{const r=await fetch(page,{method:'HEAD',cache:'no-store'}); if(!r.ok)throw 0;}
+ catch(_){page='/';q.set('product',code);}
+ return location.origin+page+'?'+q.toString();
+}
+async function shareProduct(code){
+ const p=code?products.find(x=>s(x.productCode)===s(code)):currentProduct; if(!p)return;
+ const sib=siblingsOf(p); const minPrice=Math.min(...sib.map(x=>Number(x.salePrice)||Infinity));
+ const name=groupOf(p)||p.productName||'공구 상품';
+ const price=isFinite(minPrice)?money(minPrice)+(sib.length>1?'~':'')+' (택배비 포함)':'';
+ const url=await shareLinkFor(p);
+ const text='[해남공구마켓 공동구매]\n'+name+(price?'\n'+price:'')+'\n\n👇 상품 보고 주문하기';
+ try{if(window.trackOrderStep)window.trackOrderStep('share',p)}catch(_){}
+ if(navigator.share){
+  try{await navigator.share({title:name+' | 해남공구마켓',text:text,url:url});return}
+  catch(err){if(err&&err.name==='AbortError')return}
+ }
+ try{await navigator.clipboard.writeText(text+'\n'+url);shareToast('상품 링크를 복사했어요. 카톡 대화창에 붙여넣어 보내 주세요.')}
+ catch(_){prompt('아래 링크를 복사해서 보내 주세요',url)}
 }
 function openProduct(code){
  const p=products.find(x=>s(x.productCode)===s(code)); if(!p)return;
