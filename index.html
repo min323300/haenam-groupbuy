@@ -70,6 +70,7 @@ main{max-width:1180px;margin:45px auto;padding:0 20px 70px}
 .btn.closed{background:#999;cursor:not-allowed}
 .loading,.empty{grid-column:1/-1;text-align:center;padding:55px;background:#fff;border-radius:18px;color:#777}
 .share-btn svg,.card-share svg{width:18px;height:18px;fill:#191919;flex-shrink:0}.card-share svg{width:15px;height:15px}.share-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border:1.5px solid #fee500;background:#fee500;color:#191919;font-weight:800;font-size:15px;padding:12px;border-radius:12px;margin:10px 0 4px;font-family:inherit;cursor:pointer}.title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.title-row h3{min-width:0}.card-share{flex-shrink:0;margin-top:2px;display:flex;align-items:center;gap:4px;border:0;background:#fee500;color:#191919;font-weight:800;font-size:12.5px;padding:7px 11px;border-radius:999px;font-family:inherit;cursor:pointer;white-space:nowrap}.grid .card-share{padding:6px 9px;font-size:11.5px;margin-top:0}@media(max-width:600px){.grid .card-share span{display:none}.grid .card-share{padding:6px}.grid .card-share svg{width:16px;height:16px}}.share-toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(25,25,25,.92);color:#fff;font-size:14px;padding:11px 16px;border-radius:12px;z-index:200;max-width:90vw;text-align:center;line-height:1.5}
+.cat-tabs{max-width:1180px;margin:0 auto;padding:0 20px;display:flex;gap:24px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}.cat-tabs::-webkit-scrollbar{display:none}.cat-tabs:empty{display:none}.cat-tab{border:0;background:none;padding:10px 2px 9px;font-size:15px;font-weight:600;color:#8a938c;border-bottom:2.5px solid transparent;white-space:nowrap;font-family:inherit;cursor:pointer;flex-shrink:0}.cat-tab.on{color:#18261d;font-weight:800;border-bottom-color:var(--green)}.cat-head{grid-column:1/-1;display:flex;justify-content:space-between;align-items:baseline;margin:2px 0 4px}.cat-head h2{margin:0;font-size:20px}.cat-head span{font-size:13px;color:#7a847c}@media(max-width:600px){.cat-tabs{padding:0 12px;gap:20px}.cat-tab{font-size:14.5px}}
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;padding:20px;overflow:auto}
 /* 2026-11-19 손님 주문조회 */
 .lookup-link{margin-right:8px}
@@ -228,7 +229,7 @@ main>.section-head{display:none}
 </head>
 <body>
 <a id="topBanner" class="top-banner" href="#products" hidden></a>
-<header><div class="header-in"><div class="logo" onclick="window.scrollTo({top:0,behavior:'smooth'})" style="cursor:pointer"><img src="/logo-seal.png" alt="" class="logo-mark" width="40" height="40"><span>해남공구마켓<small>전국 생산자와 함께하는 농·수·축산물 공동구매</small></span></div><div class="search-wrap"><input id="productSearch" type="search" autocomplete="off" placeholder="상품 찾기 (키위, ㄱㄷ)" aria-label="상품 찾기" oninput="onProductSearch()" onfocus="onProductSearch()"><div id="searchSuggest" class="search-suggest"></div></div><div class="header-right"><button type="button" id="a2hsHead" class="a2hs-head" onclick="a2hsOpen()" hidden>📲 바로가기</button><a class="header-link lookup-link" href="#" onclick="event.preventDefault();openLookupModal()">주문조회</a><a class="header-link" href="#products">진행 공구 보기</a></div></div></header>
+<header><div class="header-in"><div class="logo" onclick="window.scrollTo({top:0,behavior:'smooth'})" style="cursor:pointer"><img src="/logo-seal.png" alt="" class="logo-mark" width="40" height="40"><span>해남공구마켓<small>전국 생산자와 함께하는 농·수·축산물 공동구매</small></span></div><div class="search-wrap"><input id="productSearch" type="search" autocomplete="off" placeholder="상품 찾기 (키위, ㄱㄷ)" aria-label="상품 찾기" oninput="onProductSearch()" onfocus="onProductSearch()"><div id="searchSuggest" class="search-suggest"></div></div><div class="header-right"><button type="button" id="a2hsHead" class="a2hs-head" onclick="a2hsOpen()" hidden>📲 바로가기</button><a class="header-link lookup-link" href="#" onclick="event.preventDefault();openLookupModal()">주문조회</a><a class="header-link" href="#products">진행 공구 보기</a></div></div><nav id="catTabs" class="cat-tabs" aria-label="상품 카테고리"></nav></header>
 <div id="a2hsBar" class="a2hs-bar" hidden><img src="/icon-192.png" alt=""><div><b>해남공구마켓 바로가기</b><small>홈 화면에 추가하면 다음 공구도 한 번에!</small></div><button type="button" class="go" onclick="a2hsOpen()">추가하기</button><button type="button" class="x" onclick="a2hsLater()" aria-label="닫기">✕</button></div>
 <div id="a2hsModal" class="a2hs-modal" onclick="if(event.target===this)a2hsClose()"><div class="box"><button type="button" class="x" onclick="a2hsClose()" aria-label="닫기">✕</button><img src="/icon-192.png" alt="" class="ic"><h3>홈 화면에 바로가기 추가</h3><div id="a2hsGuide"></div></div></div>
 <section class="hero"><div class="hero-in"><div><div class="eyebrow">HAENAM GROUP BUY MARKET</div><h1>전국 생산자의 좋은 상품을<br>함께 더 합리적으로</h1><p>농산물·수산물·축산물까지 전국 생산자가 직접 준비한 공동구매를 한곳에서 확인하세요.<br>남은 기간과 현재 주문 현황도 실시간으로 확인할 수 있습니다.</p></div><div class="hero-box"><strong>🌾 지금 진행 중인 공구</strong><span>상품마다 마감일과 현재 주문 현황이 표시됩니다. 마감 전에 주문해 주세요.</span></div></div></section>
@@ -794,29 +795,40 @@ function updateCardBanner(list,visible){
   if(key===cbKey){box.hidden=false;return} // 같은 내용이면 돌던 자리 그대로
   cbKey=key; cbSlides=slides; box.hidden=false; cbShow(Math.min(cbIdx,slides.length-1),false); cbStart();
 }
-function renderProducts(){
- const grid=document.getElementById('productGrid');
- document.getElementById('totalProducts').textContent=products.length+'개';
- document.getElementById('activeCount').textContent=products.filter(p=>stateOf(p)==='판매중').length+'개';
- document.getElementById('totalOrders').textContent=products.reduce((a,p)=>a+Number(p.orderCount||0),0)+'건';
- if(!products.length){grid.innerHTML='<div class="empty">현재 등록된 공구상품이 없습니다.</div>';return}
- const sorted=[...products].sort((a,b)=>{const rank={'판매중':0,'준비중':1,'종료':2};return (rank[stateOf(a)]-rank[stateOf(b)])||(displayOrderOf(leaderOf(a))-displayOrderOf(leaderOf(b)))})
-   .filter(p=>s(leaderOf(p).productCode)===s(p.productCode)) // 옵션 묶음은 대표 상품 카드 1개만
-   .filter(p=>!searchQuery.trim()||matchScore(p,searchQuery)>0);
- if(!sorted.length){grid.innerHTML='<div class="empty">"'+e(searchQuery)+'"에 맞는 상품이 없어요.<br>다른 글자로 찾아보세요.</div>';return}
- let pickBanner='', list=sorted;
- if(PICK_CODES.length&&!searchQuery.trim()){
-   const picked=sorted.filter(inPick).filter(p=>stateOf(p)!=='종료');
-   if(picked.length&&!pickShowAll){list=picked;pickBanner=`<div class="pick-banner"><span>⭐ ${PICK_BY?'<b>'+e(PICK_BY)+'님</b>이 추천한':'추천받은'} 공동구매 <b>${picked.length}개</b>예요</span><button type="button" onclick="togglePickAll(true)">전체 공구 상품 보기 ›</button></div>`;}
-   else if(picked.length){pickBanner=`<div class="pick-banner"><span>전체 공구 상품을 보고 있어요</span><button type="button" onclick="togglePickAll(false)">‹ 추천 상품만 보기</button></div>`;}
-   else pickBanner='<div class="pick-banner">추천받은 상품이 마감되었어요. 지금 진행 중인 다른 공구를 확인해 보세요.</div>';
-   if(!pickScrolled){pickScrolled=true;setTimeout(()=>{if(!new URLSearchParams(location.search).get('product'))document.getElementById('products').scrollIntoView()},200)}
- }
- const topN=topPickCount(); const useTop=!pickBanner&&!searchQuery.trim()&&list.filter(p=>stateOf(p)==='판매중').length>topN;
- updateTopBanner(sorted);
- updateCardBanner(sorted,!pickBanner&&!searchQuery.trim());
- grid.innerHTML=pickBanner+list.map((p,i)=>{
-   const head=!useTop?'':i===0?'<div class="grid-head"><h2>이번 주 꼭 담으세요</h2><p>산지에서 바로 보내는 공동구매</p></div>':i===topN?'<div class="grid-head"><h2>진행 중인 공동구매</h2></div>':'';
+
+// 2026-11-22 카테고리 탭 (전체/수산/과일/채소·김장/축산/가공)
+const CATEGORIES=['수산','과일','채소·김장','축산','가공'];
+let currentCat=(()=>{try{const c=new URLSearchParams(location.search).get('cat');return CATEGORIES.includes(c)?c:'전체'}catch(_){return '전체'}})();
+function categoryOf(p){
+ const set=[leaderOf(p)].concat(siblingsOf(p),[p]).map(x=>productMeta(x,'category')).find(c=>CATEGORIES.includes(c));
+ if(set)return set;
+ const t=s(groupOf(p)||p.productName)+' '+s(p.productName);
+ if(/배추|김장|고구마|감자|양파|마늘|대파|쪽파|고추|호박|당근|버섯|쌀|잡곡|옥수수|무청|시래기|브로콜리|양배추/.test(t))return '채소·김장';
+ if(/김치|곱창김|조미김|돌김|재래김|미역|다시마|젓갈|장아찌|떡|잼|즙|청|참기름|들기름|된장|고추장|반찬|^김\s|\s김\s/.test(t))return '가공';
+ if(/가리비|오징어|갈치|과메기|킹크랩|대게|게|문어|낙지|쭈꾸미|주꾸미|굴|새우|전복|생선|가자미|골뱅이|세꼬시|조기|고등어|멸치|꼬막|바지락|홍합|장어|삼치|방어|광어|우럭|명태|황태|코다리|해삼|멍게|성게|매생이|톳/.test(t))return '수산';
+ if(/한우|소고기|돼지|삼겹|목살|닭|오리|계란|달걀|육포|갈비/.test(t))return '축산';
+ if(/사과|배(?!추)|감귤|귤|키위|딸기|포도|샤인|복숭아|참외|수박|단감|홍시|곶감|한라봉|천혜향|레드향|멜론|무화과|자두|블루베리|토마토|오렌지|레몬|망고/.test(t))return '과일';
+ return '가공';
+}
+function renderCatTabs(list){
+ const nav=document.getElementById('catTabs'); if(!nav)return;
+ const live=list.filter(p=>stateOf(p)!=='종료');
+ const cnt={}; live.forEach(p=>{const c=categoryOf(p);cnt[c]=(cnt[c]||0)+1});
+ const tabs=['전체'].concat(CATEGORIES.filter(c=>cnt[c]));
+ if(tabs.length<3){nav.innerHTML='';return}
+ if(!tabs.includes(currentCat))currentCat='전체';
+ nav.innerHTML=tabs.map(c=>`<button type="button" class="cat-tab${c===currentCat?' on':''}" onclick="setCategory('${c}')">${c}</button>`).join('');
+ const on=nav.querySelector('.on'); if(on&&on.scrollIntoView&&currentCat!=='전체'){try{nav.scrollLeft=on.offsetLeft-40}catch(_){}}
+}
+function setCategory(c){
+ currentCat=c;
+ try{const u=new URL(location.href); if(c==='전체')u.searchParams.delete('cat'); else u.searchParams.set('cat',c); history.replaceState(null,'',u.pathname+u.search+u.hash);}catch(_){}
+ if(searchQuery.trim()){searchQuery='';const si=document.getElementById('productSearch');if(si)si.value='';}
+ renderProducts();
+ try{if(window.trackOrderStep)window.trackOrderStep('category_'+c,null)}catch(_){}
+ const m=document.getElementById('products'); if(m){const h=(document.querySelector('header')||{}).offsetHeight||0; window.scrollTo({top:m.getBoundingClientRect().top+window.scrollY-h-8,behavior:'smooth'});}
+}
+function productCardHtml(p,head,topPick){
    const sib=siblingsOf(p);
    const st=stateOf(p),target=Number(p.targetOrders||0),count=sib.reduce((a,x)=>a+Number(x.orderCount||0),0);
    const percent=target>0?Math.min(100,Math.round(count/target*100)):0;
@@ -844,21 +856,53 @@ function renderProducts(){
      :st==='준비중'
        ?`<button class="btn closed" disabled>공구 준비중</button>`
        :reqFold;
-   return head+`<article class="product${useTop&&i<topN?' top-pick':''}" data-card="${e(p.productCode)}">
+   return head+`<article class="product${topPick?' top-pick':''}" data-card="${e(p.productCode)}">
     <div class="imgbox"${st==='판매중'?` onclick="openProduct('${e(p.productCode)}')" style="cursor:pointer"`:''}>${img?`<img src="${e(img)}" alt="${e(p.productName)}">`:'<div class="noimg">🌾</div>'}<span class="status ${st==='종료'?'end':st==='준비중'?'ready':''}">${st}</span></div>
     <div class="product-body"><div class="title-row"><h3${st==='판매중'?` onclick="openProduct('${e(p.productCode)}')" style="cursor:pointer"`:''}>${e(groupOf(p)||p.productName)}</h3>${st==='판매중'?`<button type="button" class="card-share" onclick="event.stopPropagation();shareProduct('${e(p.productCode)}')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4c-4.9 0-9 3.1-9 7 0 2.5 1.7 4.7 4.2 5.9L6.5 20l4-2.4c.5.1 1 .1 1.5.1 4.9 0 9-3.1 9-7s-4.1-6.7-9-6.7z"/></svg><span>카톡 공유</span></button>`:''}</div><div class="desc">${e(cardDescOf(p))}</div>
     <div class="price-row"><div class="price">${Number(p.salePrice)>0?money(p.salePrice)+(sib.length>1?'~':''):'<span style="font-size:20px;color:#7a847c">가격 준비중</span>'}</div>${Number(p.salePrice)>0?priceNoteHtml(p):''}</div>${optionPricesHtml(p)}
     <div class="timer" data-code="${e(p.productCode)}">${remainText(p)}</div>
     <div class="progress-line${count?'':' zero'}"><span>현재 <b>${count}건</b></span><span>목표 ${target||'-'}건</span></div>
     <div class="progress"><div class="bar" style="width:${percent}%"></div></div>${btn}</div></article>`;
- }).join('');
+}
+function renderProducts(){
+ const grid=document.getElementById('productGrid');
+ document.getElementById('totalProducts').textContent=products.length+'개';
+ document.getElementById('activeCount').textContent=products.filter(p=>stateOf(p)==='판매중').length+'개';
+ document.getElementById('totalOrders').textContent=products.reduce((a,p)=>a+Number(p.orderCount||0),0)+'건';
+ if(!products.length){grid.innerHTML='<div class="empty">현재 등록된 공구상품이 없습니다.</div>';return}
+ const sorted=[...products].sort((a,b)=>{const rank={'판매중':0,'준비중':1,'종료':2};return (rank[stateOf(a)]-rank[stateOf(b)])||(displayOrderOf(leaderOf(a))-displayOrderOf(leaderOf(b)))})
+   .filter(p=>s(leaderOf(p).productCode)===s(p.productCode)) // 옵션 묶음은 대표 상품 카드 1개만
+   .filter(p=>!searchQuery.trim()||matchScore(p,searchQuery)>0);
+ if(!searchQuery.trim())renderCatTabs(sorted);
+ const catOn=currentCat!=='전체'&&!searchQuery.trim();
+ if(catOn){
+   const cl=sorted.filter(p=>categoryOf(p)===currentCat);
+   updateTopBanner(sorted);
+   updateCardBanner(sorted,false);
+   const liveN=cl.filter(p=>stateOf(p)!=='종료').length;
+   grid.innerHTML=`<div class="cat-head"><h2>${e(currentCat)}</h2><span>공구 ${liveN}개 진행·준비 중</span></div>`+(cl.length?cl.map(p=>productCardHtml(p,'')).join(''):'<div class="empty">지금 이 카테고리에 진행 중인 공구가 없어요.</div>');
+   return;
+ }
+ if(!sorted.length){grid.innerHTML='<div class="empty">"'+e(searchQuery)+'"에 맞는 상품이 없어요.<br>다른 글자로 찾아보세요.</div>';return}
+ let pickBanner='', list=sorted;
+ if(PICK_CODES.length&&!searchQuery.trim()){
+   const picked=sorted.filter(inPick).filter(p=>stateOf(p)!=='종료');
+   if(picked.length&&!pickShowAll){list=picked;pickBanner=`<div class="pick-banner"><span>⭐ ${PICK_BY?'<b>'+e(PICK_BY)+'님</b>이 추천한':'추천받은'} 공동구매 <b>${picked.length}개</b>예요</span><button type="button" onclick="togglePickAll(true)">전체 공구 상품 보기 ›</button></div>`;}
+   else if(picked.length){pickBanner=`<div class="pick-banner"><span>전체 공구 상품을 보고 있어요</span><button type="button" onclick="togglePickAll(false)">‹ 추천 상품만 보기</button></div>`;}
+   else pickBanner='<div class="pick-banner">추천받은 상품이 마감되었어요. 지금 진행 중인 다른 공구를 확인해 보세요.</div>';
+   if(!pickScrolled){pickScrolled=true;setTimeout(()=>{if(!new URLSearchParams(location.search).get('product'))document.getElementById('products').scrollIntoView()},200)}
+ }
+ const topN=topPickCount(); const useTop=!pickBanner&&!searchQuery.trim()&&list.filter(p=>stateOf(p)==='판매중').length>topN;
+ updateTopBanner(sorted);
+ updateCardBanner(sorted,!pickBanner&&!searchQuery.trim());
+ grid.innerHTML=pickBanner+list.map((p,i)=>productCardHtml(p,!useTop?'':i===0?'<div class="grid-head"><h2>이번 주 꼭 담으세요</h2><p>산지에서 바로 보내는 공동구매</p></div>':i===topN?'<div class="grid-head"><h2>진행 중인 공동구매</h2></div>':'',useTop&&i<topN)).join('');
 }
 function tick(){
  document.querySelectorAll('.timer[data-code]').forEach(el=>{const p=products.find(x=>s(x.productCode)===el.dataset.code);if(p)el.textContent=remainText(p)});
  if(currentProduct)document.getElementById('modalTimer').textContent=remainText(currentProduct);
 }
 // 관리자 저장 스크립트가 '글' 블록만 남기므로 특수 블록은 [[표시]]를 붙인 글로 저장됩니다.
-const BLOCK_MARKERS={cardDesc:'[[카드설명]]',priceNote:'[[가격옆문구]]',fold:'[[접기]]',group:'[[묶음]]',optionLabel:'[[옵션명]]',displayOrder:'[[순서]]',video:'[[움짤]]',npay:'[[네이버페이]]'};
+const BLOCK_MARKERS={cardDesc:'[[카드설명]]',priceNote:'[[가격옆문구]]',fold:'[[접기]]',group:'[[묶음]]',optionLabel:'[[옵션명]]',displayOrder:'[[순서]]',video:'[[움짤]]',npay:'[[네이버페이]]',category:'[[카테고리]]'};
 function decodeDetailBlock(b){
  if(b&&s(b.type).toLowerCase()==='text'){
   const v=s(b.value||b.text||b.content);
