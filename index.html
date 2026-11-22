@@ -82,6 +82,7 @@ main{max-width:1180px;margin:45px auto;padding:0 20px 70px}
 .lk-st.wait{background:#fff3e0;color:#b45309}.lk-st.done{background:#eef2ff;color:#3730a3}.lk-st.cancel{background:#eee;color:#666}
 .lk-trk{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.lk-trk a{display:inline-block;background:#176c46;color:#fff;text-decoration:none;font-weight:800;font-size:14px;padding:8px 12px;border-radius:10px}
 .lk-trk .copy{background:#fff;border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:13px;cursor:pointer}
+.lk-pay{margin-top:10px;border:1.5px solid #f0b429;background:#fffaeb;border-radius:12px;padding:12px}.lk-pay .t{font-weight:800;color:#8a5a00;font-size:14px;margin-bottom:4px}.lk-pay .amt{font-size:20px;font-weight:900;color:#222}.lk-pay .acc{font-size:15px;font-weight:700;margin-top:4px;word-break:keep-all}.lk-pay .dep{font-size:13px;color:#6b766f;margin-top:2px}.lk-pay .copy{margin-top:8px;background:#fff;border:1px solid #f0b429;border-radius:10px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer}
 /* 2026-11-19 공지 팝업 */
 .ntc-back{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9998;display:flex;align-items:center;justify-content:center;padding:18px}
 .ntc-box{background:#fff;border-radius:18px;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.25);overflow:hidden}
@@ -2073,7 +2074,7 @@ function lkTrackUrl(courier,no){
  if(/롯데/.test(c))return 'https://www.lotteglogis.com/home/reservation/tracking/linkView?InvNo='+n;
  return 'https://search.naver.com/search.naver?query='+encodeURIComponent((c||'택배')+' 배송조회 '+no);
 }
-function lkCopy(btn,no){try{navigator.clipboard.writeText(no).then(()=>{btn.textContent='복사됨 ✓';setTimeout(()=>btn.textContent='번호 복사',1500)})}catch(_){}}
+function lkCopy(btn,no,label){label=label||'번호 복사';try{navigator.clipboard.writeText(no).then(()=>{btn.textContent='복사됨 ✓';setTimeout(()=>btn.textContent=label,1500)})}catch(_){}}
 async function runLookup(){
  const name=document.getElementById('lkName').value.trim(), phone=document.getElementById('lkPhone').value.trim();
  const box=document.getElementById('lkResult'), btn=document.getElementById('lkBtn');
@@ -2089,7 +2090,9 @@ async function runLookup(){
    const cls=o.status==='배송완료'?'done':o.status==='취소·환불'?'cancel':(o.status==='배송중'?'':'wait');
    const trk=(o.trackingNumbers||[]).map(no=>`<a href="${e(lkTrackUrl(o.courier,no))}" target="_blank" rel="noopener">${e(o.courier||'택배')} ${e(no)} 배송조회 →</a><button type="button" class="copy" onclick="lkCopy(this,'${e(no)}')">번호 복사</button>`).join('');
    const info=[o.orderedAt?('주문 '+e(o.orderedAt.split(' 오')[0])):'', o.deliveryDate?('희망 도착 '+e(o.deliveryDate)):'', o.trackingDate?('발송 '+e(o.trackingDate)):''].filter(Boolean).join(' · ');
-   const guide=o.status==='입금 확인 중'?'<div class="lk-meta" style="margin-top:6px">입금이 확인되면 출고 준비를 시작합니다.</div>':o.status==='출고 준비 중'?'<div class="lk-meta" style="margin-top:6px">출고되면 송장번호가 이곳에 표시됩니다.</div>':'';
+   const pay=o.pay;
+   const payBox=(o.status==='입금 확인 중'&&pay)?`<div class="lk-pay"><div class="t">💳 아직 입금 전이에요</div>${pay.amount?`<div class="amt">${Number(pay.amount).toLocaleString('ko-KR')}원</div>`:''}${pay.account?`<div class="acc">${e(pay.bank||'')} ${e(pay.account)}${pay.holder?' ('+e(pay.holder)+')':''}</div>`:''}${pay.depositor?`<div class="dep">입금자명: ${e(pay.depositor)}</div>`:''}${pay.account?`<button type="button" class="copy" onclick="lkCopy(this,'${e(String(pay.account).replace(/[^0-9-]/g,''))}','계좌번호 복사')">계좌번호 복사</button>`:''}</div>`:'';
+   const guide=o.status==='입금 확인 중'?payBox+'<div class="lk-meta" style="margin-top:6px">입금이 확인되면 출고 준비를 시작합니다.</div>':o.status==='출고 준비 중'?'<div class="lk-meta" style="margin-top:6px">출고되면 송장번호가 이곳에 표시됩니다.</div>':'';
    return `<div class="lk-card"><span class="lk-st ${cls}">${e(o.status)}</span><h4>${e(o.productName)} ${o.qty?e(o.qty)+'개':''}</h4><div class="lk-meta">${info}</div>${trk?`<div class="lk-trk">${trk}</div>`:''}${guide}</div>`;
   }).join('')+'</div>';
   try{if(window.trackOrderStep)window.trackOrderStep('lookup_ok',null)}catch(_){}
