@@ -29,6 +29,7 @@
     .order-status-filter label{display:flex;align-items:center;gap:5px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
     .order-status-filter input{width:auto}
     .order-status-filter b{display:inline-block;min-width:22px;padding:1px 7px;border-radius:999px;background:#e3efe7;color:#17623f;font-size:12px;text-align:center}
+    .row-cancel td{color:#9aa39d;background:#fafafa}.row-cancel td .memo{color:#7a847c}.cancel-badge{display:inline-block;background:#fdecec;color:#b42318;font-size:12px;font-weight:700;border-radius:6px;padding:3px 7px;white-space:nowrap}.cancel-btn{margin-top:4px;font-size:12px;padding:4px 8px;color:#b42318;border-color:#f1c4c4}
     .osf-title{font-size:13px;color:#555;font-weight:700}
     .track-panel{margin-top:12px;padding:14px;border:1px solid #cfe0d5;border-radius:12px;background:#f8fbf9}
     .track-panel textarea{min-height:140px;font-family:inherit}
@@ -347,6 +348,7 @@ async function saveSupplierApplication(btn){
   <label><input type="checkbox" class="osf" value="unpaid" checked onchange="onOrderStatusFilterChange()"> 미입금 <b id="osfCountUnpaid">0</b></label>
   <label><input type="checkbox" class="osf" value="paid" checked onchange="onOrderStatusFilterChange()"> 입금완료(배송 전) <b id="osfCountPaid">0</b></label>
   <label><input type="checkbox" class="osf" value="shipped" onchange="onOrderStatusFilterChange()"> 배송완료 <b id="osfCountShipped">0</b></label>
+  <label><input type="checkbox" class="osf" value="cancel" onchange="onOrderStatusFilterChange()"> 취소·환불 <b id="osfCountCancel">0</b></label>
   <span class="muted">화면 목록과 주문목록 엑셀 모두 선택한 상품·상태의 주문만 담깁니다. 한진택배 엑셀은 ⑧ 주문배송관리에 있습니다.</span>
 </div>
     <div id="orderMessage" class="notice"></div>
@@ -1750,6 +1752,7 @@ let orderCache = [];
 
 function orderNoOf(o){ return String(o.orderNo || o.orderNumber || '').trim(); }
 function orderStatusOf(o){
+  if (o.cancelled) return 'cancel'; // 2026-11-22 취소·환불
   if (o.shippingCompleted) return 'shipped';
   if (o.paymentConfirmed) return 'paid';
   return 'unpaid';
@@ -1782,6 +1785,7 @@ function updateOrderStatusCounts(){
   $('osfCountUnpaid').textContent = count('unpaid');
   $('osfCountPaid').textContent = count('paid');
   $('osfCountShipped').textContent = count('shipped');
+  if($('osfCountCancel')) $('osfCountCancel').textContent = count('cancel');
 }
 
 async function fetchOrders(){
@@ -1815,7 +1819,7 @@ function renderOrders(){
   updateOrderStatusCounts();
   const filteredRows = getFilteredOrders();
   $('orderRows').innerHTML = filteredRows.length ? filteredRows.map(o=>`
-      <tr data-order="${esc(orderNoOf(o))}">
+      <tr data-order="${esc(orderNoOf(o))}"${o.cancelled?' class="row-cancel"':''}>
         <td>${esc(orderNoOf(o))}</td><td>${esc(o.createdAt||o.date||'')}</td>
         <td>${esc(o.productName||'')}</td><td>${esc(o.name||'')}</td><td>${esc(o.phone||'')}</td>
         <td>${esc(o.qty || o.quantity || '')}</td><td class="left">${esc(o.address||'')}</td>
@@ -1826,7 +1830,7 @@ function renderOrders(){
         <td><input type="checkbox" class="guide" ${o.guideCompleted?'checked':''}></td>
         <td><input type="checkbox" class="ship" ${o.shippingCompleted?'checked':''}></td>
         <td><input class="memo" value="${esc(o.adminMemo||'')}"></td>
-        <td><button class="primary" onclick="saveOrderRow(this)">저장</button></td>
+        <td>${o.cancelled?'<span class="cancel-badge">취소·환불</span>':`<button class="primary" onclick="saveOrderRow(this)">저장</button><button class="secondary cancel-btn" type="button" onclick="cancelOrderRow(this)">취소·환불</button>`}</td>
       </tr>`).join('')
     : '<tr><td colspan="15">선택한 조건에 맞는 주문이 없습니다.</td></tr>';
   const product = $('orderProductFilter').value;
@@ -1940,6 +1944,28 @@ function trackingReplySheetOf(list){
   return ws;
 }
 
+
+// 2026-11-22 주문 취소·환불 처리: 기록은 시트에 남기고 주문현황·주문수·수당에서 제외
+async function cancelOrderRow(btn){
+  const tr=btn.closest('tr'); const no=tr&&tr.dataset.order;
+  const password=$('adminPassword').value;
+  if(!password){ showMessage('orderMessage','관리자 비밀번호를 입력해주세요.',true); return; }
+  const o=orderCache.find(x=>orderNoOf(x)===no)||{};
+  const guess=Number(o.orderSalePrice||0)*Number(o.qty||1);
+  const amount=prompt(`[${o.name||''} · ${o.productName||''}] 환불 금액을 입력하세요 (원)\n환불 전이면 비워 두세요.`, guess?String(guess):'');
+  if(amount===null) return;
+  const reason=prompt('취소 사유를 입력하세요 (예: 고객 변심, 산지 출고 불가)','');
+  if(reason===null) return;
+  const d=new Date(); const refundDate=(amount&&String(amount).trim())?`${d.getMonth()+1}/${d.getDate()}`:'';
+  if(!confirm(`주문 ${no} 을(를) 취소·환불 처리할까요?\n\n· 시트 기록은 그대로 남습니다\n· 주문현황·주문 수·택배 엑셀·파트너 수당에서 빠집니다\n· 되돌리려면 시트에서 직접 고쳐야 합니다`)) return;
+  btn.disabled=true; btn.textContent='처리 중...';
+  try{
+    const r=await apiPost({action:'adminCancelOrder',password,orderNumber:no,amount:String(amount||'').trim(),refundDate,reason:String(reason||'').trim()});
+    if(!r.success) throw new Error(r.message||'취소 처리 실패');
+    await fetchOrders(); renderOrders();
+    showMessage('orderMessage',r.message||'취소·환불 처리했습니다.');
+  }catch(e){ showMessage('orderMessage','취소 처리 오류: '+e.message,true); btn.disabled=false; btn.textContent='취소·환불'; }
+}
 async function saveOrderRow(btn){
   const tr = btn.closest('tr');
 
