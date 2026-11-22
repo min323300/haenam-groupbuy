@@ -801,7 +801,9 @@ function updateCardBanner(list,visible){
 
 // 2026-11-22 카테고리 탭 (전체/수산/과일/채소·김장/축산/가공)
 const CATEGORIES=['수산','과일','채소·김장','축산','가공'];
-let currentCat=(()=>{try{const c=new URLSearchParams(location.search).get('cat');return CATEGORIES.includes(c)?c:'전체'}catch(_){return '전체'}})();
+let currentCat=(()=>{try{const c=new URLSearchParams(location.search).get('cat');return (CATEGORIES.includes(c)||c==='선물')?c:'전체'}catch(_){return '전체'}})();
+// 2026-11-22 선물용: 원래 카테고리와 별도로 '선물' 탭에도 보임 (관리자 체크 또는 상품명에 '선물')
+function isGift(p){const sib=[leaderOf(p)].concat(siblingsOf(p),[p]);if(sib.some(x=>/^(1|y|yes|선물|true)$/i.test(productMeta(x,'gift'))))return true;return /선물/.test(s(groupOf(p)||p.productName))}
 function categoryOf(p){
  const set=[leaderOf(p)].concat(siblingsOf(p),[p]).map(x=>productMeta(x,'category')).find(c=>CATEGORIES.includes(c));
  if(set)return set;
@@ -818,7 +820,8 @@ function renderCatTabs(list){
  const nav=document.getElementById('catTabs'); if(!nav)return;
  const live=list.filter(p=>stateOf(p)!=='종료');
  const cnt={}; live.forEach(p=>{const c=categoryOf(p);cnt[c]=(cnt[c]||0)+1});
- const tabs=['전체'].concat(CATEGORIES.filter(c=>cnt[c]));
+ const giftN=live.filter(isGift).length;
+ const tabs=['전체'].concat(giftN?['선물']:[],CATEGORIES.filter(c=>cnt[c]));
  if(tabs.length<3){nav.innerHTML='';return}
  if(!tabs.includes(currentCat))currentCat='전체';
  nav.innerHTML=tabs.map(c=>`<button type="button" class="cat-tab${c===currentCat?' on':''}" onclick="setCategory('${c}')">${c}</button>`).join('');
@@ -880,11 +883,11 @@ function renderProducts(){
  if(!searchQuery.trim())renderCatTabs(sorted);
  const catOn=currentCat!=='전체'&&!searchQuery.trim();
  if(catOn){
-   const cl=sorted.filter(p=>categoryOf(p)===currentCat);
+   const cl=currentCat==='선물'?sorted.filter(isGift):sorted.filter(p=>categoryOf(p)===currentCat);
    updateTopBanner(sorted);
    updateCardBanner(sorted,false);
    const liveN=cl.filter(p=>stateOf(p)!=='종료').length;
-   grid.innerHTML=`<div class="cat-head"><h2>${e(currentCat)}</h2><span>공구 ${liveN}개 진행·준비 중</span></div>`+(cl.length?cl.map(p=>productCardHtml(p,'')).join(''):'<div class="empty">지금 이 카테고리에 진행 중인 공구가 없어요.</div>');
+   grid.innerHTML=`<div class="cat-head"><h2>${currentCat==='선물'?'🎁 선물용':e(currentCat)}</h2><span>공구 ${liveN}개 진행·준비 중</span></div>`+(cl.length?cl.map(p=>productCardHtml(p,'')).join(''):'<div class="empty">지금 이 카테고리에 진행 중인 공구가 없어요.</div>');
    return;
  }
  if(!sorted.length){grid.innerHTML='<div class="empty">"'+e(searchQuery)+'"에 맞는 상품이 없어요.<br>다른 글자로 찾아보세요.</div>';return}
@@ -906,7 +909,7 @@ function tick(){
  if(currentProduct)document.getElementById('modalTimer').textContent=remainText(currentProduct);
 }
 // 관리자 저장 스크립트가 '글' 블록만 남기므로 특수 블록은 [[표시]]를 붙인 글로 저장됩니다.
-const BLOCK_MARKERS={cardDesc:'[[카드설명]]',priceNote:'[[가격옆문구]]',fold:'[[접기]]',group:'[[묶음]]',optionLabel:'[[옵션명]]',displayOrder:'[[순서]]',video:'[[움짤]]',npay:'[[네이버페이]]',category:'[[카테고리]]'};
+const BLOCK_MARKERS={cardDesc:'[[카드설명]]',priceNote:'[[가격옆문구]]',fold:'[[접기]]',group:'[[묶음]]',optionLabel:'[[옵션명]]',displayOrder:'[[순서]]',video:'[[움짤]]',npay:'[[네이버페이]]',category:'[[카테고리]]',gift:'[[선물]]'};
 function decodeDetailBlock(b){
  if(b&&s(b.type).toLowerCase()==='text'){
   const v=s(b.value||b.text||b.content);

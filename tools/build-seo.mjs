@@ -20,7 +20,7 @@ const dateOf = v => { if (!v) return null; const d = new Date(v); return isNaN(d
 const ymd = d => d.toISOString().slice(0, 10);
 
 // 사이트(index.html)와 같은 규칙
-const BLOCK_MARKERS = { cardDesc: '[[카드설명]]', priceNote: '[[가격옆문구]]', fold: '[[접기]]', group: '[[묶음]]', optionLabel: '[[옵션명]]', displayOrder: '[[순서]]', video: '[[움짤]]', npay: '[[네이버페이]]', category: '[[카테고리]]' };
+const BLOCK_MARKERS = { cardDesc: '[[카드설명]]', priceNote: '[[가격옆문구]]', fold: '[[접기]]', group: '[[묶음]]', optionLabel: '[[옵션명]]', displayOrder: '[[순서]]', video: '[[움짤]]', npay: '[[네이버페이]]', category: '[[카테고리]]', gift: '[[선물]]' };
 function blocksOf(p) {
   let raw = p.detailBlocks;
   if (raw == null || raw === '') raw = p.detailPage;
