@@ -805,8 +805,13 @@ const CATEGORIES=['수산','과일','채소·김장','축산','가공'];
 let currentCat=(()=>{try{const c=new URLSearchParams(location.search).get('cat');return (CATEGORIES.includes(c)||c==='선물')?c:'전체'}catch(_){return '전체'}})();
 // 2026-11-22 선물용: 원래 카테고리와 별도로 '선물' 탭에도 보임 (관리자 체크 또는 상품명에 '선물')
 function isGift(p){const sib=[leaderOf(p)].concat(siblingsOf(p),[p]);if(sib.some(x=>/^(1|y|yes|선물|true)$/i.test(productMeta(x,'gift'))))return true;return /선물/.test(s(groupOf(p)||p.productName))}
+function categoriesOf(p){
+ const raw=[leaderOf(p)].concat(siblingsOf(p),[p]).map(x=>s(productMeta(x,'category'))).find(c=>c&&c.split(/\s*,\s*/).some(x=>CATEGORIES.includes(x)));
+ if(raw)return raw.split(/\s*,\s*/).filter(x=>CATEGORIES.includes(x));
+ return [categoryOf(p)];
+}
 function categoryOf(p){
- const set=[leaderOf(p)].concat(siblingsOf(p),[p]).map(x=>productMeta(x,'category')).find(c=>CATEGORIES.includes(c));
+ const set=[leaderOf(p)].concat(siblingsOf(p),[p]).map(x=>s(productMeta(x,'category')).split(/\s*,\s*/)[0]).find(c=>CATEGORIES.includes(c));
  if(set)return set;
  const t=s(groupOf(p)||p.productName)+' '+s(p.productName);
  if(/베이글|빵|케이크|쿠키|과자|한과|떡/.test(t))return '가공';
@@ -820,7 +825,7 @@ function categoryOf(p){
 function renderCatTabs(list){
  const nav=document.getElementById('catTabs'); if(!nav)return;
  const live=list.filter(p=>stateOf(p)!=='종료');
- const cnt={}; live.forEach(p=>{const c=categoryOf(p);cnt[c]=(cnt[c]||0)+1});
+ const cnt={}; live.forEach(p=>{categoriesOf(p).forEach(c=>{cnt[c]=(cnt[c]||0)+1})});
  const giftN=live.filter(isGift).length;
  const tabs=['전체'].concat(giftN?['선물']:[],CATEGORIES.filter(c=>cnt[c]));
  if(tabs.length<3){nav.innerHTML='';return}
@@ -884,7 +889,7 @@ function renderProducts(){
  if(!searchQuery.trim())renderCatTabs(sorted);
  const catOn=currentCat!=='전체'&&!searchQuery.trim();
  if(catOn){
-   const cl=currentCat==='선물'?sorted.filter(isGift):sorted.filter(p=>categoryOf(p)===currentCat);
+   const cl=currentCat==='선물'?sorted.filter(isGift):sorted.filter(p=>categoriesOf(p).includes(currentCat));
    updateTopBanner(sorted);
    updateCardBanner(sorted,false);
    const liveN=cl.filter(p=>stateOf(p)!=='종료').length;
