@@ -3807,9 +3807,12 @@ async function loadShipping(){
     }catch(_){}
 
     const sel=$('shipProductFilter'); const cur=sel.value;
-    const products=[...new Map(shippingRows.map(r=>[r.productCode,r.productName||r.productCode])).entries()].filter(([c])=>c);
-    sel.innerHTML='<option value="">전체 상품</option>'+products.map(([c,n])=>`<option value="${esc(c)}">${esc(n)}</option>`).join('');
-    if(products.some(([c])=>c===cur)) sel.value=cur;
+    if(!Array.isArray(products)||!products.length){ try{ const pr=await apiGet({action:'products'}); if(pr&&pr.success) products=pr.products||pr.data||[]; }catch(_){} }
+    const nameOf={}; (products||[]).forEach(p=>{ if(p&&p.productCode) nameOf[String(p.productCode)]=p.productName||p.name||''; });
+    shippingRows.forEach(r=>{ if(!r.productName && nameOf[r.productCode]) r.productName=nameOf[r.productCode]; });
+    const shipProds=[...new Map(shippingRows.map(r=>[r.productCode,r.productName||nameOf[r.productCode]||r.productCode])).entries()].filter(([c])=>c).sort((a,b)=>String(a[1]).localeCompare(String(b[1]),'ko'));
+    sel.innerHTML='<option value="">전체 상품</option>'+shipProds.map(([c,n])=>`<option value="${esc(c)}">${esc(n)}</option>`).join('');
+    if(shipProds.some(([c])=>c===cur)) sel.value=cur;
 
     renderShipping();
     showMessage('shipMessage',`주문 ${shippingRows.length}건을 불러왔습니다.`);
