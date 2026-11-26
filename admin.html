@@ -87,6 +87,13 @@ tbody:not(.show-all)>tr.row-more{display:none}
 #shipTable .trk input{width:100%;min-width:120px;padding:6px 8px;font-size:13px;margin:2px 0}
 #shipTable select{min-width:92px;padding:6px}
 #shipTable tr[style*=fffbeb] td{background:#fffbeb}
+#shipTable select.st{font-weight:700;border-radius:999px;border:1.5px solid}
+.st-배송대기{background:#fff7e6;color:#b45309;border-color:#f5c27a!important}
+.st-송장등록{background:#eaf2ff;color:#1d4f91;border-color:#9cbcf0!important}
+.st-배송중{background:#f3ecff;color:#6b3fb8;border-color:#c6aef0!important}
+.st-배송완료{background:#e8f5ec;color:#17623f;border-color:#8fcca5!important}
+.st-취소{background:#fdecec;color:#b42318;border-color:#f0a8a8!important}
+#shipTable select.st option{background:#fff;color:#1e2a23;font-weight:600}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
@@ -3920,7 +3927,7 @@ function renderShipping(){
       <td>${esc(r.deliveryDate||'-')}</td>
       <td>${r.paymentConfirmed?'완료':'<span style="color:#dc2626">미입금</span>'}</td>
       <td class="trk"><input list="courierList" value="${esc(r.courier)}" placeholder="택배사" oninput="shipEdit(this,'courier')"><input value="${esc(r.trackingNumber)}" placeholder="송장번호" oninput="shipEdit(this,'trackingNumber')">${r.trackingDate?`<span class="sub">등록 ${esc(r.trackingDate)}</span>`:''}</td>
-      <td><select onchange="shipEdit(this,'shippingStatus')">${SHIP_STATUSES.map(s=>`<option ${s===r.shippingStatus?'selected':''}>${s}</option>`).join('')}</select></td>
+      <td><select class="st st-${esc(r.shippingStatus||'배송대기')}" onchange="shipEdit(this,'shippingStatus');this.className='st st-'+this.value">${SHIP_STATUSES.map(s=>`<option ${s===r.shippingStatus?'selected':''}>${s}</option>`).join('')}</select></td>
     </tr>`).join(''):'<tr><td colspan="7">조건에 맞는 주문이 없습니다.</td></tr>';
 }
 
@@ -3932,6 +3939,7 @@ function shipEdit(el,field){
     const sel=el.closest('tr').querySelector('select');
     if(r.trackingNumber&&r.shippingStatus==='배송대기'){ r.shippingStatus='송장등록'; sel.value='송장등록'; }
     if(!r.trackingNumber&&r.shippingStatus!=='배송완료'){ r.shippingStatus='배송대기'; sel.value='배송대기'; }
+    sel.className='st st-'+sel.value;
   }
   el.closest('tr').style.background=shipChanged(r)?'#fffbeb':'';
 }
