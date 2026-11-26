@@ -20,7 +20,7 @@ const dateOf = v => { if (!v) return null; const d = new Date(v); return isNaN(d
 const ymd = d => d.toISOString().slice(0, 10);
 
 // 사이트(index.html)와 같은 규칙
-const BLOCK_MARKERS = { cardDesc: '[[카드설명]]', priceNote: '[[가격옆문구]]', fold: '[[접기]]', group: '[[묶음]]', optionLabel: '[[옵션명]]', displayOrder: '[[순서]]', video: '[[움짤]]', npay: '[[네이버페이]]', category: '[[카테고리]]', gift: '[[선물]]' };
+const BLOCK_MARKERS = { cardDesc: '[[카드설명]]', priceNote: '[[가격옆문구]]', seoTitle: '[[검색제목]]', fold: '[[접기]]', group: '[[묶음]]', optionLabel: '[[옵션명]]', displayOrder: '[[순서]]', video: '[[움짤]]', npay: '[[네이버페이]]', category: '[[카테고리]]', gift: '[[선물]]' };
 function blocksOf(p) {
   let raw = p.detailBlocks;
   if (raw == null || raw === '') raw = p.detailPage;
@@ -35,6 +35,7 @@ function blocksOf(p) {
     return b || {};
   });
 }
+const seoOf = u => u.items.map(x => meta(x, 'seoTitle')).find(Boolean) || '';
 const meta = (p, type) => { const b = blocksOf(p).find(x => s(x.type).toLowerCase() === type.toLowerCase()); return b ? s(b.value).trim() : ''; };
 function stateOf(p, now) {
   const start = dateOf(p.startAt), end = dateOf(p.endAt);
@@ -148,8 +149,11 @@ function productPage(u, others, biz) {
   const priceNote = meta(p, 'priceNote');
   const end = dateOf(p.endAt);
   const endTxt = end ? `${end.getMonth() + 1}월 ${end.getDate()}일 마감` : '';
-  const title = `${u.name} 공동구매 ${u.min > 0 ? money(u.min) + (u.items.length > 1 ? '~' : '') : ''} | 해남공구마켓`.replace(/\s+\|/, ' |');
-  const desc = cut([cardDesc, u.min > 0 ? money(u.min) + (u.items.length > 1 ? '부터' : '') : '', priceNote, endTxt, '산지에서 바로 보내는 해남공구마켓 공동구매'].filter(Boolean).join(' · '), 150);
+  // 검색용 제목(관리자 '검색용 제목' 칸)이 있으면 그걸 앞에, 없으면 상품명
+  // 옵션 묶음이면 묶음 안 어느 상품에 넣어도 적용
+  const seoName = seoOf(u) || u.name;
+  const title = `${seoName} 공동구매 ${u.min > 0 ? money(u.min) + (u.items.length > 1 ? '~' : '') : ''} | 해남공구마켓`.replace(/\s+\|/, ' |');
+  const desc = cut([seoName !== u.name ? seoName : '', cardDesc, u.min > 0 ? money(u.min) + (u.items.length > 1 ? '부터' : '') : '', priceNote, endTxt, '산지에서 바로 보내는 해남공구마켓 공동구매'].filter(Boolean).join(' · '), 150);
   const hero = imageUrl(p.image, 'w1200');
   const avail = u.state === '판매중' ? 'https://schema.org/InStock' : u.state === '준비중' ? 'https://schema.org/PreOrder' : 'https://schema.org/SoldOut';
   const offers = u.items.length > 1
@@ -294,7 +298,8 @@ for (const u of units.filter(x => x.state === '판매중')) {
     const price = Number(x.salePrice || 0), img = imageUrl(x.image || u.leader.image, 'w1200');
     if (!(price > 0) || !img) continue;
     const opt = u.items.length > 1 ? (meta(x, 'optionLabel') || s(x.productName)) : '';
-    const title = cut(u.items.length > 1 ? `${u.name} ${opt}` : s(x.productName), 140);
+    const seoName = seoOf(u);
+    const title = cut(u.items.length > 1 ? `${seoName || u.name} ${opt}` : (seoName || s(x.productName)), 140);
     const desc = cut([meta(u.leader, 'cardDesc') || s(u.leader.description), plain(blocksOf(u.leader).filter(b => ['text', 'price'].includes(s(b.type).toLowerCase())).map(b => s(b.value)).join(' '))].filter(Boolean).join(' · ') || u.name, 4900);
     const end = dateOf(x.endAt);
     feedItems.push(`  <item>

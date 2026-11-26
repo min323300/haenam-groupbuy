@@ -915,7 +915,7 @@ function tick(){
  if(currentProduct)document.getElementById('modalTimer').textContent=remainText(currentProduct);
 }
 // 관리자 저장 스크립트가 '글' 블록만 남기므로 특수 블록은 [[표시]]를 붙인 글로 저장됩니다.
-const BLOCK_MARKERS={cardDesc:'[[카드설명]]',priceNote:'[[가격옆문구]]',fold:'[[접기]]',group:'[[묶음]]',optionLabel:'[[옵션명]]',displayOrder:'[[순서]]',video:'[[움짤]]',npay:'[[네이버페이]]',category:'[[카테고리]]',gift:'[[선물]]'};
+const BLOCK_MARKERS={cardDesc:'[[카드설명]]',priceNote:'[[가격옆문구]]',seoTitle:'[[검색제목]]',fold:'[[접기]]',group:'[[묶음]]',optionLabel:'[[옵션명]]',displayOrder:'[[순서]]',video:'[[움짤]]',npay:'[[네이버페이]]',category:'[[카테고리]]',gift:'[[선물]]'};
 function decodeDetailBlock(b){
  if(b&&s(b.type).toLowerCase()==='text'){
   const v=s(b.value||b.text||b.content);
