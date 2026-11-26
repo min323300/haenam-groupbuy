@@ -80,9 +80,15 @@ tbody:not(.show-all)>tr.row-more{display:none}
 #shipTable{min-width:1280px}
 #shipTable td{white-space:nowrap}
 #shipTable td.left{white-space:normal}
-#shipTable td:nth-child(2){min-width:130px}
+#shipTable td:nth-child(3){min-width:130px}
 #shipTable td:nth-child(6){min-width:220px}
 #shipTable select{min-width:96px}
+#shipTable th:last-child,#shipTable td:last-child{position:sticky;right:0;z-index:2;background:#fff;box-shadow:-6px 0 8px -6px rgba(0,0,0,.18)}
+#shipTable th:last-child{background:#eef3ef}
+#shipTable tr[style*=fffbeb] td:last-child{background:#fffbeb}
+#shipTable th:first-child,#shipTable td:first-child{position:sticky;left:0;z-index:2;background:#fff;box-shadow:6px 0 8px -6px rgba(0,0,0,.12)}
+#shipTable th:first-child{background:#eef3ef}
+#shipTable tr[style*=fffbeb] td:first-child{background:#fffbeb}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
@@ -749,7 +755,7 @@ async function saveSupplierApplication(btn){
     <datalist id="courierList"><option>CJ대한통운</option><option>한진택배</option><option>롯데택배</option><option>우체국택배</option><option>로젠택배</option><option>경동택배</option></datalist>
     <div class="table-wrap" style="margin-top:14px">
       <table id="shipTable">
-        <thead><tr><th>주문번호</th><th>상품</th><th>고객명</th><th>연락처</th><th>수량</th><th>주소</th><th>희망도착일</th><th>입금</th><th>택배사</th><th>송장번호</th><th>송장등록일</th><th>배송상태</th></tr></thead>
+        <thead><tr><th>고객명</th><th>주문번호</th><th>상품</th><th>연락처</th><th>수량</th><th>주소</th><th>희망도착일</th><th>입금</th><th>택배사</th><th>송장번호</th><th>송장등록일</th><th>배송상태</th></tr></thead>
         <tbody id="shipRows"><tr><td colspan="12">관리자 비밀번호를 입력한 뒤 배송목록을 불러와 주세요.</td></tr></tbody>
       </table>
     </div>
@@ -3864,9 +3870,9 @@ async function loadShipping(){
     try{
       const ores=await apiGet({action:'orders',password});
       if(ores && ores.success){
-        const memoMap={}, pnameMap={}, pcodeMap={};
-        (ores.orders||ores.data||[]).forEach(o=>{ const k=String(o.orderNo||o.orderNumber||'').trim(); memoMap[k]=String(o.memo||''); pnameMap[k]=String(o.productName||'').trim(); pcodeMap[k]=String(o.productCode||'').trim(); });
-        shippingRows.forEach(r=>{ r.memo=memoMap[r.orderNumber]||''; if(!r.productName) r.productName=pnameMap[r.orderNumber]||''; if(!r.productCode) r.productCode=pcodeMap[r.orderNumber]||''; });
+        const memoMap={}, pnameMap={}, pcodeMap={}, qtyMap={};
+        (ores.orders||ores.data||[]).forEach(o=>{ const k=String(o.orderNo||o.orderNumber||'').trim(); memoMap[k]=String(o.memo||''); pnameMap[k]=String(o.productName||'').trim(); pcodeMap[k]=String(o.productCode||'').trim(); qtyMap[k]=Number(o.qty||o.quantity||0); });
+        shippingRows.forEach(r=>{ r.memo=memoMap[r.orderNumber]||''; if(!r.productName) r.productName=pnameMap[r.orderNumber]||''; if(!r.productCode) r.productCode=pcodeMap[r.orderNumber]||''; if(!Number(r.qty)) r.qty=Number(r.quantity)||qtyMap[r.orderNumber]||0; });
       }
     }catch(_){}
 
@@ -3910,9 +3916,9 @@ function renderShipping(){
   const rows=shipFiltered();
   $('shipRows').innerHTML=rows.length?rows.map(r=>`
     <tr data-order="${esc(r.orderNumber)}" style="${shipChanged(r)?'background:#fffbeb':''}">
+      <td><b>${esc(r.name)}</b></td>
       <td>${esc(r.orderNumber)}</td>
       <td class="left">${esc(r.productName)}</td>
-      <td>${esc(r.name)}</td>
       <td>${esc(shipPhone(r.phone))}</td>
       <td>${Number(r.qty||0)}</td>
       <td class="left">${esc(r.address)}</td>
