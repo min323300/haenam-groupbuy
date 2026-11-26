@@ -898,14 +898,18 @@ async function saveSupplierApplication(btn){
   class="notice"
 ></div>
 
+<p class="muted" style="font-size:12px;margin:8px 0 0">수입액 = 판매가 − 원가(공급단가+박스당 택배비) − 벤더수수료 − 파트너 수당 − 진행중 이벤트 수당. 수당 칸을 바꾸면 바로 다시 계산됩니다. (카드·PG 수수료는 빠져 있습니다)</p>
 <div class="table-wrap" style="margin-top:12px">
   <table>
     <thead>
       <tr>
-        <th>상품코드</th>
         <th>상품명</th>
         <th>판매가</th>
-        <th>건당 수당</th>
+        <th>원가<br><small>매입+택배</small></th>
+        <th>벤더<br>수수료</th>
+        <th>파트너 수당</th>
+        <th>이벤트<br>수당</th>
+        <th>수입액<br><small>(수입률)</small></th>
         <th>상태</th>
         <th>저장</th>
       </tr>
@@ -913,7 +917,7 @@ async function saveSupplierApplication(btn){
 
     <tbody id="productCommissionRows">
       <tr>
-        <td colspan="6">
+        <td colspan="9">
           상품 수당 불러오기를 눌러 주세요.
         </td>
       </tr>
@@ -943,8 +947,8 @@ async function saveSupplierApplication(btn){
 </div>
 <div class="table-wrap" style="margin-top:12px">
   <table>
-    <thead><tr><th>상태</th><th>상품</th><th>대상</th><th>추가수당</th><th>기간</th><th>메모</th><th>관리</th></tr></thead>
-    <tbody id="eventRows"><tr><td colspan="7">이벤트 수당 불러오기를 눌러 주세요.</td></tr></tbody>
+    <thead><tr><th>상태</th><th>상품</th><th>대상</th><th>추가수당</th><th>판매가 · 원가 · 벤더</th><th>기본+이벤트 수당</th><th>수입액</th><th>기간</th><th>메모</th><th>관리</th></tr></thead>
+    <tbody id="eventRows"><tr><td colspan="10">이벤트 수당 불러오기를 눌러 주세요.</td></tr></tbody>
   </table>
 </div>
 
@@ -2370,6 +2374,58 @@ async function loadPartnerCommissions(){
 }
 /* ---------- 상품별 공통 수당 관리 ---------- */
 
+/* ---------- 상품별 수입액 계산용 원가·벤더·이벤트 (2026-11-26) ---------- */
+let pcCost=null;   // {products, supplyPrices, vendorFees}
+let pcEvents=[];   // eventCommissionList events
+function pcToday(){ const d=new Date(),p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+async function pcLoadCost(password){
+  try{
+    const [fd,ev]=await Promise.all([
+      apiGet({action:'adminPurchaseFormData',password}),
+      apiGet({action:'eventCommissionList',password})
+    ]);
+    if(fd&&fd.success) pcCost={products:fd.products||[],supplyPrices:fd.supplyPrices||[],vendorFees:fd.vendorFees||[]};
+    if(ev&&ev.success){ pcEvents=ev.events||[]; if(!eventData) eventData=ev; }
+  }catch(_){}
+}
+function pcCostOf(code){
+  const out={buy:null,ship:0,vendor:0,vendorName:'',src:''};
+  if(!pcCost) return out;
+  const t=pcToday();
+  const sp=pcCost.supplyPrices.filter(x=>x.productCode===code&&x.startDate<=t&&(!x.endDate||x.endDate>=t))
+    .sort((a,b)=>a.startDate===b.startDate?String(b.createdAt||'').localeCompare(String(a.createdAt||'')):(a.startDate<b.startDate?1:-1))[0];
+  if(sp){ out.buy=Number(sp.unitPrice||0); out.ship=Number(sp.shippingPerBox||0); out.src='공급단가'+(sp.supplierName?' · '+sp.supplierName:''); }
+  else{
+    const p=pcCost.products.find(v=>v.productCode===code);
+    if(p&&Number(p.defaultPurchaseUnitPrice||0)>0){ out.buy=Number(p.defaultPurchaseUnitPrice||0); out.ship=Number(p.defaultShippingFee||0); out.src='상품세부정보 기본단가'; }
+  }
+  const vf=pcCost.vendorFees.filter(x=>x.productCode===code&&x.startDate<=t&&(!x.endDate||x.endDate>=t))
+    .sort((a,b)=>a.startDate<b.startDate?1:-1)[0];
+  if(vf){ out.vendor=Number(vf.feePerBox||0); out.vendorName=vf.vendorName||''; }
+  return out;
+}
+/* 진행중 이벤트 중 가장 큰 금액 (전체 대상 우선 표시) */
+function pcEventOf(code){
+  const live=pcEvents.filter(e=>e.productCode===code&&e.state==='진행중');
+  if(!live.length) return {bonus:0,label:''};
+  live.sort((a,b)=>Number(b.bonus||0)-Number(a.bonus||0));
+  const top=live[0];
+  return {bonus:Number(top.bonus||0),label:top.target==='전체'?'전체':'일부 파트너'};
+}
+function pcProfitHtml(price,cost,commission,bonus){
+  if(cost.buy===null) return '<span class="muted" style="font-size:12px">원가 미등록</span>';
+  const profit=price-cost.buy-cost.ship-cost.vendor-commission-bonus;
+  const rate=price>0?Math.round(profit/price*1000)/10:0;
+  const color=profit<=0?'#a32121':(rate<10?'#b45309':'#17623f');
+  return `<b style="color:${color}">${profit.toLocaleString('ko-KR')}원</b><br><small style="color:${color}">(${rate}%)${profit<=0?' ⚠️ 손해':''}</small>`;
+}
+function pcRecalc(input){
+  const tr=input.closest('tr'); if(!tr) return;
+  const code=tr.dataset.productCode, price=Number(tr.dataset.price||0);
+  const cost=pcCostOf(code), ev=pcEventOf(code);
+  tr.querySelector('.pc-profit').innerHTML=pcProfitHtml(price,cost,Number(input.value||0),ev.bonus);
+}
+
 /* ---------- 🔥 이벤트(특별) 수당 ---------- */
 let eventData=null;
 const won=v=>Number(v||0).toLocaleString('ko-KR')+'원';
@@ -2382,6 +2438,14 @@ function evPreview(){
   const total=Number(p.baseCommission||0)+bonus;
   let html=`기본 ${won(p.baseCommission)} + 이벤트 ${won(bonus)} = <b>합계 ${won(total)}</b> (박스·개당)`;
   if(p.commissionStatus!=='활성') html+=` <span style="color:#a32121">· 이 상품은 기본수당이 '${esc(p.commissionStatus)}' 상태라 이벤트 수당도 적용되지 않습니다.</span>`;
+  const pc=pcCostOf(p.productCode), pr=(products.find(x=>x.productCode===p.productCode)||{});
+  const salePrice=Number(p.salePrice||pr.price||pr.salePrice||0);
+  if(pc.buy!==null&&salePrice>0){
+    const profit=salePrice-pc.buy-pc.ship-pc.vendor-total;
+    const color=profit<=0?'#a32121':'#17623f';
+    html+=`<br>판매가 ${won(salePrice)} − 원가 ${won(pc.buy+pc.ship)}${pc.vendor?' − 벤더 '+won(pc.vendor):''} − 수당 ${won(total)} = <b style="color:${color}">수입액 ${won(profit)}</b>`+(profit<=0?' ⚠️ 팔수록 손해입니다':'');
+    $('evPreviewBox').innerHTML=html; return;
+  }
   if(p.margin!==null&&p.margin!==undefined){
     const left=p.margin-total, color=left<=0?'#a32121':(total>p.margin*0.5?'#b45309':'#17623f');
     html+=`<br>상품세부정보 기준 박스당 마진 약 ${won(p.margin)} → 수당 뒤 <b style="color:${color}">${won(left)}</b>`+(left<=0?' ⚠️ 팔수록 손해입니다':(total>p.margin*0.5?' ⚠️ 마진의 절반 이상을 수당으로 씁니다':''));
@@ -2394,6 +2458,16 @@ async function loadEventCommissions(){
     showMessage('eventMessage','이벤트 수당을 불러오고 있습니다...');
     const res=await apiGet({action:'eventCommissionList',password}); if(!res.success) throw new Error(res.message||'조회 실패');
     eventData=res;
+    if(!pcCost) await pcLoadCost(password);
+    pcEvents=res.events||[];
+    if(!Array.isArray(products)||!products.length){ try{ const pr=await apiGet({action:'products'}); if(pr&&pr.success) products=pr.products||pr.data||[]; }catch(_){} }
+    const baseOf={}, priceOf={}; res.products.forEach(p=>{baseOf[p.productCode]=Number(p.baseCommission||0);});
+    (products||[]).forEach(p=>{priceOf[p.productCode]=Number(p.price||p.salePrice||0);});
+    res.products.forEach(p=>{ if(p.salePrice) priceOf[p.productCode]=Number(p.salePrice); });
+    const evMoney=e=>{ const c=pcCostOf(e.productCode), price=priceOf[e.productCode]||0, tot=(baseOf[e.productCode]||0)+Number(e.bonus||0);
+      if(c.buy===null||!price) return {info:price?won(price)+' · 원가 미등록':'-', tot, profit:'-'};
+      const pf=price-c.buy-c.ship-c.vendor-tot, color=pf<=0?'#a32121':'#17623f';
+      return {info:`${won(price)}<br><small class="muted">원가 ${won(c.buy+c.ship)}${c.vendor?' · 벤더 '+won(c.vendor):''}</small>`, tot, profit:`<b style="color:${color}">${won(pf)}</b>${pf<=0?'<br><small style="color:#a32121">⚠️ 손해</small>':''}`}; };
     $('evProduct').innerHTML=res.products.map(p=>`<option value="${esc(p.productCode)}">${esc(p.productName)} (기본 ${won(p.baseCommission)})</option>`).join('');
     $('evPartners').innerHTML=res.partners.filter(p=>p.status==='활성').map(p=>`<label><input type="checkbox" class="ev-partner" value="${esc(p.partnerCode)}"> ${esc(p.name)} (${esc(p.partnerCode)})</label>`).join('')||'<span class="muted">활성 파트너가 없습니다.</span>';
     if(!$('evStart').value){$('evStart').value=dtLocal(new Date());evDays(5);}
@@ -2405,9 +2479,10 @@ async function loadEventCommissions(){
       <td class="left">${esc(e.productName)}</td>
       <td class="left">${e.target==='전체'?'전체 파트너':e.partnerCodes.map(c=>esc((names[c]||'')+' '+c)).join('<br>')}</td>
       <td><b>+${won(e.bonus)}</b></td>
+      ${(m=>`<td>${m.info}</td><td>${won(baseOf[e.productCode]||0)} + ${won(e.bonus)}<br><b>= ${won(m.tot)}</b></td><td>${m.profit}</td>`)(evMoney(e))}
       <td>${esc(String(e.startAt).replace('T',' ').slice(0,16))}<br>~ ${esc(String(e.endAt).replace('T',' ').slice(0,16))}</td>
       <td class="left">${esc(e.memo)}</td>
-      <td>${e.state==='종료'?'-':`<button class="danger" type="button" onclick="stopEventCommission('${esc(e.eventId)}')">지금 종료</button>`}</td></tr>`).join(''):'<tr><td colspan="7">등록된 이벤트 수당이 없습니다.</td></tr>';
+      <td>${e.state==='종료'?'-':`<button class="danger" type="button" onclick="stopEventCommission('${esc(e.eventId)}')">지금 종료</button>`}</td></tr>`).join(''):'<tr><td colspan="10">등록된 이벤트 수당이 없습니다.</td></tr>';
     showMessage('eventMessage','이벤트 수당을 불러왔습니다.');
   }catch(e){showMessage('eventMessage','이벤트 수당 오류: '+e.message,true);}
 }
@@ -2466,72 +2541,45 @@ async function loadProductCommissions(){
     }
 
     const rows = Array.isArray(res.items) ? res.items : [];
+    await pcLoadCost(password);
 
     $('productCommissionRows').innerHTML = rows.length
       ? rows.map(function(r){
-
           const code = esc(r.productCode || '');
           const name = esc(r.productName || '');
           const price = Number(r.salePrice || 0);
           const commission = Number(r.commission || 0);
           const status = r.status || '활성';
-
+          const cost = pcCostOf(r.productCode);
+          const ev = pcEventOf(r.productCode);
+          const costCell = cost.buy===null
+            ? '<span class="muted" style="font-size:12px">미등록</span>'
+            : `${(cost.buy+cost.ship).toLocaleString('ko-KR')}원<br><small class="muted">${cost.buy.toLocaleString('ko-KR')}${cost.ship?' + 택배 '+cost.ship.toLocaleString('ko-KR'):''}</small>`;
+          const vendorCell = cost.vendor ? `${cost.vendor.toLocaleString('ko-KR')}원${cost.vendorName?'<br><small class="muted">'+esc(cost.vendorName)+'</small>':''}` : '-';
+          const evCell = ev.bonus ? `<b style="color:#c2410c">+${ev.bonus.toLocaleString('ko-KR')}원</b><br><small class="muted">${ev.label}</small>` : '-';
           return `
-            <tr data-product-code="${code}">
-              <td>${code}</td>
-
-              <td class="left">
-                ${name}
-              </td>
-
+            <tr data-product-code="${code}" data-price="${price}">
+              <td class="left">${name}<br><small class="muted">${code}</small></td>
+              <td>${price.toLocaleString('ko-KR')}원</td>
+              <td>${costCell}</td>
+              <td>${vendorCell}</td>
               <td>
-                ${price.toLocaleString('ko-KR')}원
+                <input class="product-commission-input" type="number" min="0" step="100"
+                  value="${commission}" oninput="pcRecalc(this)"
+                  style="min-width:100px;text-align:right">
               </td>
-
-              <td>
-                <input
-                  class="product-commission-input"
-                  type="number"
-                  min="0"
-                  step="100"
-                  value="${commission}"
-                  style="min-width:130px;text-align:right"
-                >
-              </td>
-
+              <td>${evCell}</td>
+              <td class="pc-profit">${pcProfitHtml(price,cost,commission,ev.bonus)}</td>
               <td>
                 <select class="product-commission-status">
-                  <option value="활성"
-                    ${status === '활성' ? 'selected' : ''}>
-                    활성
-                  </option>
-
-                  <option value="정지"
-                    ${status === '정지' ? 'selected' : ''}>
-                    정지
-                  </option>
+                  <option value="활성" ${status === '활성' ? 'selected' : ''}>활성</option>
+                  <option value="정지" ${status === '정지' ? 'selected' : ''}>정지</option>
                 </select>
               </td>
-
-              <td>
-                <button
-                  class="primary"
-                  type="button"
-                  onclick="saveProductCommission(this)"
-                >
-                  저장
-                </button>
-              </td>
-            </tr>
-          `;
+              <td><button class="primary" type="button" onclick="saveProductCommission(this)">저장</button></td>
+            </tr>`;
         }).join('')
-      : `
-        <tr>
-          <td colspan="6">
-            등록된 상품이 없습니다.
-          </td>
-        </tr>
-      `;
+      : `<tr><td colspan="9">등록된 상품이 없습니다.</td></tr>`;
 
     showMessage(
       'productCommissionMessage',
