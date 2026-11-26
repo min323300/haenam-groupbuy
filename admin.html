@@ -1626,7 +1626,7 @@ async function editProduct(code){
     $('paymentMethod').value=p.paymentMethod||'계좌이체';
     $('productImage').value=p.productImage||p.image||'';
     $('productDescription').value=p.productDescription||p.description||'';
-    $('priceNote').value='';
+    $('priceNote').value=''; if($('seoTitle'))$('seoTitle').value='';
     $('optionGroup').value=''; $('optionLabel').value=''; $('displayOrder').value=''; if($('productCategory'))$('productCategory').value=''; if($('productGift'))$('productGift').checked=false;
     $('productLink').value=p.productLink||p.link||p.linkUrl||'';
     $('bankName').value=p.bankName||'';
