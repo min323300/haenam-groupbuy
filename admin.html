@@ -2466,8 +2466,13 @@ async function loadEventCommissions(){
     res.products.forEach(p=>{ if(p.salePrice) priceOf[p.productCode]=Number(p.salePrice); });
     const evMoney=e=>{ const c=pcCostOf(e.productCode), price=priceOf[e.productCode]||0, tot=(baseOf[e.productCode]||0)+Number(e.bonus||0);
       if(c.buy===null||!price) return {info:price?won(price)+' · 원가 미등록':'-', tot, profit:'-'};
+      const base=baseOf[e.productCode]||0, info=`${won(price)}<br><small class="muted">원가 ${won(c.buy+c.ship)}${c.vendor?' · 벤더 '+won(c.vendor):''}</small>`;
       const pf=price-c.buy-c.ship-c.vendor-tot, color=pf<=0?'#a32121':'#17623f';
-      return {info:`${won(price)}<br><small class="muted">원가 ${won(c.buy+c.ship)}${c.vendor?' · 벤더 '+won(c.vendor):''}</small>`, tot, profit:`<b style="color:${color}">${won(pf)}</b>${pf<=0?'<br><small style="color:#a32121">⚠️ 손해</small>':''}`}; };
+      if(e.state==='종료'){ /* 끝난 이벤트: 지금은 기본수당만 → 원래 수입액 */
+        const now=price-c.buy-c.ship-c.vendor-base, nc=now<=0?'#a32121':'#17623f';
+        return {info, tot, ended:true, base, profit:`<b style="color:${nc}">${won(now)}</b>${now<=0?' ⚠️':''}<br><small class="muted">이벤트 중 ${won(pf)}</small>`};
+      }
+      return {info, tot, profit:`<b style="color:${color}">${won(pf)}</b>${pf<=0?'<br><small style="color:#a32121">⚠️ 손해</small>':''}`}; };
     $('evProduct').innerHTML=res.products.map(p=>`<option value="${esc(p.productCode)}">${esc(p.productName)} (기본 ${won(p.baseCommission)})</option>`).join('');
     $('evPartners').innerHTML=res.partners.filter(p=>p.status==='활성').map(p=>`<label><input type="checkbox" class="ev-partner" value="${esc(p.partnerCode)}"> ${esc(p.name)} (${esc(p.partnerCode)})</label>`).join('')||'<span class="muted">활성 파트너가 없습니다.</span>';
     if(!$('evStart').value){$('evStart').value=dtLocal(new Date());evDays(5);}
@@ -2479,7 +2484,7 @@ async function loadEventCommissions(){
       <td class="left">${esc(e.productName)}</td>
       <td class="left">${e.target==='전체'?'전체 파트너':e.partnerCodes.map(c=>esc((names[c]||'')+' '+c)).join('<br>')}</td>
       <td><b>+${won(e.bonus)}</b></td>
-      ${(m=>`<td>${m.info}</td><td>${won(baseOf[e.productCode]||0)} + ${won(e.bonus)}<br><b>= ${won(m.tot)}</b></td><td>${m.profit}</td>`)(evMoney(e))}
+      ${(m=>`<td>${m.info}</td><td>${m.ended?`<b>기본 ${won(m.base)}</b><br><small class="muted" style="text-decoration:line-through">${won(m.base)} + ${won(e.bonus)} = ${won(m.tot)}</small>`:`${won(baseOf[e.productCode]||0)} + ${won(e.bonus)}<br><b>= ${won(m.tot)}</b>`}</td><td>${m.profit}</td>`)(evMoney(e))}
       <td>${esc(String(e.startAt).replace('T',' ').slice(0,16))}<br>~ ${esc(String(e.endAt).replace('T',' ').slice(0,16))}</td>
       <td class="left">${esc(e.memo)}</td>
       <td>${e.state==='종료'?'-':`<button class="danger" type="button" onclick="stopEventCommission('${esc(e.eventId)}')">지금 종료</button>`}</td></tr>`).join(''):'<tr><td colspan="10">등록된 이벤트 수당이 없습니다.</td></tr>';
