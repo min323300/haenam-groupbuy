@@ -2109,12 +2109,1816 @@ function renderPartnerApplications(){
   $('partnerAppRows').innerHTML=rows.length?rows.map(r=>`
     <tr data-id="${esc(r.id)}">
       <td>${esc(partnerAppDate(r.createdAt))}</td>
+      <td><b>${esc(r.name)}</b></td>
+      <td><a href="tel:${esc(r.phone)}">${esc(r.phone)}</a></td>
+      <td><b style="color:${color[r.status]||'#333'}">${esc(r.status)}</b></td>
+      <td>${esc(partnerAppDate(r.processedAt))}</td>
+      <td>${esc(r.partnerCode||'')}</td>
+      <td><input class="pa-memo" value="${esc(r.adminMemo)}" placeholder="예: 11/4 통화, 블로그 운영" style="min-width:180px"></td>
+      <td style="white-space:nowrap">
+        ${r.status==='등록완료'?'<span class="muted">완료</span>':`
+        <button class="primary" type="button" onclick="approvePartnerApplication(this)">승인</button>
+        <button class="secondary" type="button" onclick="setPartnerApplicationStatus(this,'보류')">보류</button>`}
+      </td>
+    </tr>`).join(''):'<tr><td colspan="8">조건에 맞는 신청이 없습니다.</td></tr>';
+}
+async function setPartnerApplicationStatus(btn,status){
+  const tr=btn.closest('tr'), id=tr.dataset.id;
+  try{
+    const password=partnerAppPassword();
+    if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+    btn.disabled=true;
+    const res=await apiPost({action:'partnerApplicationUpdate',password,id,status,adminMemo:tr.querySelector('.pa-memo').value});
+    if(!res.success) throw new Error(res.message||'상태 변경 실패');
+    showMessage('partnerAppMessage',res.message);
+    await loadPartnerApplications(true);
+    return true;
+  }catch(e){ showMessage('partnerAppMessage','처리 오류: '+e.message,true); btn.disabled=false; return false; }
+}
+async function approvePartnerApplication(btn){
+  const id=btn.closest('tr').dataset.id;
+  const r=partnerApplications.find(x=>x.id===id); if(!r) return;
+  if(!confirm(`${r.name}님 신청을 승인할까요?\n승인 후 아래 파트너 등록 칸에서 로그인 ID와 초기 비밀번호를 정해 등록해 주세요.`)) return;
+  if(!(await setPartnerApplicationStatus(btn,'승인'))) return;
+  pendingPartnerApplicationId=id;
+  if(!$('partnerAdminPassword').value) $('partnerAdminPassword').value=partnerAppPassword();
+  $('partnerName').value=r.name;
+  $('partnerMemo').value=`연락처 ${r.phone} / 파트너 신청 ${r.id}`;
+  $('partnerLoginId').value=''; $('partnerLoginPassword').value='';
+  $('partnerLoginId').focus();
+  $('partnerName').scrollIntoView({behavior:'smooth',block:'center'});
+  showMessage('partnerMessage',`${r.name}님 정보를 채웠습니다. 로그인 ID와 초기 비밀번호를 정한 뒤 [파트너 등록]을 눌러 주세요.`);
+}
+
+function clearPartnerForm(){
+  $('partnerName').value='';
+  $('partnerLoginId').value='';
+  $('partnerLoginPassword').value='';
+  $('partnerMemo').value='';
+}
+
+async function loadPartners(){
+  try{
+    const password=partnerPassword();
+    if(!password) return showMessage('partnerMessage','관리자 비밀번호를 입력해 주세요.',true);
+
+    showMessage('partnerMessage','파트너 목록을 불러오고 있습니다...');
+    const res=await apiGet({action:'partnerList',password});
+    if(!res.success) throw new Error(res.message||'파트너 조회 실패');
+
+    const rows=Array.isArray(res.partners)?res.partners:[];
+    partnerCache = rows;
+    try{ fillCenterParents(); }catch(_){}
+    $('partnerRows').innerHTML=rows.length ? rows.map(p=>`
+      <tr>
+        <td>${esc(p.partnerCode||'')}</td>
+        <td>${esc(p.name||'')}</td>
+        <td>${esc(p.loginId||'')}</td>
+        <td><span class="badge">${esc(p.status||'활성')}</span></td>
+        <td class="left">
+          <input value="${esc(p.partnerUrl||'')}" readonly style="min-width:360px">
+          <button class="secondary" type="button" style="margin-top:6px" onclick="copyPartnerUrl('${esc(p.partnerUrl||'')}')">URL 복사</button>
+        </td>
+        <td>${esc(p.createdAt||'')}</td>
+        <td>
+          <button class="${p.status==='활성'?'danger':'primary'}" type="button"
+            onclick="changePartnerStatus('${esc(p.partnerCode||'')}','${p.status==='활성'?'정지':'활성'}')">
+            ${p.status==='활성'?'정지':'활성'}
+          </button>
+          <button class="secondary" type="button" style="margin-top:6px" onclick="setPartnerPassword('${esc(p.partnerCode||'')}')">비밀번호 설정</button>
+        </td>
+      </tr>`).join('')
+      : '<tr><td colspan="7">등록된 파트너가 없습니다.</td></tr>';
+
+    const sel=$('partnerCommissionPartner');
+    if(sel){
+      const current=sel.value;
+      sel.innerHTML='<option value="">파트너를 먼저 선택해 주세요</option>'+rows.map(p=>
+        `<option value="${esc(p.partnerCode||'')}">${esc(p.name||'')} (${esc(p.partnerCode||'')})</option>`
+      ).join('');
+      if(rows.some(p=>String(p.partnerCode)===String(current))) sel.value=current;
+    }
+
+    fillSettlementPartners();
+    
+    showMessage('partnerMessage',`${rows.length}명의 파트너를 불러왔습니다.`);
+  }catch(e){
+    showMessage('partnerMessage','파트너 조회 오류: '+e.message,true);
+  }
+}
+
+async function savePartner(){
+  try{
+    const password=partnerPassword();
+    const name=$('partnerName').value.trim();
+    const loginId=$('partnerLoginId').value.trim();
+    const loginPassword=$('partnerLoginPassword').value;
+    const memo=$('partnerMemo').value.trim();
+
+    if(!password) return showMessage('partnerMessage','관리자 비밀번호를 입력해 주세요.',true);
+    if(!name) return showMessage('partnerMessage','파트너 이름을 입력해 주세요.',true);
+    if(!loginId) return showMessage('partnerMessage','로그인 ID를 입력해 주세요.',true);
+
+    const res=await apiPost({
+      action:'partnerSave',
+      password,
+      name,
+      loginId,
+      loginPassword,
+      memo
+    });
+    if(!res.success) throw new Error(res.message||'파트너 등록 실패');
+
+    clearPartnerForm();
+    showMessage('partnerMessage',`파트너가 등록되었습니다. 코드: ${res.partnerCode}`);
+
+    await loadPartners();
+    if(pendingPartnerApplicationId){
+      try{
+        const u=await apiPost({action:'partnerApplicationUpdate',password,id:pendingPartnerApplicationId,status:'등록완료',partnerCode:res.partnerCode});
+        if(u.success) showMessage('partnerMessage',`파트너가 등록되었습니다. 코드: ${res.partnerCode} (파트너 신청도 '등록완료'로 처리했습니다)`);
+      }catch(_){}
+      pendingPartnerApplicationId='';
+      loadPartnerApplications(true);
+    }
+  }catch(e){
+    showMessage('partnerMessage','파트너 등록 오류: '+e.message,true);
+  }
+}
+
+async function changePartnerStatus(partnerCode,status){
+  try{
+    const password=partnerPassword();
+    if(!password) return showMessage('partnerMessage','관리자 비밀번호를 입력해 주세요.',true);
+    if(!confirm(`이 파트너를 "${status}" 상태로 변경할까요?`)) return;
+
+    const res=await apiPost({
+      action:'partnerStatus',
+      password,
+      partnerCode,
+      status
+    });
+    if(!res.success) throw new Error(res.message||'상태 변경 실패');
+
+    showMessage('partnerMessage',`파트너 상태를 "${status}"(으)로 변경했습니다.`);
+    await loadPartners();
+  }catch(e){
+    showMessage('partnerMessage','파트너 상태 변경 오류: '+e.message,true);
+  }
+}
+
+async function copyPartnerUrl(url){
+  if(!url) return;
+  try{
+    await navigator.clipboard.writeText(url);
+    alert('파트너 전용 URL이 복사되었습니다.\n'+url);
+  }catch(e){
+    const t=document.createElement('textarea');
+    t.value=url;
+    document.body.appendChild(t);
+    t.select();
+    document.execCommand('copy');
+    t.remove();
+    alert('파트너 전용 URL이 복사되었습니다.\n'+url);
+  }
+}
+
+
+async function setPartnerPassword(partnerCode){
+  try{
+    const password=partnerPassword();
+    if(!password) return showMessage('partnerMessage','관리자 비밀번호를 입력해 주세요.',true);
+    const newPassword=prompt('파트너가 로그인할 새 비밀번호를 입력해 주세요. (6자 이상)');
+    if(newPassword===null) return;
+    if(String(newPassword).length<6) return showMessage('partnerMessage','파트너 비밀번호는 6자 이상으로 입력해 주세요.',true);
+    const res=await apiPost({action:'partnerPasswordSet',password,partnerCode,newPassword});
+    if(!res.success) throw new Error(res.message||'비밀번호 설정 실패');
+    showMessage('partnerMessage',`${partnerCode} 로그인 비밀번호를 설정했습니다.`);
+  }catch(e){ showMessage('partnerMessage','파트너 비밀번호 설정 오류: '+e.message,true); }
+}
+
+let partnerCache = [];
+  
+/* ---------- 본사 전체 파트너 실적 ---------- */
+let partnerPerformanceData = null;
+async function loadPartnerPerformance(){
+  try{
+    const password=partnerPassword();
+    if(!password) return showMessage('partnerPerformanceMessage','관리자 비밀번호를 입력해 주세요.',true);
+    showMessage('partnerPerformanceMessage','전체 파트너 실적을 불러오고 있습니다...');
+    const res=await apiGet({action:'partnerPerformanceSummary',password});
+    if(!res.success) throw new Error(res.message||'파트너 실적 조회 실패');
+    partnerPerformanceData=res;
+    const t=res.totals||{};
+    $('perfPartners').textContent=Number(t.partners||0).toLocaleString('ko-KR')+'명';
+    $('perfOrders').textContent=Number(t.orders||0).toLocaleString('ko-KR')+'건';
+    $('perfSales').textContent=Number(t.salesAmount||0).toLocaleString('ko-KR')+'원';
+    $('perfShipping').textContent=Number(t.shippingCompleted||0).toLocaleString('ko-KR')+'건';
+    $('perfExpected').textContent=Number(t.expectedCommission||0).toLocaleString('ko-KR')+'원';
+    $('perfConfirmed').textContent=Number(t.confirmedCommission||0).toLocaleString('ko-KR')+'원';
+    $('perfPaid').textContent=Number(t.paidCommission||0).toLocaleString('ko-KR')+'원';
+    const rows=Array.isArray(res.partners)?res.partners:[];
+    $('partnerPerformanceRows').innerHTML=rows.length?rows.map(r=>`<tr>
+      <td>${esc(r.name||'')}<br><span class="muted">${esc(r.partnerCode||'')}</span></td>
+      <td>${esc(r.status||'')}</td><td>${Number(r.orders||0).toLocaleString('ko-KR')}건</td>
+      <td>${Number(r.quantity||0).toLocaleString('ko-KR')}개</td><td>${Number(r.salesAmount||0).toLocaleString('ko-KR')}원</td>
+      <td>${Number(r.shippingCompleted||0).toLocaleString('ko-KR')}건</td>
+      <td>${Number(r.expectedCommission||0).toLocaleString('ko-KR')}원</td>
+      <td><strong>${Number(r.confirmedCommission||0).toLocaleString('ko-KR')}원</strong></td>
+      <td>${Number(r.paidCommission||0).toLocaleString('ko-KR')}원</td></tr>`).join(''):'<tr><td colspan="9">등록된 파트너가 없습니다.</td></tr>';
+    showMessage('partnerPerformanceMessage','전체 파트너 실적을 불러왔습니다.');
+  }catch(e){ showMessage('partnerPerformanceMessage','파트너 실적 조회 오류: '+e.message,true); }
+}
+async function downloadPartnerPerformanceExcel(){
+  try{
+    if(!partnerPerformanceData) await loadPartnerPerformance();
+    const res=partnerPerformanceData;
+    if(!res||!res.success) throw new Error('먼저 전체 실적을 불러와 주세요.');
+    if(typeof XLSX==='undefined') throw new Error('엑셀 기능을 불러오지 못했습니다.');
+    const rows=(res.partners||[]).map(r=>({
+      '파트너코드':r.partnerCode||'','파트너명':r.name||'','상태':r.status||'',
+      '주문건수':Number(r.orders||0),'판매수량':Number(r.quantity||0),'판매금액':Number(r.salesAmount||0),
+      '배송완료':Number(r.shippingCompleted||0),'예상수당':Number(r.expectedCommission||0),'확정수당':Number(r.confirmedCommission||0),'지급완료':Number(r.paidCommission||0)
+    }));
+    if(!rows.length) throw new Error('다운로드할 파트너 실적이 없습니다.');
+    const ws=XLSX.utils.json_to_sheet(rows); ws['!cols']=[{wch:14},{wch:16},{wch:10},{wch:12},{wch:12},{wch:16},{wch:12},{wch:16},{wch:16}];
+    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'전체파트너실적');
+    const now=new Date(),z=n=>String(n).padStart(2,'0');
+    XLSX.writeFile(wb,'해남공구마켓_전체파트너실적_'+now.getFullYear()+z(now.getMonth()+1)+z(now.getDate())+'.xlsx');
+    showMessage('partnerPerformanceMessage','전체 파트너 실적을 엑셀로 다운로드했습니다.');
+  }catch(e){ showMessage('partnerPerformanceMessage','실적 엑셀 다운로드 오류: '+e.message,true); }
+}
+
+/* ---------- 파트너별 상품 수당 설정 ---------- */
+async function loadPartnerCommissions(){
+  try{
+    const password=partnerPassword();
+    const partnerCode=$('partnerCommissionPartner').value;
+    if(!password) return showMessage('partnerCommissionMessage','관리자 비밀번호를 입력해 주세요.',true);
+    if(!partnerCode) return showMessage('partnerCommissionMessage','파트너를 선택해 주세요.',true);
+
+    showMessage('partnerCommissionMessage','상품별 수당을 불러오고 있습니다...');
+    const res=await apiGet({action:'partnerProductList',password,partnerCode});
+    if(!res.success) throw new Error(res.message||'상품 수당 조회 실패');
+    const rows=Array.isArray(res.items)?res.items:[];
+    $('partnerCommissionRows').innerHTML=rows.length ? rows.map(r=>`
+      <tr data-partner="${esc(partnerCode)}" data-product="${esc(r.productCode||'')}">
+        <td>${esc(r.productCode||'')}</td>
+        <td class="left">${esc(r.productName||'')}</td>
+        <td>${Number(r.salePrice||0).toLocaleString('ko-KR')}원</td>
+        <td><input class="commission" type="number" min="0" step="100" value="${Number(r.commission||0)}" style="min-width:130px;text-align:right"></td>
+        <td><select class="commission-status"><option value="활성" ${r.status!=='정지'?'selected':''}>활성</option><option value="정지" ${r.status==='정지'?'selected':''}>정지</option></select></td>
+        <td><button class="primary" type="button" onclick="savePartnerCommission(this)">저장</button></td>
+      </tr>`).join('') : '<tr><td colspan="6">등록된 상품이 없습니다.</td></tr>';
+    showMessage('partnerCommissionMessage',`${rows.length}개 상품을 불러왔습니다.`);
+  }catch(e){
+    showMessage('partnerCommissionMessage','상품 수당 조회 오류: '+e.message,true);
+  }
+}
+/* ---------- 상품별 공통 수당 관리 ---------- */
+
+/* ---------- 상품별 수입액 계산용 원가·벤더·이벤트 (2026-11-26) ---------- */
+let pcCost=null;   // {products, supplyPrices, vendorFees}
+let pcEvents=[];   // eventCommissionList events
+function pcToday(){ const d=new Date(),p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+async function pcLoadCost(password){
+  try{
+    const [fd,ev]=await Promise.all([
+      apiGet({action:'adminPurchaseFormData',password}),
+      apiGet({action:'eventCommissionList',password})
+    ]);
+    if(fd&&fd.success) pcCost={products:fd.products||[],supplyPrices:fd.supplyPrices||[],vendorFees:fd.vendorFees||[]};
+    if(ev&&ev.success){ pcEvents=ev.events||[]; if(!eventData) eventData=ev; }
+  }catch(_){}
+}
+function pcCostOf(code){
+  const out={buy:null,ship:0,vendor:0,vendorName:'',src:''};
+  if(!pcCost) return out;
+  const t=pcToday();
+  const sp=pcCost.supplyPrices.filter(x=>x.productCode===code&&x.startDate<=t&&(!x.endDate||x.endDate>=t))
+    .sort((a,b)=>a.startDate===b.startDate?String(b.createdAt||'').localeCompare(String(a.createdAt||'')):(a.startDate<b.startDate?1:-1))[0];
+  if(sp){ out.buy=Number(sp.unitPrice||0); out.ship=Number(sp.shippingPerBox||0); out.src='공급단가'+(sp.supplierName?' · '+sp.supplierName:''); }
+  else{
+    const p=pcCost.products.find(v=>v.productCode===code);
+    if(p&&Number(p.defaultPurchaseUnitPrice||0)>0){ out.buy=Number(p.defaultPurchaseUnitPrice||0); out.ship=Number(p.defaultShippingFee||0); out.src='상품세부정보 기본단가'; }
+  }
+  const vf=pcCost.vendorFees.filter(x=>x.productCode===code&&x.startDate<=t&&(!x.endDate||x.endDate>=t))
+    .sort((a,b)=>a.startDate<b.startDate?1:-1)[0];
+  if(vf){ out.vendor=Number(vf.feePerBox||0); out.vendorName=vf.vendorName||''; }
+  return out;
+}
+/* 진행중 이벤트 중 가장 큰 금액 (전체 대상 우선 표시) */
+function pcEventOf(code){
+  const live=pcEvents.filter(e=>e.productCode===code&&e.state==='진행중');
+  if(!live.length) return {bonus:0,label:''};
+  live.sort((a,b)=>Number(b.bonus||0)-Number(a.bonus||0));
+  const top=live[0];
+  return {bonus:Number(top.bonus||0),label:top.target==='전체'?'전체':'일부 파트너'};
+}
+function pcProfitHtml(price,cost,commission,bonus){
+  if(cost.buy===null) return '<span class="muted" style="font-size:12px">원가 미등록</span>';
+  const profit=price-cost.buy-cost.ship-cost.vendor-commission-bonus;
+  const rate=price>0?Math.round(profit/price*1000)/10:0;
+  const color=profit<=0?'#a32121':(rate<10?'#b45309':'#17623f');
+  return `<b style="color:${color}">${profit.toLocaleString('ko-KR')}원</b><br><small style="color:${color}">(${rate}%)${profit<=0?' ⚠️ 손해':''}</small>`;
+}
+function pcRecalc(input){
+  const tr=input.closest('tr'); if(!tr) return;
+  const code=tr.dataset.productCode, price=Number(tr.dataset.price||0);
+  const cost=pcCostOf(code), ev=pcEventOf(code);
+  tr.querySelector('.pc-profit').innerHTML=pcProfitHtml(price,cost,Number(input.value||0),ev.bonus);
+}
+
+/* ---------- 🔥 이벤트(특별) 수당 ---------- */
+let eventData=null;
+const won=v=>Number(v||0).toLocaleString('ko-KR')+'원';
+function dtLocal(d){const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes());}
+function evDays(n){const s=$('evStart').value?new Date($('evStart').value):new Date();const e=new Date(s.getTime()+n*86400000);e.setHours(23,59,0,0);e.setDate(e.getDate()-1);$('evEnd').value=dtLocal(e);evPreview();}
+function evTargetChange(){const sel=document.querySelector('input[name=evTarget]:checked').value==='선택';$('evPartners').style.display=sel?'flex':'none';}
+function evProductInfo(){return eventData?eventData.products.find(p=>p.productCode===$('evProduct').value):null;}
+function evPreview(){
+  const p=evProductInfo(), bonus=Number($('evBonus').value||0); if(!p){$('evPreviewBox').textContent='';return;}
+  const total=Number(p.baseCommission||0)+bonus;
+  let html=`기본 ${won(p.baseCommission)} + 이벤트 ${won(bonus)} = <b>합계 ${won(total)}</b> (박스·개당)`;
+  if(p.commissionStatus!=='활성') html+=` <span style="color:#a32121">· 이 상품은 기본수당이 '${esc(p.commissionStatus)}' 상태라 이벤트 수당도 적용되지 않습니다.</span>`;
+  const pc=pcCostOf(p.productCode), pr=(products.find(x=>x.productCode===p.productCode)||{});
+  const salePrice=Number(p.salePrice||pr.price||pr.salePrice||0);
+  if(pc.buy!==null&&salePrice>0){
+    const profit=salePrice-pc.buy-pc.ship-pc.vendor-total;
+    const color=profit<=0?'#a32121':'#17623f';
+    html+=`<br>판매가 ${won(salePrice)} − 원가 ${won(pc.buy+pc.ship)}${pc.vendor?' − 벤더 '+won(pc.vendor):''} − 수당 ${won(total)} = <b style="color:${color}">수입액 ${won(profit)}</b>`+(profit<=0?' ⚠️ 팔수록 손해입니다':'');
+    $('evPreviewBox').innerHTML=html; return;
+  }
+  if(p.margin!==null&&p.margin!==undefined){
+    const left=p.margin-total, color=left<=0?'#a32121':(total>p.margin*0.5?'#b45309':'#17623f');
+    html+=`<br>상품세부정보 기준 박스당 마진 약 ${won(p.margin)} → 수당 뒤 <b style="color:${color}">${won(left)}</b>`+(left<=0?' ⚠️ 팔수록 손해입니다':(total>p.margin*0.5?' ⚠️ 마진의 절반 이상을 수당으로 씁니다':''));
+  } else html+='<br>이 상품은 상품세부정보에 매입단가가 없어 마진을 계산하지 못했습니다.';
+  $('evPreviewBox').innerHTML=html;
+}
+async function loadEventCommissions(){
+  try{
+    const password=partnerPassword(); if(!password) return showMessage('eventMessage','관리자 비밀번호를 입력해 주세요.',true);
+    showMessage('eventMessage','이벤트 수당을 불러오고 있습니다...');
+    const res=await apiGet({action:'eventCommissionList',password}); if(!res.success) throw new Error(res.message||'조회 실패');
+    eventData=res;
+    if(!pcCost) await pcLoadCost(password);
+    pcEvents=res.events||[];
+    if(!Array.isArray(products)||!products.length){ try{ const pr=await apiGet({action:'products'}); if(pr&&pr.success) products=pr.products||pr.data||[]; }catch(_){} }
+    const baseOf={}, priceOf={}; res.products.forEach(p=>{baseOf[p.productCode]=Number(p.baseCommission||0);});
+    (products||[]).forEach(p=>{priceOf[p.productCode]=Number(p.price||p.salePrice||0);});
+    res.products.forEach(p=>{ if(p.salePrice) priceOf[p.productCode]=Number(p.salePrice); });
+    const evMoney=e=>{ const c=pcCostOf(e.productCode), price=priceOf[e.productCode]||0, tot=(baseOf[e.productCode]||0)+Number(e.bonus||0);
+      if(c.buy===null||!price) return {info:price?won(price)+' · 원가 미등록':'-', tot, profit:'-'};
+      const base=baseOf[e.productCode]||0, info=`${won(price)}<br><small class="muted">원가 ${won(c.buy+c.ship)}${c.vendor?' · 벤더 '+won(c.vendor):''}</small>`;
+      const pf=price-c.buy-c.ship-c.vendor-tot, color=pf<=0?'#a32121':'#17623f';
+      if(e.state==='종료'){ /* 끝난 이벤트: 지금은 기본수당만 → 원래 수입액 */
+        const now=price-c.buy-c.ship-c.vendor-base, nc=now<=0?'#a32121':'#17623f';
+        return {info, tot, ended:true, base, profit:`<b style="color:${nc}">${won(now)}</b>${now<=0?' ⚠️':''}<br><small class="muted">이벤트 중 ${won(pf)}</small>`};
+      }
+      return {info, tot, profit:`<b style="color:${color}">${won(pf)}</b>${pf<=0?'<br><small style="color:#a32121">⚠️ 손해</small>':''}`}; };
+    $('evProduct').innerHTML=res.products.map(p=>`<option value="${esc(p.productCode)}">${esc(p.productName)} (기본 ${won(p.baseCommission)})</option>`).join('');
+    $('evPartners').innerHTML=res.partners.filter(p=>p.status==='활성').map(p=>`<label><input type="checkbox" class="ev-partner" value="${esc(p.partnerCode)}"> ${esc(p.name)} (${esc(p.partnerCode)})</label>`).join('')||'<span class="muted">활성 파트너가 없습니다.</span>';
+    if(!$('evStart').value){$('evStart').value=dtLocal(new Date());evDays(5);}
+    $('eventForm').style.display='block'; evTargetChange(); evPreview();
+    const names={}; res.partners.forEach(p=>names[p.partnerCode]=p.name);
+    const stColor={'진행중':'#17623f','예정':'#1d4f91','종료':'#888'};
+    $('eventRows').innerHTML=res.events.length?res.events.map(e=>`<tr>
+      <td><b style="color:${stColor[e.state]||'#333'}">${esc(e.state)}</b></td>
+      <td class="left">${esc(e.productName)}</td>
+      <td class="left">${e.target==='전체'?'전체 파트너':e.partnerCodes.map(c=>esc((names[c]||'')+' '+c)).join('<br>')}</td>
+      <td><b>+${won(e.bonus)}</b></td>
+      ${(m=>`<td>${m.info}</td><td>${m.ended?`<b>기본 ${won(m.base)}</b><br><small class="muted" style="text-decoration:line-through">${won(m.base)} + ${won(e.bonus)} = ${won(m.tot)}</small>`:`${won(baseOf[e.productCode]||0)} + ${won(e.bonus)}<br><b>= ${won(m.tot)}</b>`}</td><td>${m.profit}</td>`)(evMoney(e))}
+      <td>${esc(String(e.startAt).replace('T',' ').slice(0,16))}<br>~ ${esc(String(e.endAt).replace('T',' ').slice(0,16))}</td>
+      <td class="left">${esc(e.memo)}</td>
+      <td>${e.state==='종료'?'-':`<button class="danger" type="button" onclick="stopEventCommission('${esc(e.eventId)}')">지금 종료</button>`}</td></tr>`).join(''):'<tr><td colspan="10">등록된 이벤트 수당이 없습니다.</td></tr>';
+    showMessage('eventMessage','이벤트 수당을 불러왔습니다.');
+  }catch(e){showMessage('eventMessage','이벤트 수당 오류: '+e.message,true);}
+}
+async function saveEventCommission(){
+  try{
+    const password=partnerPassword(); if(!password) return showMessage('eventMessage','관리자 비밀번호를 입력해 주세요.',true);
+    const p=evProductInfo(), bonus=Number($('evBonus').value||0);
+    if(!p) return showMessage('eventMessage','상품을 선택해 주세요.',true);
+    if(!(bonus>0)) return showMessage('eventMessage','추가 수당을 입력해 주세요.',true);
+    const target=document.querySelector('input[name=evTarget]:checked').value;
+    const partnerCodes=[...document.querySelectorAll('.ev-partner:checked')].map(x=>x.value);
+    if(target==='선택'&&!partnerCodes.length) return showMessage('eventMessage','이벤트를 줄 파트너를 한 명 이상 체크해 주세요.',true);
+    const total=Number(p.baseCommission||0)+bonus;
+    if(p.margin!==null&&p.margin!==undefined&&total>=p.margin&&!confirm('합계수당('+won(total)+')이 박스당 마진(약 '+won(p.margin)+') 이상입니다. 팔수록 손해일 수 있습니다. 그래도 등록할까요?')) return;
+    const who=target==='전체'?'전체 파트너':partnerCodes.join(', ');
+    if(!confirm(`${p.productName}\n대상: ${who}\n기본 ${won(p.baseCommission)} + 이벤트 ${won(bonus)} = ${won(total)}\n기간: ${$('evStart').value.replace('T',' ')} ~ ${$('evEnd').value.replace('T',' ')}\n\n이대로 등록할까요?`)) return;
+    showMessage('eventMessage','등록하고 있습니다...');
+    const res=await apiPost({action:'eventCommissionSave',password,productCode:p.productCode,bonus,target,partnerCodes,startAt:$('evStart').value,endAt:$('evEnd').value,memo:$('evMemo').value});
+    if(!res.success) throw new Error(res.message||'등록 실패');
+    $('evBonus').value='';$('evMemo').value='';
+    await loadEventCommissions(); showMessage('eventMessage',res.message||'등록했습니다.');
+  }catch(e){showMessage('eventMessage','이벤트 수당 등록 오류: '+e.message,true);}
+}
+async function stopEventCommission(id){
+  if(!confirm('이 이벤트를 지금 종료할까요? 지금부터 들어오는 주문은 기본수당만 적용됩니다. (이미 들어온 주문의 수당은 바뀌지 않습니다)')) return;
+  try{
+    const res=await apiPost({action:'eventCommissionStop',password:partnerPassword(),eventId:id});
+    if(!res.success) throw new Error(res.message||'종료 실패');
+    await loadEventCommissions(); showMessage('eventMessage',res.message);
+  }catch(e){showMessage('eventMessage','이벤트 종료 오류: '+e.message,true);}
+}
+async function loadProductCommissions(){
+  try{
+    const password = partnerPassword();
+
+    if(!password){
+      return showMessage(
+        'productCommissionMessage',
+        '관리자 비밀번호를 입력해 주세요.',
+        true
+      );
+    }
+
+    showMessage(
+      'productCommissionMessage',
+      '상품별 수당을 불러오고 있습니다...'
+    );
+
+    const res = await apiGet({
+      action: 'productCommissionList',
+      password: password
+    });
+
+    if(!res.success){
+      throw new Error(res.message || '상품 수당 조회 실패');
+    }
+
+    const rows = Array.isArray(res.items) ? res.items : [];
+    await pcLoadCost(password);
+
+    $('productCommissionRows').innerHTML = rows.length
+      ? rows.map(function(r){
+          const code = esc(r.productCode || '');
+          const name = esc(r.productName || '');
+          const price = Number(r.salePrice || 0);
+          const commission = Number(r.commission || 0);
+          const status = r.status || '활성';
+          const cost = pcCostOf(r.productCode);
+          const ev = pcEventOf(r.productCode);
+          const costCell = cost.buy===null
+            ? '<span class="muted" style="font-size:12px">미등록</span>'
+            : `${(cost.buy+cost.ship).toLocaleString('ko-KR')}원<br><small class="muted">${cost.buy.toLocaleString('ko-KR')}${cost.ship?' + 택배 '+cost.ship.toLocaleString('ko-KR'):''}</small>`;
+          const vendorCell = cost.vendor ? `${cost.vendor.toLocaleString('ko-KR')}원${cost.vendorName?'<br><small class="muted">'+esc(cost.vendorName)+'</small>':''}` : '-';
+          const evCell = ev.bonus ? `<b style="color:#c2410c">+${ev.bonus.toLocaleString('ko-KR')}원</b><br><small class="muted">${ev.label}</small>` : '-';
+          return `
+            <tr data-product-code="${code}" data-price="${price}">
+              <td class="left">${name}<br><small class="muted">${code}</small></td>
+              <td>${price.toLocaleString('ko-KR')}원</td>
+              <td>${costCell}</td>
+              <td>${vendorCell}</td>
+              <td>
+                <input class="product-commission-input" type="number" min="0" step="100"
+                  value="${commission}" oninput="pcRecalc(this)"
+                  style="min-width:100px;text-align:right">
+              </td>
+              <td>${evCell}</td>
+              <td class="pc-profit">${pcProfitHtml(price,cost,commission,ev.bonus)}</td>
+              <td>
+                <select class="product-commission-status">
+                  <option value="활성" ${status === '활성' ? 'selected' : ''}>활성</option>
+                  <option value="정지" ${status === '정지' ? 'selected' : ''}>정지</option>
+                </select>
+              </td>
+              <td><button class="primary" type="button" onclick="saveProductCommission(this)">저장</button></td>
+            </tr>`;
+        }).join('')
+      : `<tr><td colspan="9">등록된 상품이 없습니다.</td></tr>`;
+
+    showMessage(
+      'productCommissionMessage',
+      '상품별 수당을 불러왔습니다.'
+    );
+
+  }catch(e){
+
+    showMessage(
+      'productCommissionMessage',
+      '상품 수당 조회 오류: ' + e.message,
+      true
+    );
+  }
+}
+
+
+async function saveProductCommission(button){
+  try{
+    const password = partnerPassword();
+
+    if(!password){
+      return showMessage(
+        'productCommissionMessage',
+        '관리자 비밀번호를 입력해 주세요.',
+        true
+      );
+    }
+
+    const row = button.closest('tr');
+
+    if(!row){
+      throw new Error('상품 행을 찾을 수 없습니다.');
+    }
+
+    const productCode =
+      row.dataset.productCode || '';
+
+    const commission =
+      Number(
+        row.querySelector(
+          '.product-commission-input'
+        ).value || 0
+      );
+
+    const status =
+      row.querySelector(
+        '.product-commission-status'
+      ).value || '활성';
+
+    if(!productCode){
+      throw new Error('상품코드가 없습니다.');
+    }
+
+    if(!Number.isFinite(commission) || commission < 0){
+      throw new Error(
+        '건당 수당은 0원 이상의 숫자로 입력해 주세요.'
+      );
+    }
+
+    button.disabled = true;
+    button.textContent = '저장중';
+
+    const res = await apiPost({
+      action: 'productCommissionSave',
+      password: password,
+      productCode: productCode,
+      commission: commission,
+      status: status
+    });
+
+    if(!res.success){
+      throw new Error(
+        res.message || '상품 수당 저장 실패'
+      );
+    }
+
+    showMessage(
+      'productCommissionMessage',
+      (res.productName || productCode) +
+      ' 건당 수당 ' +
+      Number(res.commission || 0)
+        .toLocaleString('ko-KR') +
+      '원이 저장되었습니다.'
+    );
+
+    button.textContent = '저장완료';
+
+    setTimeout(function(){
+      button.disabled = false;
+      button.textContent = '저장';
+    }, 1000);
+
+  }catch(e){
+
+    button.disabled = false;
+    button.textContent = '저장';
+
+    showMessage(
+      'productCommissionMessage',
+      '상품 수당 저장 오류: ' + e.message,
+      true
+    );
+  }
+}
+async function downloadPartnerCommissionsExcel(){
+  try{
+    const password=partnerPassword();
+    const partnerCode=$('partnerCommissionPartner').value;
+    if(!password) return showMessage('partnerCommissionMessage','관리자 비밀번호를 입력해 주세요.',true);
+    if(!partnerCode) return showMessage('partnerCommissionMessage','파트너를 선택해 주세요.',true);
+    if(typeof XLSX==='undefined') throw new Error('엑셀 기능을 불러오지 못했습니다. 페이지를 새로고침해 주세요.');
+
+    showMessage('partnerCommissionMessage','수당 자료를 불러오고 있습니다...');
+    const res=await apiGet({action:'partnerProductList',password,partnerCode});
+    if(!res.success) throw new Error(res.message||'상품 수당 조회 실패');
+    const rows=Array.isArray(res.items)?res.items:[];
+    if(!rows.length) throw new Error('다운로드할 상품 수당 자료가 없습니다.');
+
+    const partnerOption=$('partnerCommissionPartner').selectedOptions[0];
+    const partnerName=partnerOption ? String(partnerOption.textContent||'').replace(/^.*?\s-\s/,'').trim() : '';
+    const excelData=rows.map(r=>({
+      '파트너코드': partnerCode,
+      '파트너명': partnerName,
+      '상품코드': r.productCode||'',
+      '상품명': r.productName||'',
+      '판매가격': Number(r.salePrice||0),
+      '건당수당': Number(r.commission||0),
+      '상태': r.status||'활성'
+    }));
+    const worksheet=XLSX.utils.json_to_sheet(excelData);
+    worksheet['!cols']=[{wch:14},{wch:16},{wch:22},{wch:28},{wch:14},{wch:14},{wch:10}];
+    const workbook=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook,worksheet,'파트너상품수당');
+    const now=new Date();
+    const z=n=>String(n).padStart(2,'0');
+    const fileName='해남공구마켓_파트너상품수당_'+partnerCode+'_'+now.getFullYear()+z(now.getMonth()+1)+z(now.getDate())+'.xlsx';
+    XLSX.writeFile(workbook,fileName);
+    showMessage('partnerCommissionMessage',`${rows.length}개 상품의 수당 자료를 엑셀로 다운로드했습니다.`);
+  }catch(e){
+    showMessage('partnerCommissionMessage','엑셀 다운로드 오류: '+e.message,true);
+  }
+}
+
+async function savePartnerCommission(btn){
+  const tr=btn.closest('tr');
+  try{
+    const password=partnerPassword();
+    const partnerCode=tr.dataset.partner;
+    const productCode=tr.dataset.product;
+    const commission=Number(tr.querySelector('.commission').value||0);
+    const status=tr.querySelector('.commission-status').value;
+    if(!password) return showMessage('partnerCommissionMessage','관리자 비밀번호를 입력해 주세요.',true);
+    if(!Number.isFinite(commission)||commission<0) return showMessage('partnerCommissionMessage','수당은 0원 이상의 숫자로 입력해 주세요.',true);
+    btn.disabled=true; btn.textContent='저장 중...';
+    const res=await apiPost({action:'partnerProductSave',password,partnerCode,productCode,commission,status});
+    if(!res.success) throw new Error(res.message||'수당 저장 실패');
+    showMessage('partnerCommissionMessage',`${res.productName||productCode} 수당을 ${Number(res.commission||0).toLocaleString('ko-KR')}원으로 저장했습니다.`);
+  }catch(e){
+    showMessage('partnerCommissionMessage','수당 저장 오류: '+e.message,true);
+  }finally{
+    btn.disabled=false; btn.textContent='저장';
+  }
+}
+
+/* ---------- 파트너 정산관리 (2026-11-16 개편) ---------- */
+let currentSettlementPreview = null;
+const SETTLE_DEFAULT_START = '2025-01-01';
+function settleYmd(d){ d=d||new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+/* 파트너 목록: 선택창 + 검색 목록 */
+function fillSettlementPartners() {
+  const select = $('settlementPartner'); if (!select) return;
+  const cur = select.value;
+  const list = (partnerCache || []).filter(p => p.partnerCode);
+  select.innerHTML = '<option value="">파트너 선택</option>' + list.map(p =>
+    `<option value="${esc(p.partnerCode)}">${esc(p.name || '파트너')} (${esc(p.partnerCode)})${p.status && p.status!=='활성' ? ' · '+esc(p.status) : ''}</option>`).join('');
+  $('settlementPartnerList').innerHTML = list.map(p => `<option value="${esc(p.name || '파트너')} · ${esc(p.partnerCode)}"></option>`).join('');
+  if (cur) select.value = cur;
+}
+async function loadSettlementPartners() {
+  try {
+    const res = await apiGet({ action: 'partnerList', password: adminPw() });
+    if (!res.success) throw new Error(res.message || '파트너 조회 실패');
+    partnerCache = Array.isArray(res.partners) ? res.partners : [];
+    fillSettlementPartners();
+    showMessage('settlementMessage', `파트너 ${partnerCache.length}명을 불러왔습니다. 이름이나 코드로 검색하거나 목록에서 고르세요.`);
+  } catch (e) { showMessage('settlementMessage', '파트너 목록 오류: ' + e.message, true); }
+}
+function onSettlementPartnerSearch() {
+  const q = $('settlementPartnerSearch').value.trim(); if (!q) return;
+  const m = q.match(/PT-\d+/i);
+  const list = partnerCache || [];
+  const hit = m ? list.find(p => String(p.partnerCode).toUpperCase() === m[0].toUpperCase())
+                : (list.filter(p => String(p.name || '') === q).length === 1 ? list.find(p => String(p.name || '') === q) : null);
+  if (hit && $('settlementPartner').value !== hit.partnerCode) { $('settlementPartner').value = hit.partnerCode; onSettlementPartnerChange(); }
+}
+function settleRemembered(code) { try { return JSON.parse(localStorage.getItem('haenamSettleBank_' + code) || 'null'); } catch (_) { return null; } }
+function settleRemember(code, bank, holder, type) { try { localStorage.setItem('haenamSettleBank_' + code, JSON.stringify({ bank, holder, type })); } catch (_) {} }
+function onSettlementPartnerChange() {
+  const code = $('settlementPartner').value;
+  const p = (partnerCache || []).find(x => x.partnerCode === code);
+  $('settlementPartnerCode').value = code || '';
+  if (p) $('settlementPartnerSearch').value = `${p.name || '파트너'} · ${code}`;
+  resetSettlementPreview();
+  $('settlementMemo').value = '';
+  const mem = code ? settleRemembered(code) : null;
+  $('settlementBank').value = mem ? mem.bank || '' : '';
+  $('settlementAccountHolder').value = mem ? mem.holder || '' : (p ? p.name || '' : '');
+  $('settlementType').value = mem && mem.type ? mem.type : '개인';
+  onSettlementTypeChange();
+  if (!code) return;
+  if (settleBasisValue() === '직접') {
+    if (!$('settlementStartDate').value) $('settlementStartDate').value = SETTLE_DEFAULT_START;
+    if (!$('settlementEndDate').value) $('settlementEndDate').value = settleYmd();
+  }
+  if (settleBasisValue() === '공구마감' && !$('settleProduct').value) { showMessage('settlementMessage', '공구마감 정산: 상품을 골라 주세요.'); return; }
+  previewPartnerSettlement();
+}
+function onSettlementTypeChange() {
+  const mode = $('settlementType').value === '개인' ? '3.3%' : '없음';
+  document.querySelectorAll('input[name=settlementTaxMode]').forEach(r => r.checked = r.value === mode);
+  updateSettlementActualPayment();
+}
+function resetSettlementPreview() {
+  currentSettlementPreview = null;
+  $('settlementPreviewTitle').textContent = '파트너를 선택하면 확정수당을 불러옵니다.';
+  $('settlementOrderCount').textContent = '0건';
+  $('settlementQuantity').textContent = '0개';
+  $('settlementTotalCommission').textContent = '0원';
+  $('settlementSalesCommission').textContent = '0원';
+  $('settlementVendorTotal').textContent = '0원';
+  $('settlementVendorCount').textContent = '0';
+  updateSettlementActualPayment();
+}
+
+/* 확정수당 불러오기 */
+async function previewPartnerSettlement() {
+  const partnerCode = $('settlementPartner').value;
+  if (!$('settlementStartDate').value) $('settlementStartDate').value = SETTLE_DEFAULT_START;
+  if (!$('settlementEndDate').value) $('settlementEndDate').value = settleYmd();
+  const startDate = $('settlementStartDate').value, endDate = $('settlementEndDate').value;
+  if (!partnerCode) { showMessage('settlementMessage', '파트너를 선택해 주세요.', true); return; }
+  if (startDate > endDate) { showMessage('settlementMessage', '정산 시작일이 종료일보다 늦습니다.', true); return; }
+  try {
+    $('settlementPreviewTitle').textContent = '확정수당을 불러오는 중...';
+    const basis = settleBasisValue();
+    const productCode = basis === '공구마감' ? $('settleProduct').value : '';
+    if (basis === '공구마감' && !productCode) { $('settlementPreviewTitle').textContent = '공구마감 정산: 상품을 골라 주세요.'; return; }
+    const result = await apiGet({ action: 'adminPartnerSettlementPreview', password: adminPw(), partnerCode, startDate, endDate, productCode, t: Date.now() });
+    if (!result.success) throw new Error(result.message || '정산대상을 조회하지 못했습니다.');
+    if ($('settlementPartner').value !== partnerCode) return; // 그 사이 다른 파트너를 고른 경우
+    currentSettlementPreview = result;
+    result.settleBasis = basis;
+    const prodLabel = productCode ? ($('settleProduct').selectedOptions[0]?.textContent || productCode) : '';
+    $('settlementPreviewTitle').textContent = `${result.partnerName || ''} (${partnerCode}) · ${basis === '말일' ? $('settleMonth').value + ' 말일 정산' : basis === '공구마감' ? '공구마감 정산 · ' + prodLabel : startDate + ' ~ ' + endDate}`;
+    $('settlementOrderCount').textContent = Number(result.orderCount || 0).toLocaleString('ko-KR') + '건';
+    $('settlementQuantity').textContent = Number(result.quantity || 0).toLocaleString('ko-KR') + '개';
+    $('settlementSalesCommission').textContent = Number(result.totalCommission || 0).toLocaleString('ko-KR') + '원';
+    $('settlementVendorTotal').textContent = Number(result.vendorTotal || 0).toLocaleString('ko-KR') + '원';
+    $('settlementVendorCount').textContent = Number(result.vendorCount || 0).toLocaleString('ko-KR');
+    $('settlementTotalCommission').textContent = Number(result.grandTotal ?? result.totalCommission ?? 0).toLocaleString('ko-KR') + '원';
+    if (!$('settlementPayDate').value) $('settlementPayDate').value = settleYmd();
+    if (!$('settlementMemo').value.trim()) {
+      const d = new Date($('settlementPayDate').value + 'T00:00:00');
+      const kind = (result.vendorCount > 0 ? (result.orderCount > 0 ? '판매수당·벤더수수료' : '벤더수수료') : '파트너 수당');
+      $('settlementMemo').value = basis === '공구마감'
+        ? `${prodLabel} 공구마감 ${kind} 정산 (${result.partnerName || ''} ${partnerCode})`
+        : `${basis === '말일' ? $('settleMonth').value.replace('-', '년 ') + '월 말일' : d.getFullYear() + '년 ' + (d.getMonth() + 1) + '월'} ${kind} 정산 (${result.partnerName || ''} ${partnerCode}, 판매 ${result.orderCount || 0}건·벤더 ${result.vendorCount || 0}건)`;
+    }
+    updateSettlementActualPayment();
+    if (Number(result.vendorHeldTotal || 0) > 0) {
+      const ag = result.vendorAgreement || {};
+      showMessage('settlementMessage', `⚠️ 벤더 약정 ${ag.termsOk ? '이해관계 미확인(' + (ag.pending || []).join(', ') + ')' : '미동의'}로 벤더수수료 ${Number(result.vendorHeldTotal).toLocaleString('ko-KR')}원(${result.vendorHeldCount}건)은 지급 보류되어 이번 정산에서 빠졌습니다. 파트너가 파트너센터에서 동의하면 다음 정산에 들어갑니다.`, true);
+    } else if (result.orderCount > 0 || result.vendorCount > 0) showMessage('settlementMessage', `${result.partnerName} 파트너: 판매수당 ${result.orderCount || 0}건 · 벤더수수료 ${result.vendorCount || 0}건 (지급 안 된 확정분)을 불러왔습니다.`);
+    else showMessage('settlementMessage', '선택한 조건에 지급할 확정수당이 없습니다.', true);
+  } catch (err) {
+    resetSettlementPreview();
+    showMessage('settlementMessage', '확정수당 조회 오류: ' + (err.message || err), true);
+  }
+}
+
+
+/* 정산 기준: 직접 / 말일 / 공구마감 (2026-11-16) */
+function settleBasisValue() { const r = document.querySelector('input[name=settleBasis]:checked'); return r ? r.value : '직접'; }
+async function onSettleBasisChange() {
+  const b = settleBasisValue();
+  document.querySelectorAll('input[name=settleBasis]').forEach(r => r.closest('.st-chip').classList.toggle('on', r.checked));
+  $('settleBasisExtra').style.display = b === '직접' ? 'none' : '';
+  $('settleMonthWrap').style.display = b === '말일' ? '' : 'none';
+  $('settleProductWrap').style.display = b === '공구마감' ? '' : 'none';
+  if (b === '말일') {
+    if (!$('settleMonth').value) $('settleMonth').value = settleYmd().slice(0, 7);
+    const [y, m] = $('settleMonth').value.split('-').map(Number);
+    $('settlementStartDate').value = `${y}-${String(m).padStart(2, '0')}-01`;
+    $('settlementEndDate').value = settleYmd(new Date(y, m, 0));
+  } else if (b === '공구마감') {
+    await loadSettleProducts();
+    $('settlementStartDate').value = SETTLE_DEFAULT_START;
+    $('settlementEndDate').value = settleYmd(); // 상품 기준: 처음부터 오늘까지 주문 중 확정·미지급분
+  }
+  resetSettlementPreview();
+  $('settlementMemo').value = '';
+  if ($('settlementPartner').value && (b !== '공구마감' || $('settleProduct').value)) previewPartnerSettlement();
+}
+let settleProductsLoaded = false;
+async function loadSettleProducts() {
+  if (settleProductsLoaded) return;
+  try {
+    const res = await apiGet({ action: 'products' });
+    const list = (res && (res.products || res.data)) || [];
+    const today = settleYmd();
+    const opts = list.filter(p => p.productCode).map(p => {
+      const dl = String(p.endAt || '').slice(0, 10);
+      return { code: p.productCode, name: p.productName || p.name || p.productCode, dl };
+    }).sort((a, b) => (a.dl || '9999').localeCompare(b.dl || '9999'));
+    $('settleProduct').innerHTML = '<option value="">상품 선택</option>' + opts.map(o =>
+      `<option value="${esc(o.code)}" data-deadline="${esc(o.dl)}">${esc(o.name)}${o.dl ? ' (마감 ' + esc(o.dl.slice(5).replace('-', '/')) + (o.dl < today ? ' · 지남' : '') + ')' : ''}</option>`).join('');
+    settleProductsLoaded = opts.length > 0;
+  } catch (e) { showMessage('settlementMessage', '상품 목록 오류: ' + e.message, true); }
+}
+async function loadVendorWait() {
+  try {
+    $('vendorWaitRows').innerHTML = '<tr><td colspan="9">불러오는 중...</td></tr>';
+    const res = await apiGet({ action: 'adminVendorFeeSummary', password: adminPw() });
+    if (!res.success) throw new Error(res.message || '조회 실패');
+    const won = v => Number(v || 0).toLocaleString('ko-KR') + '원';
+    const rows = [];
+    let due = 0;
+    (res.vendors || []).forEach(v => (v.products || []).forEach(p => {
+      const isDue = p.confirmed > 0 && p.nextSettlement && p.nextSettlement <= res.today;
+      const soon = p.confirmed > 0 && p.nextSettlement && !isDue && (new Date(p.nextSettlement) - new Date(res.today)) / 86400000 <= 5;
+      if (isDue || soon) due++;
+      rows.push(`<tr${isDue ? ' style="background:#fff7ed"' : ''}><td class="left"><b>${esc(v.vendorName || '')}</b><br><small>${esc(v.vendorCode)}</small></td><td class="left">${esc(p.productName)}</td><td>${esc(p.cycle)}</td><td>${p.nextSettlement ? esc(p.nextSettlement.slice(5).replace('-', '/')) : '<span class="muted">마감일 없음</span>'}${isDue ? ' ⚠️' : soon ? ' ⏰' : ''}</td><td><b>${won(p.confirmed)}</b></td><td>${won(p.expected)}</td><td>${won(p.paid)}</td><td>${(() => { const a = v.agreement || {}; return a.ok ? `<span title="${esc(a.agreedAt || '')}">✅</span>` : !a.termsOk ? '<b style="color:#b45309">⚠️ 미동의</b><br><small>지급 보류</small>' : `<b style="color:#b45309">⚠️ 이해관계 미확인</b><br><small>${esc((a.pending || []).join(', '))}</small>`; })()}</td><td>${p.confirmed > 0 ? `<button type="button" class="primary" onclick="startVendorSettle('${esc(v.vendorCode)}','${esc(p.cycle)}','${esc(p.productCode)}')">정산하기</button>` : '-'}</td></tr>`);
+    }));
+    $('vendorWaitRows').innerHTML = rows.join('') || '<tr><td colspan="9">등록된 벤더수수료 조건이 없습니다. ⑦ 매입관리 「🤝 벤더 수수료」에서 등록하세요.</td></tr>';
+    $('vendorWaitBadge').textContent = due ? `⚠️ 정산할 때 ${due}건` : '';
+  } catch (e) { $('vendorWaitRows').innerHTML = `<tr><td colspan="9">오류: ${esc(e.message)}</td></tr>`; }
+}
+async function startVendorSettle(vendorCode, cycle, productCode) {
+  if (!(partnerCache || []).length) await loadSettlementPartners();
+  document.querySelectorAll('input[name=settleBasis]').forEach(r => r.checked = r.value === (cycle === '공구마감' ? '공구마감' : '말일'));
+  if (cycle === '공구마감') { await loadSettleProducts(); $('settleProduct').value = productCode; }
+  $('settlementPartner').value = vendorCode;
+  await onSettleBasisChange();
+  onSettlementPartnerChange();
+  $('settlementPartnerSearch').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+/* 세금(3.3%) · 기타공제 · 실지급액 계산 — 서버도 같은 방식으로 다시 계산합니다 */
+function settlementTaxMode() { const r = document.querySelector('input[name=settlementTaxMode]:checked'); return r ? r.value : '3.3%'; }
+function calcSettlement() {
+  const p = currentSettlementPreview;
+  const total = p ? Number((p.grandTotal ?? p.totalCommission) || 0) : 0;
+  const mode = settlementTaxMode();
+  const incomeTax = mode === '3.3%' ? Math.floor(total * 0.03 / 10) * 10 : 0;   // 소득세 3% (10원 미만 절사)
+  const localTax = mode === '3.3%' ? Math.floor(incomeTax * 0.1 / 10) * 10 : 0; // 지방소득세 = 소득세의 10%
+  const other = Math.max(0, Math.floor(Number($('settlementDeduction').value || 0)));
+  const deduction = incomeTax + localTax + other;
+  return { total, mode, incomeTax, localTax, other, deduction, actual: Math.max(0, total - deduction) };
+}
+function updateSettlementActualPayment() {
+  const c = calcSettlement();
+  document.querySelectorAll('input[name=settlementTaxMode]').forEach(r => r.closest('.st-chip').classList.toggle('on', r.checked));
+  $('settlementActualPayment').value = c.actual;
+  $('settlementActualPaymentView').textContent = c.actual.toLocaleString('ko-KR') + '원';
+  $('settlementTaxDetail').innerHTML = c.mode === '3.3%'
+    ? `소득세 3% <b>${c.incomeTax.toLocaleString('ko-KR')}원</b> + 지방소득세 0.3% <b>${c.localTax.toLocaleString('ko-KR')}원</b> = <b>${(c.incomeTax + c.localTax).toLocaleString('ko-KR')}원</b> 공제`
+      + (c.total > 0 && c.incomeTax < 1000 ? '<br><span style="color:#b45309">소득세가 1,000원 미만이면 원천징수하지 않는 소액부징수 대상일 수 있습니다. 세무사 확인 후 처리방식을 고르세요.</span>' : '')
+    : '세금을 공제하지 않습니다. (사업자는 세금계산서 등 별도 처리)';
+  $('settlementCalcLine').textContent = c.total ? `확정수당 ${c.total.toLocaleString('ko-KR')}원 − 세금 ${(c.incomeTax + c.localTax).toLocaleString('ko-KR')}원 − 기타 ${c.other.toLocaleString('ko-KR')}원` : '';
+}
+
+/* 복사 */
+async function settleCopy(text, label) {
+  try { await navigator.clipboard.writeText(text); }
+  catch (_) { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+  showMessage('settlementMessage', `${label} 복사했습니다: ${text}`);
+}
+function copySettlementAmount() {
+  const c = calcSettlement();
+  if (!c.actual) { showMessage('settlementMessage', '복사할 실지급액이 없습니다. 확정수당을 먼저 불러오세요.', true); return; }
+  settleCopy(String(c.actual), '실지급액(숫자만)');
+}
+function copySettlementTransfer() {
+  const c = calcSettlement();
+  if (!c.actual) { showMessage('settlementMessage', '복사할 실지급액이 없습니다. 확정수당을 먼저 불러오세요.', true); return; }
+  settleCopy(`${$('settlementBank').value.trim() || '(은행)'} ${$('settlementAccountHolder').value.trim() || '(예금주)'} ${c.actual.toLocaleString('ko-KR')}원`, '이체정보');
+}
+
+/* 정산완료 저장 */
+async function savePartnerSettlement() {
+  const p = currentSettlementPreview;
+  if (!p) { showMessage('settlementMessage', '먼저 확정수당을 불러와 주세요.', true); return; }
+  if (Number(p.orderCount || 0) < 1 && Number(p.vendorCount || 0) < 1) { showMessage('settlementMessage', '지급할 확정수당이 없습니다.', true); return; }
+  const c = calcSettlement();
+  if (c.deduction > c.total) { showMessage('settlementMessage', '공제금액이 확정수당보다 클 수 없습니다.', true); return; }
+  const bankName = $('settlementBank').value.trim(), accountHolder = $('settlementAccountHolder').value.trim();
+  const payDate = $('settlementPayDate').value || settleYmd();
+  if (!bankName || !accountHolder) { showMessage('settlementMessage', '지급은행과 예금주를 입력해 주세요.', true); return; }
+  const settlementType = $('settlementType').value || '개인';
+  const won = v => Number(v).toLocaleString('ko-KR') + '원';
+  if (!confirm(`${p.partnerName} (${p.partnerCode}) 파트너\n\n정산기간: ${p.startDate} ~ ${p.endDate}\n정산기준: ${p.settleBasis || '직접'}${p.productCode ? ' (' + p.productCode + ')' : ''}\n판매수당: ${p.orderCount}건 ${won(p.totalCommission || 0)}\n벤더수수료: ${p.vendorCount || 0}건 ${won(p.vendorTotal || 0)}\n확정수당 합계: ${won(c.total)}\n세금(${c.mode}): ${won(c.incomeTax + c.localTax)}\n기타 공제: ${won(c.other)}\n실지급액: ${won(c.actual)}\n지급: ${bankName} ${accountHolder} · ${payDate}\n\n이체를 마쳤으면 정산완료 처리하시겠습니까?`)) return;
+  try {
+    const result = await apiPost({
+      action: 'adminSavePartnerSettlement', password: adminPw(),
+      partnerCode: p.partnerCode, partnerName: p.partnerName, startDate: p.startDate, endDate: p.endDate,
+      settlementType, taxMode: c.mode, otherDeduction: c.other, deductionAmount: c.deduction,
+      settleBasis: p.settleBasis || '직접', productCode: p.productCode || '',
+      bankName, accountHolder, paymentDate: payDate, memo: $('settlementMemo').value.trim()
+    });
+    if (!result.success) throw new Error(result.message || '정산완료 처리에 실패했습니다.');
+    if (Number(result.actualPayment) !== c.actual) {
+      showMessage('settlementMessage', `⚠️ 서버 계산 실지급액(${won(result.actualPayment)})이 화면(${won(c.actual)})과 다릅니다. 파트너정산 시트를 확인해 주세요. 정산번호 ${result.settlementId}`, true);
+    } else {
+      showMessage('settlementMessage', `정산완료: ${result.settlementId} · 실지급액 ${won(result.actualPayment)} — 파트너정산 시트에 저장했습니다.`);
+    }
+    settleRemember(p.partnerCode, bankName, accountHolder, settlementType);
+    resetSettlementPreview();
+    $('settlementDeduction').value = '0';
+    $('settlementMemo').value = '';
+  } catch (err) {
+    showMessage('settlementMessage', '정산 저장 오류: ' + (err.message || err), true);
+  }
+}
+
+  
+/* ---------- 구매후기 관리 ---------- */
+async function loadReviews(){
+  try{
+    const password=$('reviewAdminPassword').value || $('adminPassword').value;
+    if(!password) return showMessage('reviewMessage','관리자 비밀번호를 입력해 주세요.',true);
+    const res=await apiGet({action:'reviewList',password});
+    if(!res.success) throw new Error(res.message||'후기 조회 실패');
+    const rows=res.reviews||res.data||[];
+    $('reviewRows').innerHTML=rows.length ? rows.map(r=>`
+      <tr data-review="${esc(r.id||r.reviewId||'')}">
+        <td>${esc(r.createdAt||r.date||'')}</td><td>${esc(r.productName||'')}</td><td>${esc(r.name||'')}</td>
+        <td>${'★'.repeat(Math.max(0,Math.min(5,Number(r.rating||0))))}</td>
+        <td class="left">${esc(r.content||r.reviewText||'')}</td>
+        <td>${r.imageUrl?`<a href="${esc(r.imageUrl)}" target="_blank" rel="noopener"><img class="review-photo" src="${esc(r.imageUrl)}" alt="후기 사진"></a>`:'-'}</td>
+        <td class="review-status">${esc(r.status||'승인대기')}</td>
+        <td><input class="reviewMemo" value="${esc(r.adminMemo||'')}" placeholder="관리자 메모"></td>
+        <td><div class="review-actions">
+          <button class="primary" type="button" onclick="saveReviewStatus(this,'승인')">승인</button>
+          <button class="secondary" type="button" onclick="saveReviewStatus(this,'승인대기')">대기</button>
+          <button class="danger" type="button" onclick="saveReviewStatus(this,'숨김')">숨김</button>
+        </div></td>
+      </tr>`).join(''):'<tr><td colspan="9">등록된 구매후기가 없습니다.</td></tr>';
+    showMessage('reviewMessage',`${rows.length}건의 후기를 불러왔습니다.`);
+  }catch(e){showMessage('reviewMessage','후기 조회 오류: '+e.message,true)}
+}
+async function saveReviewStatus(btn,status){
+  const tr=btn.closest('tr');
+  try{
+    const password=$('reviewAdminPassword').value || $('adminPassword').value;
+    const id=tr.dataset.review;
+    const res=await apiPost({action:'updateReviewStatus',password,id,reviewId:id,status,adminMemo:tr.querySelector('.reviewMemo').value});
+    if(!res.success) throw new Error(res.message||'후기 상태 저장 실패');
+    showMessage('reviewMessage',`후기 상태를 "${status}"(으)로 저장했습니다.`);
+    await loadReviews();
+  }catch(e){showMessage('reviewMessage','후기 저장 오류: '+e.message,true)}
+}
+
+  /* ---------- 방문자 분석 ---------- */
+async function loadAnalytics(){
+  try{
+    const password = $('analyticsPassword').value || $('adminPassword').value;
+
+    if(!password){
+      showMessage(
+        'analyticsMessage',
+        '관리자 비밀번호를 입력해 주세요.',
+        true
+      );
+      return;
+    }
+
+    showMessage(
+      'analyticsMessage',
+      '방문통계를 불러오고 있습니다...'
+    );
+
+    const res = await apiGet({
+      action: 'analyticsSummary',
+      password: password
+    });
+
+    if(!res.success){
+      throw new Error(res.message || '방문통계 조회 실패');
+    }
+
+    // 상단 통계 숫자
+    $('statCurrent').textContent = Number(res.currentVisitors || 0).toLocaleString('ko-KR');
+    $('statToday').textContent = Number(res.todayVisitors || 0).toLocaleString('ko-KR');
+    $('statTotal').textContent = Number(res.totalVisitors || 0).toLocaleString('ko-KR');
+    $('statPageViews').textContent = Number(res.pageViews || 0).toLocaleString('ko-KR');
+    $('statClicks').textContent = Number(res.groupbuyClicks || 0).toLocaleString('ko-KR');
+
+    // 유입경로
+    const sources = Array.isArray(res.sources) ? res.sources : [];
+    const sourceBox = $('analyticsSources');
+
+    if(!sources.length){
+      sourceBox.innerHTML =
+        '<div class="muted">아직 유입경로 데이터가 없습니다.</div>';
+    }else{
+      const maxCount = Math.max(
+        ...sources.map(s => Number(s.count || 0)),
+        1
+      );
+
+      sourceBox.innerHTML = sources.map(s => {
+        const count = Number(s.count || 0);
+        const width = Math.max(
+          3,
+          Math.round((count / maxCount) * 100)
+        );
+
+        return `
+          <div style="margin-bottom:12px;">
+            <div style="
+              display:flex;
+              justify-content:space-between;
+              margin-bottom:5px;
+              font-size:13px;
+            ">
+              <strong>${esc(s.name || '직접접속')}</strong>
+              <span>${count.toLocaleString('ko-KR')}회</span>
+            </div>
+
+            <div style="
+              height:18px;
+              background:#edf1ed;
+              border-radius:9px;
+              overflow:hidden;
+            ">
+              <div style="
+                width:${width}%;
+                height:100%;
+                background:#16875a;
+                border-radius:9px;
+              "></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 상품별 관심도
+    const products = Array.isArray(res.products) ? res.products : [];
+
+    $('analyticsProducts').innerHTML = products.length
+      ? products.map(p => `
+          <tr>
+            <td class="left">
+              ${esc(p.productName || p.productCode || '-')}
+            </td>
+            <td>
+              ${Number(p.views || 0).toLocaleString('ko-KR')}회
+            </td>
+            <td>
+              ${Number(p.clicks || 0).toLocaleString('ko-KR')}회
+            </td>
+          </tr>
+        `).join('')
+      : `
+          <tr>
+            <td colspan="3">
+              아직 상품별 방문 데이터가 없습니다.
+            </td>
+          </tr>
+        `;
+
+    showMessage(
+      'analyticsMessage',
+      '방문통계를 불러왔습니다.'
+    );
+
+  }catch(e){
+    showMessage(
+      'analyticsMessage',
+      '방문통계 조회 오류: ' + e.message,
+      true
+    );
+  }
+}
+
+
+/* ---------- 현금영수증 보기 (2026-11-16) ---------- */
+let adminCashReceipts=null;
+async function loadAdminCashReceipts(){
+  try{
+    showMessage('crAdminMessage','현금영수증 목록을 불러오고 있습니다...');
+    const res=await apiGet({action:'cashReceiptList',password:adminPw(),startDate:$('crStart').value,endDate:$('crEnd').value});
+    if(!res.success) throw new Error(res.message||'조회 실패');
+    adminCashReceipts=res;
+    const s=res.summary||{};
+    $('crAdminSummary').innerHTML=`발행할 것(입금확인·발행대기) <b style="color:#b45309">${s.waitingPaid||0}건 ${money(s.waitingPaidAmount)}</b> · 입금 전 ${s.waitingUnpaid||0}건 · 발행완료 <b style="color:#17623f">${s.issued||0}건 ${money(s.issuedAmount)}</b>`;
+    renderAdminCashReceipts();
+    showMessage('crAdminMessage',`현금영수증 대상 ${res.rows.length}건을 불러왔습니다.`);
+  }catch(e){ showMessage('crAdminMessage','현금영수증 조회 오류: '+e.message,true); }
+}
+function renderAdminCashReceipts(){
+  const d=adminCashReceipts; if(!d) return;
+  const f=$('crStatusFilter').value;
+  const rows=(d.rows||[]).filter(x=>!f||x.status===f);
+  $('crAdminRows').innerHTML=rows.length?rows.map(x=>`<tr><td>${esc(x.orderDate)}</td><td>${esc(x.orderNo)}</td><td>${esc(x.name)}</td><td class="left">${esc(x.productName)} ${x.quantity}개</td><td><b>${money(x.amount)}</b></td><td>${x.paid?'✅':'<span class="muted">입금 전</span>'}</td><td>${esc(x.type)}</td><td>${esc(x.idNumber)}</td><td>${x.status==='발행완료'?'<b style="color:#17623f">발행완료</b>':x.status==='발행취소'?'<span class="muted">발행취소</span>':'<b style="color:#b45309">발행대기</b>'}</td><td>${esc(x.approvalNo||'')}</td><td>${esc(x.issuedAt||'')}</td><td>${esc(x.handler||'')}</td></tr>`).join(''):'<tr><td colspan="12">해당하는 건이 없습니다.</td></tr>';
+}
+
+/* ---------- 매입관리 ---------- */
+let purchaseProducts=[];
+let purchaseSuppliers=[];
+let loadedPurchaseRows=[];
+
+function todayYmd(){
+  const d=new Date();
+  const y=d.getFullYear();
+  const m=String(d.getMonth()+1).padStart(2,'0');
+  const day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+async function loadPurchaseFormData(){
+  try{
+    const password=$('purchaseAdminPassword').value.trim();
+    if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+
+    showMessage('purchaseSaveMessage','상품·공급처 정보를 불러오고 있습니다...');
+    const res=await apiGet({action:'adminPurchaseFormData',password});
+    if(!res.success) throw new Error(res.message||'상품·공급처 조회 실패');
+
+    purchaseProducts=Array.isArray(res.products)?res.products:[];
+    purchaseSuppliers=Array.isArray(res.suppliers)?res.suppliers:[];
+    purchaseSupplyPrices=Array.isArray(res.supplyPrices)?res.supplyPrices:[];
+    purchaseVendorFees=Array.isArray(res.vendorFees)?res.vendorFees:[];
+    purchasePartners=Array.isArray(res.partners)?res.partners:[];
+
+    $('purchaseProduct').innerHTML='<option value="">상품 선택</option>'+
+      purchaseProducts.map(p=>`<option value="${esc(p.productCode)}">${esc(p.productName)} (${esc(p.productCode)})</option>`).join('');
+
+    renderPurchaseSuppliers();
+    spFillProducts();
+    spRender(true);
+    vfFillSelects();
+    vfRender(true);
+    if(typeof spdAfterLoad==='function') spdAfterLoad();
+
+    // 주문 기준 매출·발주수량 자동 계산용 (주문배송관리 데이터)
+    try{
+      const sr=await apiGet({action:'shippingList',password});
+      purchaseOrderStats=sr.success?buildPurchaseOrderStats(sr.rows||[]):{};
+    }catch(_){ purchaseOrderStats={}; }
+
+    showMessage('purchaseSaveMessage',`상품 ${purchaseProducts.length}개, 공급처 ${purchaseSuppliers.length}개, 공급단가 이력 ${purchaseSupplyPrices.length}건, 벤더 수수료 ${purchaseVendorFees.length}건을 불러왔습니다.`);
+  }catch(e){
+    showMessage('purchaseSaveMessage','불러오기 오류: '+e.message,true);
+  }
+}
+
+/* ---------- 공급처 등록 ---------- */
+function renderPurchaseSuppliers(selectName){
+  $('purchaseSupplier').innerHTML='<option value="">공급처 선택</option>'+
+    purchaseSuppliers.map(s=>`<option value="${esc(s.supplierName)}">${esc(s.supplierName)}${s.supplierType?' / '+esc(s.supplierType):''}</option>`).join('');
+  if(selectName!==undefined) $('purchaseSupplier').value=selectName;
+  const spSel=$('spSupplier'); if(spSel){ const keep=spSel.value;
+    spSel.innerHTML='<option value="">공통 (모든 공급처)</option>'+purchaseSuppliers.map(s=>`<option value="${esc(s.supplierName)}">${esc(s.supplierName)}</option>`).join('');
+    spSel.value=keep; }
+  const vfSel=$('vfSupplier'); if(vfSel){ const keep=vfSel.value;
+    vfSel.innerHTML='<option value="">선택 안 함</option>'+purchaseSuppliers.map(s=>`<option value="${esc(s.supplierName)}">${esc(s.supplierName)}</option>`).join('');
+    vfSel.value=keep; }
+}
+function openSupplierRegister(){
+  ['spRegName','spRegOwner','spRegPhone','spRegBiz'].forEach(id=>$(id).value='');
+  $('spRegType').value='';
+  ['spRegPrice','spRegShip','spRegRound','spRegCheck'].forEach(id=>$(id).value='');
+  $('spRegStart').value=$('purchaseDate').value||todayYmd();
+  $('spRegProduct').innerHTML='<option value="">선택 안 함</option>'+purchaseProducts.map(p=>`<option value="${esc(p.productCode)}">${esc(p.productName)}</option>`).join('');
+  $('spRegProduct').value=$('purchaseProduct').value||'';
+  spRegProductChange();
+  $('spRegVendor').innerHTML='<option value="">없음</option>'+purchasePartners.filter(p=>p.status!=='중지').map(p=>`<option value="${esc(p.partnerCode)}">${esc(p.name)} (${esc(p.partnerCode)})</option>`).join('');
+  $('spRegVendorFee').value=''; $('spRegVendorCycle').value='말일';
+  $('spRegMessage').style.display='none';
+  $('supplierRegisterModal').classList.add('open');
+  setTimeout(()=>$('spRegName').focus(),50);
+}
+function closeSupplierRegister(){ $('supplierRegisterModal').classList.remove('open'); }
+async function saveSupplierRegister(){
+  const btn=$('spRegSave');
+  try{
+    const password=$('purchaseAdminPassword').value.trim()||$('adminPassword').value.trim();
+    if(!password) throw new Error('매입관리의 관리자 비밀번호를 먼저 입력해 주세요.');
+    const supplierName=$('spRegName').value.trim().replace(/\s+/g,' ');
+    const supplierType=$('spRegType').value;
+    if(!supplierName) throw new Error('공급처명을 입력해 주세요.');
+    if(!supplierType) throw new Error('공급자구분을 선택해 주세요.');
+    const key=v=>String(v||'').replace(/\s+/g,'').toLowerCase();
+    const dup=purchaseSuppliers.find(s=>key(s.supplierName)===key(supplierName));
+    if(dup) throw new Error(`"${dup.supplierName}" 공급처가 이미 있습니다. 목록에서 선택해 주세요.`);
+    btn.disabled=true; btn.textContent='저장 중...';
+    const res=await apiPost({action:'adminSupplierSave',password,supplierName,supplierType,
+      ownerName:$('spRegOwner').value.trim(),phone:$('spRegPhone').value.trim(),businessNumber:$('spRegBiz').value.trim()});
+    if(!res.success) throw new Error(res.message||'공급처 등록 실패');
+    purchaseSuppliers.push(res.supplier);
+    renderPurchaseSuppliers(res.supplier.supplierName);
+    let msg=res.message+' 매입 공급처로 선택했습니다.', spErr=false;
+    // 최초 공급 단가 (선택)
+    const spCode=$('spRegProduct').value, spPrice=$('spRegPrice').value.trim();
+    if(spCode && spPrice){
+      try{
+        const r2=await apiPost({action:'adminSupplyPriceSave',password,productCode:spCode,supplierName:res.supplier.supplierName,
+          unitPrice:spPrice,shippingPerBox:$('spRegShip').value.trim(),startDate:$('spRegStart').value||todayYmd(),
+          round:$('spRegRound').value.trim(),reason:'최초입점',checkDays:$('spRegCheck').value.trim(),memo:'공급처 등록 시 최초입점단가'});
+        if(!r2.success) throw new Error(r2.message||'단가 저장 실패');
+        msg+=' '+r2.message;
+        await reloadSupplyPrices();
+        if(!$('purchaseProduct').value){ $('purchaseProduct').value=spCode; onPurchaseProductChange(); }
+        else applyPurchaseSupplyPrice();
+      }catch(e2){ msg+=' (공급처는 등록됐지만 최초 단가 저장 실패: '+e2.message+' — 공급단가 관리에서 다시 등록해 주세요.)'; spErr=true; }
+    } else if(spCode || spPrice){
+      msg+=' (최초 단가는 상품과 단가를 모두 넣어야 저장됩니다 — 공급단가 관리에서 등록해 주세요.)';
+    }
+    // 연결한 파트너(벤더) 수수료 (선택)
+    const vCode=$('spRegVendor').value, vFee=$('spRegVendorFee').value.trim();
+    if(vCode && vFee){
+      if(!spCode){ msg+=' (벤더 수수료는 공급 상품을 골라야 저장됩니다 — 「🤝 벤더 수수료」에서 등록해 주세요.)'; }
+      else try{
+        const r3=await apiPost({action:'adminVendorFeeSave',password,productCode:spCode,supplierName:res.supplier.supplierName,vendorCode:vCode,
+          feePerBox:vFee,startDate:$('spRegStart').value||todayYmd(),cycle:$('spRegVendorCycle').value,memo:'공급처 등록 시 연결 파트너'});
+        if(!r3.success) throw new Error(r3.message||'벤더 수수료 저장 실패');
+        msg+=' '+r3.message;
+        await reloadVendorFees();
+      }catch(e3){ msg+=' (벤더 수수료 저장 실패: '+e3.message+' — 「🤝 벤더 수수료」에서 다시 등록해 주세요.)'; spErr=true; }
+    } else if(vCode || vFee){
+      msg+=' (벤더 수수료는 파트너와 금액을 모두 넣어야 저장됩니다.)';
+    }
+    closeSupplierRegister();
+    showMessage('purchaseSaveMessage',msg,spErr);
+    if(typeof spdAfterLoad==='function'){ spdAfterLoad(); spdOpen(res.supplier.supplierName); }
+  }catch(e){ showMessage('spRegMessage',e.message,true); }
+  finally{ btn.disabled=false; btn.textContent='공급처 저장'; }
+}
+
+function onPurchaseProductChange(){
+  const code=$('purchaseProduct').value;
+  const p=purchaseProducts.find(x=>x.productCode===code);
+  if(!p){
+    $('purchaseUnitPrice').value='';
+    $('purchaseShipping').value=0;
+    $('purchaseTaxType').value='';
+    calcPurchaseTotal();
+    return;
+  }
+  $('purchaseUnitPrice').value=Number(p.defaultPurchaseUnitPrice||0);
+  $('purchaseShipping').value=Number(p.defaultShippingFee||0);
+  $('purchaseTaxType').value=p.taxType||'';
+  applyPurchaseSupplyPrice();
+  applyPurchaseOrderHint(code);
+  calcPurchaseTotal();
+}
+
+
+/* ---------- 공급단가 이력 (2026-11-16) ---------- */
+let purchaseSupplyPrices=[];
+const spKey=v=>String(v||'').replace(/\s+/g,'').toLowerCase();
+const spShort=ymd=>ymd?ymd.slice(5).replace('-','/'):'';
+function spSort(a,b){ return a.startDate===b.startDate ? String(b.createdAt).localeCompare(String(a.createdAt)) : (a.startDate<b.startDate?1:-1); }
+/* 그 날짜에 적용되는 단가: 공급처 지정 단가 > 공통 단가. 공급처 없으면 아무 공급처 중 최근 */
+function spFor(code,supplier,ymd){
+  const k=spKey(supplier);
+  const hits=purchaseSupplyPrices.filter(x=>x.productCode===code && x.startDate<=ymd && (!x.endDate||x.endDate>=ymd) && (!k||!x.supplierName||spKey(x.supplierName)===k));
+  hits.sort((a,b)=>{ if(k){const sa=a.supplierName?1:0,sb=b.supplierName?1:0; if(sa!==sb) return sb-sa;} return spSort(a,b); });
+  return hits[0]||null;
+}
+function spLabel(x){ return `${spShort(x.startDate)}~${x.endDate?spShort(x.endDate):''} · ${money(x.unitPrice)}${x.round?' · '+esc(x.round):''}${x.reason?' · '+esc(x.reason):''}${x.supplierName?'':' · 공통'}`; }
+async function reloadSupplyPrices(){
+  const password=$('purchaseAdminPassword').value.trim();
+  const res=await apiGet({action:'adminSupplyPriceList',password});
+  if(!res.success) throw new Error(res.message||'공급단가 조회 실패');
+  purchaseSupplyPrices=res.rows||[];
+  spRender(false);
+}
+
+/* 매입 등록: 상품·공급처·매입일자 기준 단가 자동 입력 */
+function applyPurchaseSupplyPrice(){
+  const code=$('purchaseProduct').value;
+  if(!code){ $('purchaseSpHint').textContent=''; return; }
+  const ymd=$('purchaseDate').value||todayYmd();
+  const x=spFor(code,$('purchaseSupplier').value,ymd);
+  if(x){
+    $('purchaseUnitPrice').value=x.unitPrice;
+    $('purchaseShipping').value=x.shippingPerBox||0;
+  }else{
+    const p=purchaseProducts.find(v=>v.productCode===code);
+    if(p){ $('purchaseUnitPrice').value=Number(p.defaultPurchaseUnitPrice||0); $('purchaseShipping').value=Number(p.defaultShippingFee||0); }
+  }
+  calcPurchaseTotal();
+  purchaseSpDiffHint();
+}
+function purchaseSpDiffHint(){
+  const box=$('purchaseSpHint'); const code=$('purchaseProduct').value;
+  if(!code){ box.textContent=''; return; }
+  const x=spFor(code,$('purchaseSupplier').value,$('purchaseDate').value||todayYmd());
+  if(!x){ box.innerHTML='공급단가 이력 없음 → 상품세부정보 기본단가 사용'; box.style.color=''; return; }
+  const cur=Number($('purchaseUnitPrice').value||0);
+  if(cur===Number(x.unitPrice)){ box.innerHTML='공급단가 이력 적용: '+spLabel(x); box.style.color='#17623f'; }
+  else{ box.innerHTML=`이력 단가(${money(x.unitPrice)})와 다릅니다. 단가가 바뀐 거라면 아래 「💰 공급단가 관리」에서 새 단가를 등록해 주세요.`; box.style.color='#b45309'; }
+}
+
+/* 공급처 등록 창: 상품 고르면 기본 택배비 */
+function spRegProductChange(){
+  const code=$('spRegProduct').value;
+  const p=purchaseProducts.find(v=>v.productCode===code);
+  if(p && !$('spRegShip').value) $('spRegShip').value=Number(p.defaultShippingFee||0);
+}
+
+/* 공급단가 관리 패널 */
+function spFillProducts(){
+  const sel=$('spProduct'); const keep=sel.value;
+  sel.innerHTML='<option value="">상품 선택</option>'+purchaseProducts.map(p=>`<option value="${esc(p.productCode)}">${esc(p.productName)}</option>`).join('');
+  sel.value=keep;
+}
+function spRenderAlerts(){
+  const today=todayYmd(); const groups={};
+  purchaseSupplyPrices.forEach(x=>{ const g=x.productCode+'|'+spKey(x.supplierName); if(!groups[g]||spSort(x,groups[g])<0) groups[g]=x; });
+  const alerts=Object.values(groups).filter(x=>Number(x.checkDays)>0 && x.startDate<=today && !x.endDate).map(x=>{
+    const days=Math.floor((new Date(today)-new Date(x.startDate))/86400000);
+    return days>=Number(x.checkDays)?{x,days}:null; }).filter(Boolean);
+  $('spAlertBadge').textContent=alerts.length?`⚠️ 시세 확인 ${alerts.length}건`:'';
+  $('spAlerts').innerHTML=alerts.length?`<div class="notice" style="display:block;background:#fff7ed;color:#9a3412">`+alerts.map(({x,days})=>
+    `⚠️ <b>${esc(x.productName||x.productCode)}</b>${x.supplierName?' / '+esc(x.supplierName):''}: 현재 단가 ${money(x.unitPrice)} · ${spShort(x.startDate)}부터 ${days}일째 사용 중 (확인주기 ${x.checkDays}일). 시세가 바뀌었으면 새 단가를 등록하세요.`).join('<br>')+'</div>':'';
+}
+function spRender(resetForm){
+  spRenderAlerts();
+  const code=$('spProduct').value, sup=$('spSupplier').value;
+  const p=purchaseProducts.find(v=>v.productCode===code);
+  if(!code){ $('spRows').innerHTML='<tr><td colspan="10">상품을 선택하세요.</td></tr>'; $('spCurrent').style.display='none'; return; }
+  const today=todayYmd();
+  const exact=purchaseSupplyPrices.filter(x=>x.productCode===code && spKey(x.supplierName)===spKey(sup)).sort(spSort);
+  const cur=spFor(code,sup,today);
+  const box=$('spCurrent'); box.style.display='block';
+  box.innerHTML=cur?`오늘(${spShort(today)}) 적용 단가: <b>${money(cur.unitPrice)}</b> (택배 ${money(cur.shippingPerBox)}) — ${spLabel(cur)}`+(cur.supplierName!==sup&&!cur.supplierName&&sup?'<br><span class="muted">이 공급처 전용 단가가 없어 공통 단가를 씁니다.</span>':'')
+    :`공급단가 이력이 없습니다. 지금은 상품세부정보 기본단가 <b>${money(p?p.defaultPurchaseUnitPrice:0)}</b>를 씁니다. 첫 단가는 사유를 '최초입점'으로 등록하세요.`;
+  if(resetForm){
+    const last=exact[0]||cur;
+    $('spPrice').value=''; $('spSale').value=''; $('spMemo').value='';
+    $('spShip').value=last?Number(last.shippingPerBox||0):Number(p?p.defaultShippingFee||0:0);
+    $('spRound').value=last?last.round||'':'';
+    $('spCheck').value=last&&last.checkDays!==''?last.checkDays:'';
+    $('spReason').value=exact.length?'시세변동':'최초입점';
+    const nextDay=exact[0]&&exact[0].startDate>=today?addDaysYmd(exact[0].startDate,1):today;
+    $('spStart').value=nextDay;
+    $('spMessage').style.display='none';
+  }
+  // 이력 표: 선택한 상품의 모든 공급처 단가, 최신순
+  const all=purchaseSupplyPrices.filter(x=>x.productCode===code).sort(spSort);
+  const latestIds=new Set(); const seen=new Set();
+  all.forEach(x=>{ const g=spKey(x.supplierName); if(!seen.has(g)){ seen.add(g); latestIds.add(x.id); } });
+  $('spRows').innerHTML=all.length?all.map(x=>{
+    const prev=all.filter(y=>spKey(y.supplierName)===spKey(x.supplierName) && y.startDate<x.startDate).sort(spSort)[0];
+    const diff=prev?Number(x.unitPrice)-Number(prev.unitPrice):null;
+    const diffTxt=diff===null?'<span class="muted">처음</span>':diff===0?'-':`<b style="color:${diff>0?'#a32121':'#1d4ed8'}">${diff>0?'▲':'▼'} ${Math.abs(diff).toLocaleString('ko-KR')}</b>`;
+    const isCur=x.startDate<=today&&(!x.endDate||x.endDate>=today);
+    return `<tr${isCur?' style="background:#eef8f2"':''}><td>${spShort(x.startDate)} ~ ${x.endDate?spShort(x.endDate):(x.startDate>today?'(예정)':'(현재)')}</td><td>${x.supplierName?esc(x.supplierName):'<span class="muted">공통</span>'}</td><td>${esc(x.round||'-')}</td><td><b>${money(x.unitPrice)}</b></td><td>${diffTxt}</td><td>${money(x.shippingPerBox)}</td><td>${x.salePrice===''||x.salePrice==null?'-':money(x.salePrice)}</td><td>${esc(x.reason||'')}</td><td class="left">${esc(x.memo||'')}</td><td>${latestIds.has(x.id)?`<button class="secondary" type="button" onclick="deleteSupplyPrice('${esc(x.id)}')">삭제</button>`:''}</td></tr>`;
+  }).join(''):'<tr><td colspan="10">이 상품의 단가 이력이 없습니다.</td></tr>';
+  spDiffPreview();
+}
+function addDaysYmd(ymd,n){ const d=new Date(ymd+'T00:00:00'); d.setDate(d.getDate()+n); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function spDiffPreview(){
+  const code=$('spProduct').value; if(!code) return;
+  const price=Number($('spPrice').value||0); if(!price){ return; }
+  const cur=spFor(code,$('spSupplier').value,todayYmd());
+  const ship=Number($('spShip').value||0), sale=Number($('spSale').value||0);
+  const vf=vfFor(code,todayYmd()); const vfee=vf?Number(vf.feePerBox||0):0;
+  let t=cur?`현재 ${money(cur.unitPrice)} → 새 단가 ${money(price)} (${price-cur.unitPrice>=0?'+':''}${(price-cur.unitPrice).toLocaleString('ko-KR')}원)`:`새 단가 ${money(price)}`;
+  const mg=sale-price-ship-vfee;
+  if(sale) t+=` · 판매가 ${money(sale)} 기준 박스당 마진 약 <b style="color:${mg<=0?'#a32121':'#17623f'}">${money(mg)}</b>`+(vfee?` (벤더 수수료 ${money(vfee)} 뺌, 판매수당은 별도)`:' (판매수당 별도)')+(mg<=0?' ⚠️ 팔수록 손해':'');
+  $('spMessage').className='notice'; $('spMessage').style.display='block'; $('spMessage').innerHTML=t;
+}
+async function saveSupplyPrice(){
+  const btn=$('spSaveBtn');
+  try{
+    const password=$('purchaseAdminPassword').value.trim();
+    if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+    if(!$('spProduct').value) throw new Error('상품을 선택해 주세요.');
+    if(!Number($('spPrice').value)) throw new Error('새 공급단가를 입력해 주세요.');
+    if(!$('spStart').value) throw new Error('적용 시작일을 입력해 주세요.');
+    btn.disabled=true; btn.textContent='저장 중...';
+    const res=await apiPost({action:'adminSupplyPriceSave',password,productCode:$('spProduct').value,supplierName:$('spSupplier').value,
+      unitPrice:$('spPrice').value.trim(),shippingPerBox:$('spShip').value.trim(),startDate:$('spStart').value,round:$('spRound').value.trim(),
+      reason:$('spReason').value,checkDays:$('spCheck').value.trim(),salePrice:$('spSale').value.trim(),memo:$('spMemo').value.trim()});
+    if(!res.success) throw new Error(res.message||'단가 저장 실패');
+    await reloadSupplyPrices();
+    spRender(true);
+    showMessage('spMessage',res.message);
+    if($('purchaseProduct').value && !$('purchaseEditNumber').value) applyPurchaseSupplyPrice();
+  }catch(e){ showMessage('spMessage','단가 저장 오류: '+e.message,true); }
+  finally{ btn.disabled=false; btn.textContent='단가 등록'; }
+}
+async function deleteSupplyPrice(id){
+  const x=purchaseSupplyPrices.find(v=>v.id===id); if(!x) return;
+  if(!confirm(`${x.productName} ${x.supplierName||'공통'} ${x.startDate} 단가 ${money(x.unitPrice)}를 삭제할까요?\n잘못 넣은 단가를 지울 때만 쓰세요. 직전 단가가 다시 현재 단가가 됩니다.`)) return;
+  try{
+    const password=$('purchaseAdminPassword').value.trim();
+    const res=await apiPost({action:'adminSupplyPriceDelete',password,id});
+    if(!res.success) throw new Error(res.message||'삭제 실패');
+    await reloadSupplyPrices();
+    spRender(true);
+    showMessage('spMessage',res.message);
+  }catch(e){ showMessage('spMessage','단가 삭제 오류: '+e.message,true); }
+}
+
+
+/* ---------- 벤더(공급처 연결 파트너) 수수료 (2026-11-16) ---------- */
+let purchaseVendorFees=[], purchasePartners=[];
+function vfFor(code,ymd){
+  const hits=purchaseVendorFees.filter(x=>x.productCode===code && x.startDate<=ymd && (!x.endDate||x.endDate>=ymd));
+  hits.sort(spSort); return hits[0]||null;
+}
+async function reloadVendorFees(){
+  const res=await apiGet({action:'adminVendorFeeList',password:$('purchaseAdminPassword').value.trim()});
+  if(!res.success) throw new Error(res.message||'벤더 수수료 조회 실패');
+  purchaseVendorFees=res.rows||[];
+  vfRender(false);
+}
+function vfFillSelects(){
+  const ps=$('vfProduct'), keep=ps.value;
+  ps.innerHTML='<option value="">전체 보기 (등록할 상품 선택)</option>'+purchaseProducts.map(p=>`<option value="${esc(p.productCode)}">${esc(p.productName)}</option>`).join('');
+  ps.value=keep;
+  const vs=$('vfVendor'), kv=vs.value;
+  vs.innerHTML='<option value="">파트너 선택</option>'+purchasePartners.filter(p=>p.status!=='중지').map(p=>`<option value="${esc(p.partnerCode)}">${esc(p.name)} (${esc(p.partnerCode)})</option>`).join('');
+  vs.value=kv;
+  renderPurchaseSuppliers($('purchaseSupplier').value);
+}
+function vfRender(resetForm){
+  const code=$('vfProduct').value, today=todayYmd();
+  const cur=code?vfFor(code,today):null;
+  const box=$('vfCurrent');
+  if(code){ box.style.display='block';
+    box.innerHTML=cur?`오늘 적용: <b>${esc(cur.vendorName)} (${esc(cur.vendorCode)})</b> · 박스당 <b>${money(cur.feePerBox)}</b> · ${esc(cur.cycle)} 정산 · ${spShort(cur.startDate)}~${cur.endDate?spShort(cur.endDate):''}${cur.supplierName?' · 공급처 '+esc(cur.supplierName):''}`
+      :'이 상품에는 오늘 적용 중인 벤더 수수료가 없습니다.';
+  } else box.style.display='none';
+  if(resetForm){
+    $('vfFee').value=''; $('vfMemo').value='';
+    $('vfStart').value=today;
+    if(cur){ $('vfVendor').value=cur.vendorCode; $('vfCycle').value=cur.cycle; $('vfSupplier').value=cur.supplierName||''; }
+    else { const sp=code?spFor(code,'',today):null; if(sp&&sp.supplierName) $('vfSupplier').value=sp.supplierName; }
+    $('vfMessage').style.display='none';
+  }
+  const list=purchaseVendorFees.filter(x=>!code||x.productCode===code).sort(spSort);
+  const latest=new Set(), seen=new Set();
+  list.forEach(x=>{ if(!seen.has(x.productCode)){ seen.add(x.productCode); latest.add(x.id); } });
+  $('vfRows').innerHTML=list.length?list.map(x=>{
+    const active=x.startDate<=today&&(!x.endDate||x.endDate>=today);
+    const btns=[];
+    if(!x.endDate||x.endDate>today) btns.push(`<button class="secondary" type="button" onclick="endVendorFee('${esc(x.id)}')">종료</button>`);
+    if(latest.has(x.id)) btns.push(`<button class="secondary" type="button" onclick="deleteVendorFee('${esc(x.id)}')">삭제</button>`);
+    return `<tr${active?' style="background:#eef8f2"':''}><td>${spShort(x.startDate)} ~ ${x.endDate?spShort(x.endDate):(x.startDate>today?'(예정)':'(현재)')}</td><td class="left">${esc(x.productName)}</td><td>${esc(x.supplierName||'-')}</td><td><b>${esc(x.vendorName)}</b><br><small>${esc(x.vendorCode)}</small></td><td><b>${money(x.feePerBox)}</b></td><td>${esc(x.cycle)}</td><td class="left">${esc(x.memo||'')}</td><td>${btns.join(' ')||'-'}</td></tr>`;
+  }).join(''):`<tr><td colspan="8">${code?'이 상품에 등록된 벤더 수수료가 없습니다.':'등록된 벤더 수수료가 없습니다.'}</td></tr>`;
+  vfMarginPreview();
+}
+function vfMarginPreview(){
+  const code=$('vfProduct').value, fee=Number($('vfFee').value||0);
+  if(!code||!fee) return;
+  const sp=spFor(code,'',todayYmd()); const p=purchaseProducts.find(v=>v.productCode===code);
+  const buy=sp?Number(sp.unitPrice):Number(p?p.defaultPurchaseUnitPrice||0:0), ship=sp?Number(sp.shippingPerBox||0):Number(p?p.defaultShippingFee||0:0);
+  const sale=sp&&sp.salePrice!==''&&sp.salePrice!=null?Number(sp.salePrice):0;
+  const t=sale?`판매가 ${money(sale)} − 공급단가 ${money(buy)} − 택배 ${money(ship)} − 벤더 수수료 ${money(fee)} = 박스당 약 <b style="color:${sale-buy-ship-fee<=0?'#a32121':'#17623f'}">${money(sale-buy-ship-fee)}</b> (판매수당은 별도로 더 빠짐)`
+    :`벤더 수수료 박스당 ${money(fee)} · 마진을 보려면 「💰 공급단가 관리」에 판매가(참고)를 넣어 두세요.`;
+  $('vfMessage').className='notice'; $('vfMessage').style.display='block'; $('vfMessage').innerHTML=t;
+}
+async function saveVendorFee(){
+  const btn=$('vfSaveBtn');
+  try{
+    const password=$('purchaseAdminPassword').value.trim();
+    if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+    if(!$('vfProduct').value) throw new Error('상품을 선택해 주세요.');
+    if(!$('vfVendor').value) throw new Error('연결한 파트너(벤더)를 선택해 주세요.');
+    if(!Number($('vfFee').value)) throw new Error('박스당 수수료를 입력해 주세요.');
+    btn.disabled=true; btn.textContent='저장 중...';
+    const res=await apiPost({action:'adminVendorFeeSave',password,productCode:$('vfProduct').value,supplierName:$('vfSupplier').value,vendorCode:$('vfVendor').value,
+      feePerBox:$('vfFee').value.trim(),startDate:$('vfStart').value||todayYmd(),cycle:$('vfCycle').value,memo:$('vfMemo').value.trim()});
+    if(!res.success) throw new Error(res.message||'저장 실패');
+    await reloadVendorFees(); vfRender(true);
+    showMessage('vfMessage',res.message);
+  }catch(e){ showMessage('vfMessage','벤더 수수료 저장 오류: '+e.message,true); }
+  finally{ btn.disabled=false; btn.textContent='벤더 수수료 등록'; }
+}
+async function endVendorFee(id){
+  const x=purchaseVendorFees.find(v=>v.id===id); if(!x) return;
+  const end=prompt(`${x.productName} · ${x.vendorName} 벤더 수수료를 언제까지 적용할까요? (이 날짜 다음 주문부터 수수료 없음)\n형식: YYYY-MM-DD`, todayYmd());
+  if(!end) return;
+  try{
+    const res=await apiPost({action:'adminVendorFeeEnd',password:$('purchaseAdminPassword').value.trim(),id,endDate:end.trim()});
+    if(!res.success) throw new Error(res.message||'종료 실패');
+    await reloadVendorFees(); showMessage('vfMessage',res.message);
+  }catch(e){ showMessage('vfMessage','종료 오류: '+e.message,true); }
+}
+async function deleteVendorFee(id){
+  const x=purchaseVendorFees.find(v=>v.id===id); if(!x) return;
+  if(!confirm(`${x.productName} · ${x.vendorName} · 박스당 ${money(x.feePerBox)} (${x.startDate}~) 조건을 삭제할까요?\n잘못 넣었을 때만 쓰세요. 연결을 끝내려면 '종료'를 쓰세요.`)) return;
+  try{
+    const res=await apiPost({action:'adminVendorFeeDelete',password:$('purchaseAdminPassword').value.trim(),id});
+    if(!res.success) throw new Error(res.message||'삭제 실패');
+    await reloadVendorFees(); vfRender(true); showMessage('vfMessage',res.message);
+  }catch(e){ showMessage('vfMessage','삭제 오류: '+e.message,true); }
+}
+
+/* 주문(입금완료) 기준 발주수량·매출 연결 */
+let purchaseOrderStats={};
+function buildPurchaseOrderStats(rows){
+  const s={};
+  rows.forEach(r=>{
+    const c=r.productCode; if(!c) return;
+    if(!s[c]) s[c]={orders:0,qty:0,paidOrders:0,paidQty:0,paidSales:0};
+    const q=Number(r.qty||0);
+    s[c].orders++; s[c].qty+=q;
+    if(r.paymentConfirmed){ s[c].paidOrders++; s[c].paidQty+=q; s[c].paidSales+=q*Number(r.orderSalePrice||0); }
+  });
+  return s;
+}
+function applyPurchaseOrderHint(code){
+  const box=$('purchaseOrderHint');
+  const st=purchaseOrderStats[code];
+  if(!code||!st){ box.style.display='none'; return; }
+  const already=loadedPurchaseRows
+    .filter(r=>r.productCode===code && r.purchaseNumber!==$('purchaseEditNumber').value)
+    .reduce((a,r)=>a+Number(r.quantity||0),0);
+  const need=Math.max(0,st.paidQty-already);
+  const editing=!!$('purchaseEditNumber').value;
+  if(!editing && need>0) $('purchaseQuantity').value=need;
+  box.className='notice'; box.style.display='block';
+  box.innerHTML=`입금완료 주문 <b>${st.paidOrders}건 · ${st.paidQty}박스</b> (전체 주문 ${st.orders}건 · ${st.qty}박스) · 입금 매출 <b>${money(st.paidSales)}</b><br>`+
+    (loadedPurchaseRows.length?`이미 매입등록 ${already}박스 → `:'')+
+    (editing?`수정 중이라 수량은 바꾸지 않았습니다.`:`발주수량 <b>${need}박스</b> ${need>0?'자동 입력':'(추가 발주할 수량 없음)'}`)+
+    (loadedPurchaseRows.length?'':'<br><span class="muted">매입내역을 먼저 불러오면 이미 등록한 수량을 빼고 계산합니다.</span>');
+}
+
+function calcPurchaseTotal(){
+  const q=Math.max(0,Number($('purchaseQuantity').value||0));
+  const unit=Math.max(0,Number($('purchaseUnitPrice').value||0));
+  const shippingPerBox=Math.max(0,Number($('purchaseShipping').value||0));
+  const other=Math.max(0,Number($('purchaseOther').value||0));
+  const productAmount=q*unit;
+  const shippingTotal=q*shippingPerBox;
+  const total=productAmount+shippingTotal+other;
+  $('purchaseProductAmountPreview').textContent=money(productAmount);
+  $('purchaseShippingTotalPreview').textContent=money(shippingTotal);
+  $('purchaseTotalPreview').textContent=money(total);
+}
+
+function clearPurchaseForm(){
+  $('purchaseDate').value=todayYmd();
+  $('purchaseProduct').value='';
+  $('purchaseSupplier').value='';
+  $('purchaseQuantity').value=1;
+  $('purchaseUnitPrice').value='';
+  $('purchaseShipping').value=0;
+  $('purchaseOther').value=0;
+  $('purchaseTaxType').value='';
+  $('purchaseEvidenceType').value='';
+  $('purchasePaymentStatus').value='미지급';
+  $('purchaseMemo').value='';
+  $('purchaseEditNumber').value='';
+  $('purchaseSaveBtn').textContent='매입 등록';
+  $('purchaseOrderHint').style.display='none';
+  $('purchaseSpHint').textContent='';
+  calcPurchaseTotal();
+  showMessage('purchaseSaveMessage','');
+}
+
+async function savePurchase(){
+  try{
+    const password=$('purchaseAdminPassword').value.trim();
+    if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+    if(!$('purchaseDate').value) throw new Error('매입일자를 선택해 주세요.');
+    if(!$('purchaseProduct').value) throw new Error('상품을 선택해 주세요.');
+    if(!$('purchaseSupplier').value) throw new Error('공급처를 선택해 주세요.');
+
+    const quantity=Number($('purchaseQuantity').value||0);
+    const unitPrice=Number($('purchaseUnitPrice').value||0);
+    if(quantity<=0) throw new Error('수량을 1개 이상 입력해 주세요.');
+    if(unitPrice<0) throw new Error('매입단가를 확인해 주세요.');
+
+    showMessage('purchaseSaveMessage','매입내역을 저장하고 있습니다...');
+
+    const editNumber=$('purchaseEditNumber').value.trim();
+    const res=await apiPost({
+      action:editNumber ? 'adminPurchaseUpdate' : 'adminPurchaseSave',
+      purchaseNumber:editNumber,
+      password,
+      purchaseDate:$('purchaseDate').value,
+      productCode:$('purchaseProduct').value,
+      supplierName:$('purchaseSupplier').value,
+      quantity,
+      purchaseUnitPrice:unitPrice,
+      shippingPerBox:Number($('purchaseShipping').value||0),
+      otherAmount:Number($('purchaseOther').value||0),
+      evidenceType:$('purchaseEvidenceType').value,
+      paymentStatus:$('purchasePaymentStatus').value,
+      memo:$('purchaseMemo').value
+    });
+
+    if(!res.success) throw new Error(res.message||'매입 등록 실패');
+    showMessage('purchaseSaveMessage',`${editNumber ? '매입 수정' : '매입 등록'} 완료: ${res.purchaseNumber||''}`);
+    clearPurchaseForm();
+    await loadPurchases();
+  }catch(e){
+    showMessage('purchaseSaveMessage','매입 등록 오류: '+e.message,true);
+  }
+}
+
+async function loadPurchases(){
+  try{
+    const password=$('purchaseAdminPassword').value.trim();
+    if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+
+    showMessage('purchaseMessage','매입내역을 불러오고 있습니다...');
+    const res=await apiGet({
+      action:'accountingSummary',
+      password:password,
+      startDate:$('purchaseStartDate').value,
+      endDate:$('purchaseEndDate').value
+    });
+    if(!res.success) throw new Error(res.message||'매입내역 조회 실패');
+
+    const p=res.purchases||{};
+    $('purchaseCount').textContent=Number(p.count||0).toLocaleString('ko-KR');
+    $('purchaseTotal').textContent=money(p.totalAmount||0);
+    $('purchasePaid').textContent=money(p.paidAmount||0);
+    $('purchaseUnpaid').textContent=money(p.unpaidAmount||0);
+
+    const rows=Array.isArray(p.rows)?p.rows:[];
+    loadedPurchaseRows=rows;
+    $('purchaseRows').innerHTML=rows.length ? rows.map(r=>`
+      <tr>
+        <td>${esc(r.purchaseDate||'')}</td>
+        <td>${esc(r.purchaseNumber||'')}</td>
+        <td class="left"><b>${esc(r.productName||r.productCode||'')}</b></td>
+        <td>${esc(r.supplier||'')}</td>
+        <td>${Number(r.quantity||0).toLocaleString('ko-KR')}</td>
+        <td>${money(r.purchaseUnitPrice||0)}</td>
+        <td>${money(r.productAmount||0)}</td>
+        <td>${money(r.shippingPerBox||0)}</td>
+        <td>${money(r.shippingAmount||0)}</td>
+        <td>${money(r.otherAmount||0)}</td>
+        <td><b>${money(r.totalAmount||0)}</b></td>
+        <td>${esc(r.paymentStatus||'')}</td>
+        <td>${formatPurchaseDate(r.paymentDate)}</td>
+        <td>
+          ${(()=>{
+            const qty=Number(r.quantity||0);
+            const tracking=Number(r.trackingCount||0);
+            const delivered=Number(r.deliveredCount||0);
+            const missing=Math.max(0,qty-tracking);
+            const shipDone=qty>0 && tracking>=qty && delivered>=qty;
+            const paid=r.paymentStatus==='지급완료';
+            const isDone=shipDone && paid;
+            const status=isDone?'처리완료':(shipDone?'배송완료 · 공급처 지급대기':(tracking>0?'배송진행중':'송장대기'))+(!shipDone&&paid?' · 지급완료':'');
+            return `매입 ${qty.toLocaleString('ko-KR')}박스 / 송장 ${tracking.toLocaleString('ko-KR')}건 / 미등록 ${missing.toLocaleString('ko-KR')}건 / 완료 ${delivered.toLocaleString('ko-KR')}건<br><b>${status}</b>`;
+          })()}
+        </td>
+        <td>
+          <button class="secondary" type="button" onclick="editPurchase('${esc(r.purchaseNumber||'')}')">수정</button>
+          <button class="${r.paymentStatus==='지급완료'?'secondary':'primary'}" type="button"
+            onclick="togglePurchasePayment('${esc(r.purchaseNumber||'')}','${r.paymentStatus==='지급완료'?'미지급':'지급완료'}')">
+            ${r.paymentStatus==='지급완료'?'미지급으로':'입금완료'}
+          </button>
+        </td>
+      </tr>`).join('') : '<tr><td colspan="15">조회 기간에 매입내역이 없습니다.</td></tr>';
+
+    showMessage('purchaseMessage','매입내역을 불러왔습니다.');
+  }catch(e){
+    showMessage('purchaseMessage','매입내역 조회 오류: '+e.message,true);
+  }
+}
+
+
+function formatPurchaseDate(value){
+  if(!value) return '';
+  const d=new Date(value);
+  if(isNaN(d.getTime())) return esc(String(value));
+  const y=d.getFullYear();
+  const m=String(d.getMonth()+1).padStart(2,'0');
+  const day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+function editPurchase(purchaseNumber){
+  const r=loadedPurchaseRows.find(x=>String(x.purchaseNumber||'')===String(purchaseNumber||''));
+  if(!r){ showMessage('purchaseSaveMessage','수정할 매입내역을 찾지 못했습니다.',true); return; }
+
+  $('purchaseEditNumber').value=r.purchaseNumber||'';
+  $('purchaseDate').value=formatPurchaseDate(r.purchaseDate);
+  $('purchaseProduct').value=r.productCode||'';
+  $('purchaseSupplier').value=r.supplier||'';
+  $('purchaseQuantity').value=Number(r.quantity||0);
+  $('purchaseUnitPrice').value=Number(r.purchaseUnitPrice||0);
+  $('purchaseShipping').value=Number(r.shippingPerBox||0);
+  $('purchaseOther').value=Number(r.otherAmount||0);
+  $('purchaseTaxType').value=r.taxType||'';
+  $('purchaseEvidenceType').value=r.evidenceType||'';
+  $('purchasePaymentStatus').value=r.paymentStatus==='지급완료'?'지급완료':'미지급';
+  $('purchaseMemo').value=r.memo||'';
+  purchaseSpDiffHint();
+  $('purchaseSaveBtn').textContent='매입 수정 저장';
+  calcPurchaseTotal();
+  showMessage('purchaseSaveMessage',`매입번호 ${r.purchaseNumber} 수정 중입니다.`);
+  window.scrollTo({top:$('purchaseAdminPassword').getBoundingClientRect().top+window.scrollY-30,behavior:'smooth'});
+}
+
+async function togglePurchasePayment(purchaseNumber,status){
+  try{
+    const password=$('purchaseAdminPassword').value.trim();
+    if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+    showMessage('purchaseMessage','지급상태를 변경하고 있습니다...');
+    const res=await apiPost({
+      action:'adminPurchasePaymentUpdate',
+      password,
+      purchaseNumber,
+      paymentStatus:status
+    });
+    if(!res.success) throw new Error(res.message||'지급상태 변경 실패');
+    showMessage('purchaseMessage',status==='지급완료'?'공급처 입금완료로 처리했습니다.':'미지급으로 변경했습니다.');
+    await loadPurchases();
+  }catch(e){
+    showMessage('purchaseMessage','지급상태 변경 오류: '+e.message,true);
+  }
+}
+
+/* ---------- 주문배송관리 ---------- */
+let shippingRows=[];
+const SHIP_STATUSES=['배송대기','송장등록','배송중','배송완료','취소']; // 2026-11-19 취소 추가
+
+function shipPhone(v){
+  let p=String(v||'').replace(/[^0-9]/g,'');
+  if(p.length===10&&p.startsWith('10')) p='0'+p;
+  if(p.length===11&&p.startsWith('010')) return p.replace(/(\d{3})(\d{4})(\d{4})/,'$1-$2-$3');
+  return p||String(v||'');
+}
+function shipPassword(){
+  return ($('shipAdminPassword').value||$('purchaseAdminPassword').value||$('adminPassword').value||'').trim();
+}
+
+const HANJIN_DEFAULT_COURIER = '한진택배';
+const SHIP_CATEGORIES = ['unpaid','배송대기','송장등록','배송중','배송완료','취소'];
+
+// 배송 화면 분류: 배송완료 > 미입금 > 배송상태
+function shipCategory(r){
+  if(r.shippingStatus === '배송완료') return '배송완료';
+  if(r.shippingStatus === '취소') return '취소';
+  if(!r.paymentConfirmed) return 'unpaid';
+  return SHIP_STATUSES.includes(r.shippingStatus) ? r.shippingStatus : '배송대기';
+}
+function selectedShipCategories(){
+  return Array.from(document.querySelectorAll('.ssf:checked')).map(el => el.value);
+}
+function toggleAllShipStatus(on){
+  document.querySelectorAll('.ssf').forEach(el => { el.checked = on; });
+  renderShipping();
+}
+function onShipStatusFilterChange(){
+  $('ssfAll').checked = Array.from(document.querySelectorAll('.ssf')).every(el => el.checked);
+  renderShipping();
+}
+
+async function loadShipping(){
+  try{
+    const password=shipPassword();
+    if(!password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+    showMessage('shipMessage','배송목록을 불러오고 있습니다...');
+    const res=await apiGet({action:'shippingList',password});
+    if(!res.success) throw new Error(res.message||'배송목록 조회 실패');
+    shippingRows=(res.rows||[]).map(r=>({...r,_orig:{courier:r.courier||'',trackingNumber:r.trackingNumber||'',shippingStatus:r.shippingStatus||'배송대기'}}));
+
+    // 배송메시지(고객 요청사항)는 주문관리에서 가져와 붙입니다.
+    try{
+      const ores=await apiGet({action:'orders',password});
+      if(ores && ores.success){
+        const memoMap={}, pnameMap={}, pcodeMap={}, qtyMap={};
+        (ores.orders||ores.data||[]).forEach(o=>{ const k=String(o.orderNo||o.orderNumber||'').trim(); memoMap[k]=String(o.memo||''); pnameMap[k]=String(o.productName||'').trim(); pcodeMap[k]=String(o.productCode||'').trim(); qtyMap[k]=Number(o.qty||o.quantity||0); });
+        shippingRows.forEach(r=>{ r.memo=memoMap[r.orderNumber]||''; if(!r.productName) r.productName=pnameMap[r.orderNumber]||''; if(!r.productCode) r.productCode=pcodeMap[r.orderNumber]||''; if(!Number(r.qty)) r.qty=Number(r.quantity)||qtyMap[r.orderNumber]||0; });
+      }
+    }catch(_){}
+
+    const sel=$('shipProductFilter'); const cur=sel.value;
+    if(!Array.isArray(products)||!products.length){ try{ const pr=await apiGet({action:'products'}); if(pr&&pr.success) products=pr.products||pr.data||[]; }catch(_){} }
+    const nameOf={}; (products||[]).forEach(p=>{ if(p&&p.productCode) nameOf[String(p.productCode)]=p.productName||p.name||''; });
+    shippingRows.forEach(r=>{ if(!r.productName && nameOf[r.productCode]) r.productName=nameOf[r.productCode]; });
+    const shipProds=[...new Map(shippingRows.map(r=>[r.productCode,r.productName||nameOf[r.productCode]||r.productCode])).entries()].filter(([c])=>c).sort((a,b)=>String(a[1]).localeCompare(String(b[1]),'ko'));
+    sel.innerHTML='<option value="">전체 상품</option>'+shipProds.map(([c,n])=>`<option value="${esc(c)}">${esc(n)}</option>`).join('');
+    if(shipProds.some(([c])=>c===cur)) sel.value=cur;
+
+    renderShipping();
+    showMessage('shipMessage',`주문 ${shippingRows.length}건을 불러왔습니다.`);
+  }catch(e){ showMessage('shipMessage','배송목록 오류: '+e.message,true); }
+}
+
+function shipScope(){
+  const code=$('shipProductFilter').value;
+  return shippingRows.filter(r=>!code||r.productCode===code);
+}
+function shipFiltered(){
+  const cats=selectedShipCategories();
+  return shipScope().filter(r=>cats.includes(shipCategory(r)));
+}
+
+function shipChanged(r){
+  return r.courier!==r._orig.courier||r.trackingNumber!==r._orig.trackingNumber||r.shippingStatus!==r._orig.shippingStatus;
+}
+
+function renderShipping(){
+  const scope=shipScope();
+  const paid=scope.filter(r=>r.paymentConfirmed);
+  $('shipSumOrders').textContent=scope.length+'건';
+  $('shipSumPaidQty').textContent=paid.reduce((a,r)=>a+Number(r.qty||0),0).toLocaleString('ko-KR')+'박스';
+  $('shipSumSales').textContent=money(paid.reduce((a,r)=>a+Number(r.qty||0)*Number(r.orderSalePrice||0),0));
+  $('shipSumTracking').textContent=paid.filter(r=>r.trackingNumber).length+'건';
+  $('shipSumMissing').textContent=paid.filter(r=>!r.trackingNumber).length+'건';
+  $('shipSumDelivered').textContent=paid.filter(r=>r.shippingStatus==='배송완료').length+'건';
+  SHIP_CATEGORIES.forEach(c=>{ const el=$('ssfCount-'+c); if(el) el.textContent=scope.filter(r=>shipCategory(r)===c).length; });
+
+  const rows=shipFiltered();
+  $('shipRows').innerHTML=rows.length?rows.map(r=>`
+    <tr data-order="${esc(r.orderNumber)}" style="${shipChanged(r)?'background:#fffbeb':''}">
       <td class="left"><b>${esc(r.name)}</b><span class="sub">${esc(shipPhone(r.phone))}</span><span class="sub">${esc(r.orderNumber)}</span></td>
       <td class="left">${esc(r.productName)}<br><b>${Number(r.qty||0)}</b>개</td>
       <td class="left addr">${esc(r.address)}</td>
       <td>${esc(r.deliveryDate||'-')}</td>
       <td>${r.paymentConfirmed?'완료':'<span style="color:#dc2626">미입금</span>'}</td>
-      <td class="trk"><input list="courierList" value="${esc(r.courier)}" placeholder="택배사" oninput="shipEdit(this,'courier')"><input class="trk-no" value="${esc(r.trackingNumber)}" placeholder="송장번호" oninput="shipEdit(this,'trackingNumber')">${r.trackingDate?`<span class="sub">등록 ${esc(r.trackingDate)}</span>`:''}</td>
+      <td class="trk"><input list="courierList" value="${esc(r.courier)}" placeholder="택배사" oninput="shipEdit(this,'courier')"><input value="${esc(r.trackingNumber)}" placeholder="송장번호" oninput="shipEdit(this,'trackingNumber')">${r.trackingDate?`<span class="sub">등록 ${esc(r.trackingDate)}</span>`:''}</td>
       <td><select onchange="shipEdit(this,'shippingStatus')">${SHIP_STATUSES.map(s=>`<option ${s===r.shippingStatus?'selected':''}>${s}</option>`).join('')}</select></td>
     </tr>`).join(''):'<tr><td colspan="7">조건에 맞는 주문이 없습니다.</td></tr>';
 }
