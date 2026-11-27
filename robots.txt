@@ -7,3 +7,5 @@ Disallow: /promotion.html
 Disallow: /accounting.html
 
 Sitemap: https://haenamgonggu.kr/sitemap.xml
+
+#DaumWebMasterTool:65341391acecb62ef5be5121e2cb9ee64584e970c76883ba9f26b611c719f3ab:bBY3xhlFAprgQb834vQqzA==
