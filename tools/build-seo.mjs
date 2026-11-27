@@ -333,4 +333,34 @@ ${feedItems.join('\n')}
 </rss>
 `);
 
-console.log(`상품 ${products.length}개 → 페이지 ${units.length}개 (검색 노출 ${live.length}개), sitemap ${urls.length}개 주소, 구글 피드 ${feedItems.length}개`);
+// ---------- 네이버 쇼핑 상품 목록표 EP 3.0 (/feed/naver.tsv) — 쇼핑파트너센터 '상품 DB URL'에 넣는 주소 ----------
+// 탭으로 구분한 표(UTF-8). 판매중·가격·사진 있는 상품만, 옵션은 각각 1줄. 배송비는 택배비 포함이라 0(무료).
+const te = v => s(v).replace(/[\t\r\n]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+const EP_COLS = ['id', 'title', 'price_pc', 'price_mobile', 'normal_price', 'link', 'mobile_link', 'image_link', 'category_name1', 'category_name2', 'brand', 'maker', 'search_tag', 'group_id', 'shipping'];
+const epRows = [];
+for (const u of units.filter(x => x.state === '판매중')) {
+  for (const x of u.items) {
+    const price = Number(x.salePrice || 0), img = imageUrl(x.image || u.leader.image, 'w1000');
+    if (!(price > 0) || !img) continue;
+    const opt = u.items.length > 1 ? (meta(x, 'optionLabel') || s(x.productName)) : '';
+    const seoName = seoOf(u);
+    const base = seoName || (u.items.length > 1 ? u.name : s(x.productName));
+    const title = cut(u.items.length > 1 && !base.includes(opt) ? `${base} ${opt}` : base, 100);
+    const normal = Number(x.normalPrice) > price ? Number(x.normalPrice) : '';
+    const link = `${SITE}/p/${s(u.slug)}.html?utm_source=naver&utm_medium=shopping`;
+    // 검색태그: 검색용 제목의 단어 중 상품명에 없는 것, 최대 10개
+    const nameWords = new Set(te(s(x.productName)).split(' '));
+    const tags = [...new Set(te(seoName).split(' ').filter(w => w.length > 1 && !nameWords.has(w)))].slice(0, 10).join('|');
+    epRows.push({
+      id: x.productCode, title, price_pc: price, price_mobile: price, normal_price: normal,
+      link, mobile_link: link, image_link: img,
+      category_name1: '식품', category_name2: meta(u.leader, 'category') || '',
+      brand: '', maker: '', search_tag: tags,
+      group_id: u.items.length > 1 ? u.slug : '', shipping: 0
+    });
+  }
+}
+fs.writeFileSync(path.join(ROOT, 'feed', 'naver.tsv'),
+  [EP_COLS.join('\t'), ...epRows.map(r => EP_COLS.map(c => te(r[c])).join('\t'))].join('\n') + '\n');
+
+console.log(`상품 ${products.length}개 → 페이지 ${units.length}개 (검색 노출 ${live.length}개), sitemap ${urls.length}개 주소, 구글 피드 ${feedItems.length}개, 네이버 EP ${epRows.length}개`);
