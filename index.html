@@ -107,7 +107,7 @@ textarea{min-height:80px;resize:vertical} .privacy{display:flex;gap:8px;align-it
 .msg{margin-top:12px;padding:11px;border-radius:9px;display:none} .ok{display:block;background:#e8f6ed;color:#17623f} .err{display:block;background:#fdeaea;color:#a32121}
 /* 주문서 개선: 입금자명·주소검색·교환환불 안내·동의 상세 */
 .of-row{display:flex;gap:8px}.of-row input{flex:1}.of-sub-btn{flex:none;border:0;border-radius:9px;padding:0 16px;background:var(--green);color:#fff;font-weight:800;cursor:pointer;font-size:14px}
-.of-gap{margin-top:8px}.of-inline{display:flex!important;align-items:center;gap:6px;font-size:12px!important;font-weight:500!important;color:#555;margin:6px 0 0!important}.of-inline input{width:auto}
+#postcodeLayer{display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.45);align-items:flex-end;justify-content:center}#postcodeLayer.open{display:flex}#postcodeLayer .pc-box{background:#fff;width:100%;max-width:520px;height:82vh;border-radius:16px 16px 0 0;display:flex;flex-direction:column;overflow:hidden}@media(min-width:700px){#postcodeLayer{align-items:center}#postcodeLayer .pc-box{height:560px;border-radius:16px}}#postcodeLayer .pc-top{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid #e5e5e5;font-weight:800}#postcodeLayer .pc-top button{border:0;background:none;font-size:26px;line-height:1;cursor:pointer;color:#555}#postcodeWrap{flex:1;min-height:0}#addrBase,#zipcode{cursor:pointer}.addr-focus{outline:3px solid #f59e0b!important;border-color:#f59e0b!important;background:#fffbeb!important}.addr-guide{display:none;margin-top:6px;font-size:13px;font-weight:700;color:#b45309}.of-gap{margin-top:8px}.of-inline{display:flex!important;align-items:center;gap:6px;font-size:12px!important;font-weight:500!important;color:#555;margin:6px 0 0!important}.of-inline input{width:auto}
 .of-hint{font-size:12px;color:#777;margin-top:5px}
 .cr-box{border:1.5px solid #18794e;background:#f2faf5;border-radius:12px;padding:12px 14px;margin:14px 0 4px}.cr-box>strong{display:block;font-size:15px;color:#18794e}.cr-amt{font-size:12px;color:#5f6b61;font-weight:600}.cr-opt{display:flex;align-items:center;gap:6px;font-weight:600;margin:5px 0;font-size:14px;cursor:pointer}.cr-opt input{width:auto;margin:0}.cr-sub{font-weight:400;color:#777;font-size:12px}.of-error{font-size:12px;color:#a32121;margin-top:5px;display:none}
 .of-notice{background:#f6f8f7;border:1px solid #e1e8e4;border-radius:12px;padding:13px 15px;font-size:13px;line-height:1.7;color:#333;margin:16px 0 12px}.of-notice strong{display:block;font-size:14px;margin-bottom:5px;color:var(--green)}.of-notice ul{margin:0;padding-left:18px}
@@ -340,6 +340,7 @@ main>.section-head{display:none}
     <div class="of-row"><input id="zipcode" placeholder="우편번호" readonly><button type="button" class="of-sub-btn" id="findAddressBtn">주소 검색</button></div>
     <input id="addrBase" class="of-gap" placeholder="주소 검색 버튼을 눌러 주세요" readonly>
     <input id="addrDetail" name="address-line2" class="of-gap" placeholder="상세 주소 (동·호수 등)" autocomplete="address-line2">
+    <div id="addrGuide" class="addr-guide">👆 동·호수 등 상세 주소를 입력해 주세요</div>
     <input id="address" type="hidden">
     <div id="addressError" class="of-error">주소 검색 후 상세 주소까지 입력해 주세요.</div>
     <div id="deliveryDateBox" style="display:none;">
@@ -1368,21 +1369,38 @@ function loadPostcodeScript(){
   });
   return postcodeLoading;
 }
-document.getElementById('findAddressBtn').addEventListener('click', async function(){
+function closePostcode(){ document.getElementById('postcodeLayer').classList.remove('open'); document.getElementById('postcodeWrap').innerHTML=''; }
+async function openPostcode(){
   try{
     await loadPostcodeScript();
+    const layer=document.getElementById('postcodeLayer'), wrap=document.getElementById('postcodeWrap');
+    wrap.innerHTML=''; layer.classList.add('open');
+    // 팝업(새 창) 대신 화면 안에 띄움: 모바일에서 선택 후 주문서로 바로 돌아오고 상세주소 칸으로 이어짐
     new daum.Postcode({
+      width:'100%', height:'100%',
       oncomplete: function(data){
         document.getElementById('zipcode').value = data.zonecode;
-        document.getElementById('addrBase').value = data.roadAddress || data.jibunAddress;
+        let addr = data.roadAddress || data.jibunAddress;
+        if(data.buildingName && data.apartment==='Y') addr += ' ('+data.buildingName+')';
+        document.getElementById('addrBase').value = addr;
         document.getElementById('addressError').style.display = 'none';
-        document.getElementById('addrDetail').focus();
+        closePostcode();
+        const d=document.getElementById('addrDetail'), g=document.getElementById('addrGuide');
+        d.classList.add('addr-focus'); g.style.display='block';
+        setTimeout(function(){
+          try{ d.scrollIntoView({block:'center',behavior:'smooth'}); }catch(_){ d.scrollIntoView(); }
+          d.focus({preventScroll:true});
+        },80);
       }
-    }).open();
+    }).embed(wrap,{autoClose:false});
   }catch(err){
+    closePostcode();
     showMsg(err.message + ' 잠시 후 다시 시도해 주세요.', true);
   }
-});
+}
+document.getElementById('findAddressBtn').addEventListener('click', openPostcode);
+['zipcode','addrBase'].forEach(function(id){ document.getElementById(id).addEventListener('click', function(){ if(!this.value) openPostcode(); }); });
+document.getElementById('addrDetail').addEventListener('input', function(){ if(this.value.trim()){ this.classList.remove('addr-focus'); document.getElementById('addrGuide').style.display='none'; } });
 function buildAddress(){
   const zip = document.getElementById('zipcode').value.trim();
   const base = document.getElementById('addrBase').value.trim();
@@ -2137,5 +2155,6 @@ function noticeForProduct(p){
   return `<div class="ntc-inline"><b>📢 ${e(n.title||'공지')}</b>${n.body?'\n'+e(n.body):''}</div>`;
 }
 </script>
+<div id="postcodeLayer" onclick="if(event.target.id==='postcodeLayer')closePostcode()"><div class="pc-box"><div class="pc-top"><span>주소 검색</span><button type="button" onclick="closePostcode()" aria-label="닫기">×</button></div><div id="postcodeWrap"></div></div></div>
 </body>
 </html>
