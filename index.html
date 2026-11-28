@@ -1043,7 +1043,7 @@ function selectOption(code){
  openProduct(code);
  if(dd&&keep&&[...dd.options].some(o=>o.value===keep)) dd.value=keep;
 }
-function cardDescOf(p){return productMeta(p,'cardDesc')||siblingsOf(p).map(x=>productMeta(x,'cardDesc')).find(Boolean)||s(p.description).trim()||'생산자가 직접 준비한 공동구매 상품입니다.'}
+function cardDescOf(p){return productMeta(p,'cardDesc')||siblingsOf(p).map(x=>productMeta(x,'cardDesc')).find(Boolean)||s(p.description).trim()||(typeof isBiz==='function'&&isBiz(p)?'식당·배달 업소용 포장용기':'생산자가 직접 준비한 공동구매 상품입니다.')}
 function priceNoteHtml(p){const n=productMeta(p,'priceNote')||(typeof siblingsOf==='function'?siblingsOf(p).map(x=>productMeta(x,'priceNote')).find(Boolean):'');return n?`<span class="price-note">${e(n)}</span>`:''}
 function renderDetailBlocks(p){
  const box=document.getElementById('detailBlocks');
