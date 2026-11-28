@@ -238,6 +238,16 @@ main>.section-head{display:none}
 <div class="stats"><div class="stats-in"><div class="stat"><span>진행 중 공구</span><b id="activeCount">-</b></div><div class="stat"><span>전체 주문</span><b id="totalOrders">-</b></div><div class="stat"><span>등록 상품</span><b id="totalProducts">-</b></div></div></div>
 <main id="products"><div class="section-head"><div><div class="eyebrow">NOW OPEN</div><h2>진행 중인 공동구매</h2></div><p>상품을 눌러 주문과 결제계좌를 확인하세요.</p></div><div id="cardBanner" class="cbanner" hidden></div><div id="productGrid" class="grid"><div class="loading">공구상품을 불러오는 중입니다.</div></div>
 
+<section class="biz-info" id="bizInfo" hidden>
+ <h3>🏪 업소용 주문 안내</h3>
+ <ul>
+  <li><b>🧾 세금계산서 발행 가능</b><span>주문서에서 「세금계산서 요청」을 체크하고 사업자번호를 입력해 주세요.</span></li>
+  <li><b>📦 대량 구매·정기 납품 문의</b><span><a href="tel:01054785289">010-5478-5289</a> · 수량에 맞춰 단가를 안내해 드려요.</span></li>
+  <li><b>🚚 입금 확인 후 순차 발송</b><span>상시 판매 상품으로, 입금이 확인되면 차례로 보내드려요.</span></li>
+ </ul>
+</section>
+<style>.biz-info{margin:26px 0 6px;padding:22px 24px;background:#f3f6fb;border:1px solid #d5deeb;border-radius:16px}.biz-info h3{margin:0 0 12px;color:#1d3f74;font-size:18px}.biz-info ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.biz-info li{background:#fff;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}.biz-info li b{color:#1d3f74;font-size:15px}.biz-info li span{font-size:13px;color:#555;line-height:1.5}.biz-info a{color:#1d3f74;font-weight:700}@media(max-width:760px){.biz-info{padding:18px}.biz-info ul{grid-template-columns:1fr}}</style>
+
 <section class="partner-join" id="partner-join">
  <h3>🤝 해남공구마켓과 함께하세요!</h3>
  <p>재고 부담 없이 상품을 소개하고 판매 실적에 따라 수당을 받아보세요.</p>
@@ -916,6 +926,7 @@ function renderProducts(){
    .filter(p=>s(leaderOf(p).productCode)===s(p.productCode)) // 옵션 묶음은 대표 상품 카드 1개만
    .filter(p=>!searchQuery.trim()||matchScore(p,searchQuery)>0);
  if(!searchQuery.trim())renderCatTabs(sorted);
+ {const bz=currentCat===BIZ_CAT&&!searchQuery.trim();[['bizInfo',!bz],['partner-join',bz],['reviews',bz]].forEach(([id,h])=>{const el=document.getElementById(id);if(el)el.hidden=h});}
  if(currentCat===BIZ_CAT&&!searchQuery.trim()){
    const all=sorted.filter(isBiz);
    const cnt={}; all.filter(p=>stateOf(p)!=='종료').forEach(p=>bizSubsOf(p).forEach(c=>{cnt[c]=(cnt[c]||0)+1}));
