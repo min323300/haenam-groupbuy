@@ -70,7 +70,7 @@ main{max-width:1180px;margin:45px auto;padding:0 20px 70px}
 .btn.closed{background:#999;cursor:not-allowed}
 .loading,.empty{grid-column:1/-1;text-align:center;padding:55px;background:#fff;border-radius:18px;color:#777}
 .share-btn svg,.card-share svg{width:18px;height:18px;fill:#191919;flex-shrink:0}.card-share svg{width:15px;height:15px}.share-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border:1.5px solid #fee500;background:#fee500;color:#191919;font-weight:800;font-size:15px;padding:12px;border-radius:12px;margin:10px 0 4px;font-family:inherit;cursor:pointer}.title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.title-row h3{min-width:0}.card-share{flex-shrink:0;margin-top:2px;display:flex;align-items:center;gap:4px;border:0;background:#fee500;color:#191919;font-weight:800;font-size:12.5px;padding:7px 11px;border-radius:999px;font-family:inherit;cursor:pointer;white-space:nowrap}.grid .card-share{padding:6px 9px;font-size:11.5px;margin-top:0}@media(max-width:600px){.grid .card-share span{display:none}.grid .card-share{padding:6px}.grid .card-share svg{width:16px;height:16px}}.share-toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(25,25,25,.92);color:#fff;font-size:14px;padding:11px 16px;border-radius:12px;z-index:200;max-width:90vw;text-align:center;line-height:1.5}
-.cat-tabs{max-width:1180px;margin:0 auto;padding:0 20px;display:flex;gap:24px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}.cat-tabs::-webkit-scrollbar{display:none}.cat-tabs:empty{display:none}.cat-tab{border:0;background:none;padding:10px 2px 9px;font-size:15px;font-weight:600;color:#8a938c;border-bottom:2.5px solid transparent;white-space:nowrap;font-family:inherit;cursor:pointer;flex-shrink:0}.cat-tab.on{color:#18261d;font-weight:800;border-bottom-color:var(--green)}.cat-head{grid-column:1/-1;display:flex;justify-content:space-between;align-items:baseline;margin:2px 0 4px}.cat-head h2{margin:0;font-size:20px}.cat-head span{font-size:13px;color:#7a847c}@media(max-width:600px){.cat-tabs{padding:0 12px;gap:20px}.cat-tab{font-size:14.5px}}
+.cat-tabs{max-width:1180px;margin:0 auto;padding:0 20px;display:flex;gap:24px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}.cat-tabs::-webkit-scrollbar{display:none}.cat-tabs:empty{display:none}.cat-tab{border:0;background:none;padding:10px 2px 9px;font-size:15px;font-weight:600;color:#8a938c;border-bottom:2.5px solid transparent;white-space:nowrap;font-family:inherit;cursor:pointer;flex-shrink:0}.cat-tab.on{color:#18261d;font-weight:800;border-bottom-color:var(--green)}.cat-tab.biz{margin-left:auto;padding-left:14px;border-left:1px solid #e2e6e2;border-bottom-color:transparent;color:#5b6b8a}.cat-tab.biz.on{color:#1d3f74;border-bottom-color:#1d3f74}.biz-subs{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;margin:0 0 6px}.biz-sub{border:1px solid #d6dbe4;background:#fff;border-radius:999px;padding:7px 13px;font-size:13.5px;font-weight:700;color:#4a5568;cursor:pointer;font-family:inherit}.biz-sub.on{background:#1d3f74;border-color:#1d3f74;color:#fff}.biz-sub small{font-weight:600;opacity:.7;margin-left:3px}.biz-empty{grid-column:1/-1;background:#f4f6fa;border:1px dashed #c9d1de;border-radius:14px;padding:26px 18px;text-align:center;color:#4a5568;line-height:1.7}.cat-head{grid-column:1/-1;display:flex;justify-content:space-between;align-items:baseline;margin:2px 0 4px}.cat-head h2{margin:0;font-size:20px}.cat-head span{font-size:13px;color:#7a847c}@media(max-width:600px){.cat-tabs{padding:0 12px;gap:20px}.cat-tab{font-size:14.5px}}
 .sb-box{background:#eef7f0;border:1px solid #cfe5d5;border-radius:12px;padding:11px 12px;margin:0 0 12px}.sb-box b{color:#17603c}.sb-row{display:flex;gap:6px;align-items:center;margin-top:8px}.sb-row select{flex:1;min-width:0;margin:0}.sb-fill{border:0;background:#1f6b45;color:#fff;font-weight:800;border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;cursor:pointer;white-space:nowrap}.sb-del{border:0;background:none;color:#7a847c;font-size:12px;text-decoration:underline;cursor:pointer;font-family:inherit;padding:4px 0 0}.sb-sub{color:#7a847c;font-size:12px}.sb-remember{margin-top:10px}
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;padding:20px;overflow:auto}
 /* 2026-11-19 손님 주문조회 */
@@ -803,7 +803,13 @@ function updateCardBanner(list,visible){
 
 // 2026-11-22 카테고리 탭 (전체/수산/과일/채소·김장/축산/가공)
 const CATEGORIES=['수산','과일','채소·김장','축산','가공'];
-let currentCat=(()=>{try{const c=new URLSearchParams(location.search).get('cat');return (CATEGORIES.includes(c)||c==='선물')?c:'전체'}catch(_){return '전체'}})();
+// 2026-11-28 업소용 용기: '전체'에는 안 섞이는 별도 탭 + 세부 분류
+const BIZ_CAT='업소용 용기';
+const BIZ_SUBS=['배달·포장용기','도시락용기','식품용기','농수산물 포장','카페용품','일회용품','포장기계'];
+let currentBizSub='전체';
+function bizSubsOf(p){const raw=[leaderOf(p)].concat(siblingsOf(p),[p]).map(x=>s(productMeta(x,'category'))).find(c=>c&&/업소용|용기|일회용|카페용품|포장기계/.test(c))||'';return raw.split(/\s*,\s*/).filter(x=>BIZ_SUBS.includes(x));}
+function isBiz(p){const raw=[leaderOf(p)].concat(siblingsOf(p),[p]).map(x=>s(productMeta(x,'category'))).join(',');return raw.split(/\s*,\s*/).some(x=>x==='업소용'||x===BIZ_CAT||BIZ_SUBS.includes(x));}
+let currentCat=(()=>{try{const c=new URLSearchParams(location.search).get('cat');return (CATEGORIES.includes(c)||c==='선물'||c===BIZ_CAT)?c:'전체'}catch(_){return '전체'}})();
 // 2026-11-22 선물용: 원래 카테고리와 별도로 '선물' 탭에도 보임 (관리자 체크 또는 상품명에 '선물')
 function isGift(p){const sib=[leaderOf(p)].concat(siblingsOf(p),[p]);if(sib.some(x=>/^(1|y|yes|선물|true)$/i.test(productMeta(x,'gift'))))return true;return /선물/.test(s(groupOf(p)||p.productName))}
 function categoriesOf(p){
@@ -825,23 +831,25 @@ function categoryOf(p){
 }
 function renderCatTabs(list){
  const nav=document.getElementById('catTabs'); if(!nav)return;
- const live=list.filter(p=>stateOf(p)!=='종료');
+ const live=list.filter(p=>stateOf(p)!=='종료'&&!isBiz(p));
  const cnt={}; live.forEach(p=>{categoriesOf(p).forEach(c=>{cnt[c]=(cnt[c]||0)+1})});
  const giftN=live.filter(isGift).length;
  const tabs=['전체'].concat(giftN?['선물']:[],CATEGORIES.filter(c=>cnt[c]));
  if(tabs.length<3){nav.innerHTML='';return}
- if(!tabs.includes(currentCat))currentCat='전체';
- nav.innerHTML=tabs.map(c=>`<button type="button" class="cat-tab${c===currentCat?' on':''}" onclick="setCategory('${c}')">${c}</button>`).join('');
+ if(!tabs.includes(currentCat)&&currentCat!==BIZ_CAT)currentCat='전체';
+ nav.innerHTML=tabs.map(c=>`<button type="button" class="cat-tab${c===currentCat?' on':''}" onclick="setCategory('${c}')">${c}</button>`).join('')
+   +`<button type="button" class="cat-tab biz${currentCat===BIZ_CAT?' on':''}" onclick="setCategory('${BIZ_CAT}')">🏪 ${BIZ_CAT}</button>`;
  const on=nav.querySelector('.on'); if(on&&on.scrollIntoView&&currentCat!=='전체'){try{nav.scrollLeft=on.offsetLeft-40}catch(_){}}
 }
 function setCategory(c){
- currentCat=c;
+ currentCat=c; currentBizSub='전체';
  try{const u=new URL(location.href); if(c==='전체')u.searchParams.delete('cat'); else u.searchParams.set('cat',c); history.replaceState(null,'',u.pathname+u.search+u.hash);}catch(_){}
  if(searchQuery.trim()){searchQuery='';const si=document.getElementById('productSearch');if(si)si.value='';}
  renderProducts();
  try{if(window.trackOrderStep)window.trackOrderStep('category_'+c,null)}catch(_){}
  const m=document.getElementById('products'); if(m){const h=(document.querySelector('header')||{}).offsetHeight||0; window.scrollTo({top:m.getBoundingClientRect().top+window.scrollY-h-8,behavior:'smooth'});}
 }
+function setBizSub(c){currentBizSub=c;renderProducts();try{if(window.trackOrderStep)window.trackOrderStep('bizsub_'+c,null)}catch(_){}}
 function productCardHtml(p,head,topPick){
    const sib=siblingsOf(p);
    const st=stateOf(p),target=Number(p.targetOrders||0),count=sib.reduce((a,x)=>a+Number(x.orderCount||0),0);
@@ -884,10 +892,20 @@ function renderProducts(){
  document.getElementById('activeCount').textContent=products.filter(p=>stateOf(p)==='판매중').length+'개';
  document.getElementById('totalOrders').textContent=products.reduce((a,p)=>a+Number(p.orderCount||0),0)+'건';
  if(!products.length){grid.innerHTML='<div class="empty">현재 등록된 공구상품이 없습니다.</div>';return}
- const sorted=[...products].sort((a,b)=>{const rank={'판매중':0,'준비중':1,'종료':2};return (rank[stateOf(a)]-rank[stateOf(b)])||(displayOrderOf(leaderOf(a))-displayOrderOf(leaderOf(b)))})
+ let sorted=[...products].sort((a,b)=>{const rank={'판매중':0,'준비중':1,'종료':2};return (rank[stateOf(a)]-rank[stateOf(b)])||(displayOrderOf(leaderOf(a))-displayOrderOf(leaderOf(b)))})
    .filter(p=>s(leaderOf(p).productCode)===s(p.productCode)) // 옵션 묶음은 대표 상품 카드 1개만
    .filter(p=>!searchQuery.trim()||matchScore(p,searchQuery)>0);
  if(!searchQuery.trim())renderCatTabs(sorted);
+ if(currentCat===BIZ_CAT&&!searchQuery.trim()){
+   const all=sorted.filter(isBiz);
+   const cnt={}; all.filter(p=>stateOf(p)!=='종료').forEach(p=>bizSubsOf(p).forEach(c=>{cnt[c]=(cnt[c]||0)+1}));
+   const cl=currentBizSub==='전체'?all:all.filter(p=>bizSubsOf(p).includes(currentBizSub));
+   const subs=`<div class="biz-subs">${['전체'].concat(BIZ_SUBS).map(c=>`<button type="button" class="biz-sub${c===currentBizSub?' on':''}" onclick="setBizSub('${c}')">${c}${c!=='전체'&&cnt[c]?`<small>${cnt[c]}</small>`:''}</button>`).join('')}</div>`;
+   const empty=`<div class="biz-empty">🏪 <b>식당·업소용 포장용기를 준비하고 있어요.</b><br>배달용기·도시락용기·식품용기·일회용품을 사업자 가격으로 곧 만나보실 수 있어요.<br><span style="font-size:13px">대량 구매·원하는 용기 문의: <a href="tel:01054785289" style="color:#1d3f74;font-weight:700">010-5478-5289</a></span></div>`;
+   grid.innerHTML=`<div class="cat-head"><h2>🏪 ${BIZ_CAT}</h2><span>식당·배달·식품 업소용</span></div>`+subs+(cl.length?cl.map(p=>productCardHtml(p,'')).join(''):empty);
+   return;
+ }
+ if(!searchQuery.trim())sorted=sorted.filter(p=>!isBiz(p)); // 업소용 용기는 전체·일반 카테고리에 안 섞음
  const catOn=currentCat!=='전체'&&!searchQuery.trim();
  if(catOn){
    const cl=currentCat==='선물'?sorted.filter(isGift):sorted.filter(p=>categoriesOf(p).includes(currentCat));
