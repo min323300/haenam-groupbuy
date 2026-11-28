@@ -4745,11 +4745,13 @@ setTimeout(()=>{ try{ loadNotice(); }catch(_){} }, 800);
   if(h) h.innerHTML='🏪 업소용 용기 관리자 <a href="admin.html" style="font-size:15px;vertical-align:middle;margin-left:8px;padding:7px 12px;border-radius:999px;background:#16875a;color:#fff;text-decoration:none">🌾 공구상품 관리자로</a>';
   // 업소용에 필요 없는 칸 숨기기 (상품 등록·등록된 상품·주문관리·주문배송관리·매입관리만 남김)
   const keep=['① 공구상품 관리','등록된 상품','② 주문관리','⑧ 주문배송관리','⑦ 매입관리'];
-  document.querySelectorAll('.wrap > .card, .wrap > div.card').forEach(c=>{
-    const t=((c.querySelector('h2')||{}).textContent||'').trim();
-    if(!keep.some(k=>t.startsWith(k))) c.style.display='none';
+  document.querySelectorAll('.wrap > .card').forEach(c=>{
+    const t=(c.dataset.foldTitle||((c.querySelector('h2')||{}).textContent||'').replace(/^▶/,'')).trim();
+    const ok=keep.some(k=>t.startsWith(k));
+    if(!ok){ c.style.display='none'; if(c._chip) c._chip.style.display='none'; }
+    else if(c.classList.contains('fold-card')&&!c.classList.contains('open')){ const h=c.querySelector(':scope > h2'); if(h) h.click(); }
+    if(t.startsWith('① 공구상품 관리')){ const h=c.querySelector(':scope > h2'); if(h){ [...h.childNodes].forEach(n=>{ if(n.nodeType===3&&n.textContent.includes('공구상품 관리')) n.textContent='① 업소용 상품 등록·수정 '; }); } if(c._chip) c._chip.textContent='① 업소용 상품 등록'; }
   });
-  const h2=[...document.querySelectorAll('h2')].find(x=>x.textContent.trim().startsWith('① 공구상품 관리')); if(h2) h2.textContent='① 업소용 상품 등록·수정';
   const pt=document.querySelector('.ptabs'); if(pt) pt.style.display='none';
   const nb=document.getElementById('newBizBtn'); if(nb) nb.style.display='inline-block';
   const note=document.getElementById('bizTabNote'); if(note) note.style.display='block';
