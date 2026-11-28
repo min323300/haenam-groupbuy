@@ -1362,7 +1362,7 @@ function loadPostcodeScript(){
   if(postcodeLoading) return postcodeLoading;
   postcodeLoading = new Promise(function(resolve, reject){
     const sc = document.createElement('script');
-    sc.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
+    sc.src = 'https://t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
     sc.onload = resolve;
     sc.onerror = function(){ postcodeLoading = null; reject(new Error('주소 검색을 불러오지 못했습니다.')); };
     document.head.appendChild(sc);
