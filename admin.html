@@ -4752,6 +4752,8 @@ setTimeout(()=>{ try{ loadNotice(); }catch(_){} }, 800);
     else if(c.classList.contains('fold-card')&&!c.classList.contains('open')){ const h=c.querySelector(':scope > h2'); if(h) h.click(); }
     if(t.startsWith('① 공구상품 관리')){ const h=c.querySelector(':scope > h2'); if(h){ [...h.childNodes].forEach(n=>{ if(n.nodeType===3&&n.textContent.includes('공구상품 관리')) n.textContent='① 업소용 상품 등록·수정 '; }); } if(c._chip) c._chip.textContent='① 업소용 상품 등록'; }
   });
+  // 업소용은 상시 판매: 공구 시작일·마감일·목표 주문건수 칸 숨김 (값은 비워서 저장)
+  ['startDate','endDate','targetCount'].forEach(id=>{ const el=document.getElementById(id); if(!el) return; el.value=''; const f=el.closest('.field'); if(f) f.style.display='none'; });
   const pt=document.querySelector('.ptabs'); if(pt) pt.style.display='none';
   const nb=document.getElementById('newBizBtn'); if(nb) nb.style.display='inline-block';
   const note=document.getElementById('bizTabNote'); if(note) note.style.display='block';
