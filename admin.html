@@ -94,6 +94,7 @@ tbody:not(.show-all)>tr.row-more{display:none}
 .st-배송완료{background:#e8f5ec;color:#17623f;border-color:#8fcca5!important}
 .st-취소{background:#fdecec;color:#b42318;border-color:#f0a8a8!important}
 #shipTable select.st option{background:#fff;color:#1e2a23;font-weight:600}
+.ptabs{display:flex;gap:6px;margin:4px 0 10px;border-bottom:2px solid #e5e7eb}.ptab{border:0;background:none;padding:9px 14px;font-size:15px;font-weight:700;color:#7b857e;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}.ptab.on{color:#16875a;border-bottom-color:#16875a}.ptab.biz.on{color:#1d3f74;border-bottom-color:#1d3f74}.ptab span{font-size:12px;font-weight:600;opacity:.75}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
@@ -260,8 +261,10 @@ async function saveSupplierApplication(btn){
   </div>
 
   <div class="card">
-    <h2>등록된 공구상품</h2>
-    <div class="toolbar"><button class="secondary" onclick="loadProducts()">새로고침</button></div>
+    <h2>등록된 상품</h2>
+    <div class="ptabs"><button type="button" id="ptabGroup" class="ptab on" onclick="setProductTab('group')">🌾 공구상품 <span id="ptabGroupN"></span></button><button type="button" id="ptabBiz" class="ptab biz" onclick="setProductTab('biz')">🏪 업소용 용기 <span id="ptabBizN"></span></button></div>
+    <div class="toolbar"><button class="secondary" onclick="loadProducts()">새로고침</button><button type="button" id="newBizBtn" class="blue" style="display:none" onclick="newBizProduct()">＋ 업소용 상품 새로 등록</button></div>
+    <div id="bizTabNote" class="muted" style="display:none;margin-bottom:8px">업소용 용기는 홈 화면 「🏪 업소용 용기」 탭에만 보이고 공구상품 목록·홈 순서와는 따로 관리됩니다. 마감일은 비워 두면 상시 판매입니다.</div>
     <div class="table-wrap">
       <table>
         <thead><tr><th>홈 순서</th><th>코드</th><th>상품명</th><th>판매가</th><th>기간</th><th>현재 주문</th><th>목표</th><th>상태</th><th>은행</th><th>계좌번호</th><th>예금주</th><th>상세</th><th>수정</th></tr></thead>
@@ -1540,8 +1543,17 @@ function homeUnits(){
   units.sort((a,b)=>(STATE_RANK[a.state]-STATE_RANK[b.state])||((a.order||9999)-(b.order||9999))||(a.idx-b.idx));
   return units;
 }
+let productTab='group';
+function isBizProduct(p){const c=(prodBlocks(p).find(b=>b.type==='category')||{}).value||'';return /^업소용/.test(String(c));}
+function setProductTab(t){productTab=t;$('ptabGroup').classList.toggle('on',t==='group');$('ptabBiz').classList.toggle('on',t==='biz');$('newBizBtn').style.display=t==='biz'?'inline-block':'none';$('bizTabNote').style.display=t==='biz'?'block':'none';renderProducts();}
+function newBizProduct(){newProduct(); const sel=$('productCategory'); if(sel){const o=[...sel.options].find(x=>/^업소용,/.test(x.value)); if(o) sel.value=o.value;} if(typeof toggleBizFields==='function') toggleBizFields(); if($('endDate')) $('endDate').value=''; window.scrollTo({top:0,behavior:'smooth'}); showMessage('productMessage','업소용 상품 새로 등록: 분류·입수·사이즈·재질을 넣고 저장하세요. 마감일은 비워 두면 상시 판매입니다.');}
 function renderProducts(){
-  const units=homeUnits(); let pos=0;
+  const allUnits=homeUnits();
+  const isBizUnit=u=>u.items.some(isBizProduct);
+  if($('ptabGroupN')) $('ptabGroupN').textContent='('+allUnits.filter(u=>!isBizUnit(u)).reduce((a,u)=>a+u.items.length,0)+')';
+  if($('ptabBizN')) $('ptabBizN').textContent='('+allUnits.filter(isBizUnit).reduce((a,u)=>a+u.items.length,0)+')';
+  const units=allUnits.filter(u=>productTab==='biz'?isBizUnit(u):!isBizUnit(u)); let pos=0;
+  if(!units.length){$('productRows').innerHTML=`<tr><td colspan="13" class="muted" style="padding:24px">${productTab==='biz'?'아직 등록된 업소용 상품이 없습니다. 「＋ 업소용 상품 새로 등록」으로 시작하세요.':'등록된 공구상품이 없습니다.'}</td></tr>`;return;}
   const rows=[];
   units.forEach(u=>{
     const live=u.state!=='종료'; if(live) pos++;
