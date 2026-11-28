@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>카카오 연결 코드</title>
+<style>body{font-family:system-ui,sans-serif;max-width:560px;margin:40px auto;padding:0 18px;color:#222}h1{font-size:20px}textarea{width:100%;height:90px;font-size:14px;padding:10px;box-sizing:border-box}button{margin-top:10px;width:100%;padding:14px;border:0;border-radius:10px;background:#fee500;font-weight:700;font-size:16px}.err{color:#c0392b}</style></head>
+<body><h1>💬 카카오 주문알림 연결 코드</h1><div id="box"></div>
+<script>
+const q=new URLSearchParams(location.search),code=q.get('code'),err=q.get('error_description')||q.get('error'),box=document.getElementById('box');
+if(code){box.innerHTML='<p>아래 코드를 복사해서 앱스스크립트 <b>kakaoSetup</b> 안에 붙여넣고 실행하세요.</p><textarea id="c" readonly></textarea><button id="b">코드 복사</button>';
+ const t=document.getElementById('c');t.value=code;document.getElementById('b').onclick=()=>{t.select();navigator.clipboard?navigator.clipboard.writeText(code):document.execCommand('copy');document.getElementById('b').textContent='복사됨 ✓'}}
+else box.innerHTML=err?'<p class="err">연결 실패: '+err.replace(/</g,'&lt;')+'</p>':'<p>카카오 로그인 후 이 페이지로 돌아오면 코드가 표시됩니다.</p>';
+</script></body></html>
