@@ -926,7 +926,7 @@ function renderProducts(){
    .filter(p=>s(leaderOf(p).productCode)===s(p.productCode)) // 옵션 묶음은 대표 상품 카드 1개만
    .filter(p=>!searchQuery.trim()||matchScore(p,searchQuery)>0);
  if(!searchQuery.trim())renderCatTabs(sorted);
- {const bz=currentCat===BIZ_CAT&&!searchQuery.trim();[['bizInfo',!bz],['partner-join',bz],['reviews',bz]].forEach(([id,h])=>{const el=document.getElementById(id);if(el)el.hidden=h});}
+ {const bz=currentCat===BIZ_CAT&&!searchQuery.trim();[['bizInfo',!bz],['partner-join',bz],['reviews',bz],['supplier-partnership',bz]].forEach(([id,h])=>{const el=document.getElementById(id);if(el)el.hidden=h});}
  if(currentCat===BIZ_CAT&&!searchQuery.trim()){
    const all=sorted.filter(isBiz);
    const cnt={}; all.filter(p=>stateOf(p)!=='종료').forEach(p=>bizSubsOf(p).forEach(c=>{cnt[c]=(cnt[c]||0)+1}));
